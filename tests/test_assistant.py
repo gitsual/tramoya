@@ -281,3 +281,43 @@ def test_ask_repairs_a_plan_once_when_preflight_complains() -> None:
     assert len(backend.prompts) == 2
     assert "MARKS.json, which does not exist" in backend.prompts[1][1]
     assert plan.steps[0].command == ["tramoya", "marks", "marks.json"]
+
+
+def test_preflight_knows_what_direct_produces(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "script.json").write_text('{"scene-welcome": {"en": "Hello"}}')
+    plan = Plan(summary="", steps=[
+        Step("direct", "", ["tramoya", "direct", "director.py", "--out", "out"]),
+        Step("voice", "", ["tramoya", "tts", "--script", "script.json", "--lang", "en",
+                          "--out-dir", "out/voices/en"]),
+        Step("build", "", ["tramoya", "assemble", "--video", "out/take.webm", "--marks",
+                          "out/marks.json", "--voice-dir", "out/voices/en", "--out", "demo.mp4"]),
+    ])
+    assert preflight(plan, exists=lambda p: p in {"director.py", "script.json"}) == []
+
+
+def test_preflight_reports_a_missing_director_script() -> None:
+    plan = Plan(summary="", steps=[
+        Step("direct", "", ["tramoya", "direct", "director.py", "--out", "out"]),
+    ])
+    assert preflight(plan, exists=lambda p: False) == [
+        "step 1 needs director.py, which does not exist"
+    ]
+
+
+def test_run_plan_dry_run_reaches_direct() -> None:
+    plan = Plan(summary="", steps=[
+        Step("direct", "", ["tramoya", "direct", "director.py", "--out", "out"]),
+    ])
+    seen: list[list[str]] = []
+    run_plan(plan, runner=lambda argv: (seen.append(argv), 0)[1], dry_run=True)
+    assert seen == [["direct", "director.py", "--out", "out", "--dry-run"]]
+
+
+def test_preflight_reports_direct_without_a_script() -> None:
+    plan = Plan(summary="", steps=[
+        Step("direct", "", ["tramoya", "direct", "--out", "out", "--lang", "en"]),
+    ])
+    assert preflight(plan, exists=lambda p: True) == [
+        "step 1 does not say which director script to run (tramoya direct <director.py> ...)"
+    ]

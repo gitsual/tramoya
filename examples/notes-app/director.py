@@ -143,7 +143,9 @@ def main() -> int:
     webm = video_path
     (out / "take.webm").write_bytes(webm.read_bytes())
     print(f"take written to {out / 'take.webm'}; marks in {out / 'marks.json'}")
-    print("next: ffmpeg -i take.webm take.mp4 && tramoya assemble --video take.mp4 …")
+    print("next: tramoya tts --script script.json --lang en --out-dir voices/en")
+    print("      tramoya assemble --video take.webm --marks marks.json "
+          "--voice-dir voices/en --out demo.mp4")
     return 0
 
 

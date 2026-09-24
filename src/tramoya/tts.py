@@ -8,6 +8,7 @@ injecting a `pipeline_factory` shaped like `kokoro.KPipeline`.
 
 from __future__ import annotations
 
+import warnings
 import wave
 from array import array
 from collections.abc import Callable, Iterable
@@ -67,16 +68,20 @@ def synthesize(
     out_path = Path(out)
     lang_code, voice = voices[lang]
     factory = pipeline_factory or _default_pipeline_factory
-    pipeline = factory(lang_code, _REPO_ID)
 
     gap = [0.0] * int(SAMPLE_RATE * gap_seconds)
     tail = [0.0] * int(SAMPLE_RATE * tail_seconds)
 
     samples: list[float] = []
-    for index, (_graphemes, _phonemes, audio) in enumerate(pipeline(text, voice=voice)):
-        if index:
-            samples.extend(gap)
-        samples.extend(_to_samples(audio))
+    # Kokoro's torch stack prints deprecation notices on every load; they are
+    # nothing the person running `tramoya tts` can act on.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        pipeline = factory(lang_code, _REPO_ID)
+        for index, (_graphemes, _phonemes, audio) in enumerate(pipeline(text, voice=voice)):
+            if index:
+                samples.extend(gap)
+            samples.extend(_to_samples(audio))
     samples.extend(tail)
 
     _write_wav(out_path, samples)

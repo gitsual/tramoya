@@ -7,4 +7,7 @@ build/
 .pytest_cache/
 .ruff_cache/
 uv.lock
-examples/notes-app/out/
+examples/notes-app/*
+!examples/notes-app/index.html
+!examples/notes-app/script.json
+!examples/notes-app/director.py

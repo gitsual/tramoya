@@ -108,3 +108,17 @@ def test_synthesize_script_picks_the_requested_language_text(tmp_path):
     script = {"only": {"en": "english text", "es": "texto en español"}}
     synthesize_script(script, "es", tmp_path / "tts", pipeline_factory=factory)
     assert calls == ["texto en español"]
+
+
+def test_synthesize_keeps_library_warnings_off_the_terminal(tmp_path):
+    import warnings
+
+    def noisy_factory(lang_code: str, repo_id: str):
+        warnings.warn("dropout option adds dropout", UserWarning, stacklevel=1)
+        pipeline = _FakePipeline(lang_code, repo_id)
+        return pipeline
+
+    with warnings.catch_warnings(record=True) as seen:
+        warnings.simplefilter("always")
+        synthesize("hi", "en", tmp_path / "a.wav", pipeline_factory=noisy_factory)
+    assert seen == []

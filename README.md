@@ -11,7 +11,7 @@ The audience never sees it. The show runs on time because of it.</em><br>
 <p>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3D0115?style=for-the-badge&logo=python&logoColor=AAA875">
   <img alt="stdlib core" src="https://img.shields.io/badge/core-zero%20deps-3D0115?style=for-the-badge&labelColor=3D0115&color=E1777D">
-  <img alt="229 tests" src="https://img.shields.io/badge/229%20tests-one%20real%20encode-3D0115?style=for-the-badge&labelColor=3D0115&color=979367">
+  <img alt="236 tests" src="https://img.shields.io/badge/236%20tests-one%20real%20encode-3D0115?style=for-the-badge&labelColor=3D0115&color=979367">
   <img alt="ask and do" src="https://img.shields.io/badge/tramoya%20ask-plain%20English%20in-3D0115?style=for-the-badge&labelColor=3D0115&color=AAA875">
   <img alt="MIT" src="https://img.shields.io/badge/license-MIT-3D0115?style=for-the-badge&labelColor=3D0115&color=731F51">
 </p>
@@ -60,18 +60,72 @@ the page, the browser recorded itself, Kokoro read the script, `assemble` cut it
 
 <p align="center"><sub>Preview GIF (8 fps, no sound). <a href="assets/video/notes-demo.mp4"><b>Watch the full video with narration</b></a> (59 s, h264 + aac).</sub></p>
 
+### How it was made, start to finish
+
+This is tramoya running over the notes app from a single sentence. Nothing is staged: the terminal is a real
+recording of the installed command, and the video at the end is the file it produced.
+
+<p align="center">
+  <a href="assets/video/walkthrough.mp4"><img src="assets/gifs/walkthrough.gif" alt="Walkthrough: one request, the plan, the real run, the resulting demo" width="720"></a>
+</p>
+
+<p align="center"><sub><a href="assets/video/walkthrough.mp4"><b>Watch the walkthrough</b></a> (73 s, h264 + aac): the request, the run, and the result.</sub></p>
+
+**Before.** The folder holds exactly three files, and none of them is a video:
+
+```
+examples/notes-app/
+├── index.html    the app under demo: a one-page notes list, no build step
+├── script.json   what the voice says, one entry per scene, per language
+└── director.py   the choreography: six scene functions built on tramoya.stage
+```
+
+**During.** One request, and the assistant turns it into a plan, checks it, and runs it step by step:
+
+```
+$ tramoya do "record the notes app demo with director.py, give it an English voice and build the final video" --yes
+
+1. Record the demo
+   $ tramoya direct director.py --out demo
+2. Generate English voiceover
+   $ tramoya tts --script script.json --lang en --out-dir voices
+3. Assemble final video
+   $ tramoya assemble --video demo/take.webm --marks demo/marks.json --voice-dir voices --out final_video.mp4
+```
+
+`direct` launches the director: a headless Chromium opens `index.html`, the injected cursor travels and clicks,
+the caption band changes per scene, the browser records itself and the director writes `marks.json` as it goes.
+`tts` reads `script.json` through Kokoro, one wav per scene. `assemble` cuts the take at the marks, fits each
+scene to its clip and concatenates.
+
+**After.** The folder now has the take, the marks, six voice clips and `final_video.mp4`, and the terminal shows
+the per-scene table `assemble` printed:
+
+```
+scene welcome:    7.6s raw ->  7.8s final
+scene search:     7.0s raw ->  7.0s final
+scene new-note:  11.1s raw -> 11.2s final
+scene done:       7.1s raw ->  7.1s final
+scene views:      8.4s raw ->  8.4s final
+scene closing:    7.3s raw ->  7.3s final
+assembled final_video.mp4
+```
+
+That file is the demo at the top of this section.
+
+### The same thing by hand
+
 The whole thing lives in [`examples/notes-app/`](examples/notes-app): a self-contained `index.html`, a
 `script.json` with one line per scene, and a `director.py` of under a hundred lines. Reproduce it from scratch:
 
 ```bash
 uv pip install -e ".[dev,playwright,tts]" && uv run python -m playwright install chromium
 
-uv run python examples/notes-app/director.py --out examples/notes-app/out   # directs + records (headless) -> take.webm, marks.json
-cd examples/notes-app/out
-ffmpeg -i take.webm -c:v libx264 -pix_fmt yuv420p take.mp4
-tramoya tts --script ../script.json --lang en --out-dir voices/en           # one wav per scene
-tramoya marks marks.json                                                    # the scene table
-tramoya assemble --video take.mp4 --marks marks.json --voice-dir voices/en --out demo.mp4
+cd examples/notes-app
+tramoya direct director.py --out out                                        # directs + records (headless) -> take.webm, marks.json
+tramoya tts --script script.json --lang en --out-dir out/voices/en          # one wav per scene
+tramoya marks out/marks.json                                                # the scene table
+tramoya assemble --video out/take.webm --marks out/marks.json --voice-dir out/voices/en --out out/demo.mp4
 ```
 
 `--rehearse` runs the same choreography in a few seconds without recording, and `--pace 0.7` slows the whole
@@ -128,7 +182,8 @@ fits each voice clip and writes <code>final-demo.mp4</code>. With <code>--yes</c
 - The model sees the command reference and the files in the current directory, and answers in strict JSON. A reply
   that is not a plan gets **one repair round**, then the error is yours to read.
 - **Preflight** rejects a plan before anything runs: an input that does not exist, a language with no voices, a
-  file used as a narration script that is not one.
+  file used as a narration script that is not one, a `direct` step with no director script. It also knows what
+  each step produces, so `assemble` may consume the `take.webm` that `direct` will write two steps earlier.
 - `run_plan` executes **only `tramoya` commands**, in order, and stops at the first failure. Nothing else the model
   writes is ever passed to a shell.
 - `tramoya do --dry-run` appends `--dry-run` to every step that would encode, so the whole plan can be inspected
@@ -139,9 +194,9 @@ fits each voice clip and writes <code>final-demo.mp4</code>. With <code>--yes</c
 ## 📥 Install
 
 ```bash
-pip install "tramoya @ git+https://github.com/gitsual/tramoya@v0.2.0"
-pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.2.0"   # + Stage
-pip install "tramoya[tts] @ git+https://github.com/gitsual/tramoya@v0.2.0"          # + Kokoro voice
+pip install "tramoya @ git+https://github.com/gitsual/tramoya@v0.3.0"
+pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.3.0"   # + Stage
+pip install "tramoya[tts] @ git+https://github.com/gitsual/tramoya@v0.3.0"          # + Kokoro voice
 ```
 
 The core has **no Python dependencies**. `ffmpeg`, `ffprobe`, `wf-recorder`, `paplay` and `pactl` are
@@ -341,7 +396,7 @@ src/tramoya/
 ├── assembly.py    assemble_marks · plan_segments · assemble_deck · Segment
 ├── captions.py    split · wrap · page_cues · render_srt · render_ass · burn_argv · trim_plan
 ├── audio.py       build_loop · render_wav · duck_filter · solo_filter · mix_argv
-└── cli.py         tramoya ask | do | marks | assemble | deck | captions | music | cues | record | tts
+└── cli.py         tramoya ask | do | direct | marks | assemble | deck | captions | music | cues | record | tts
 ```
 
 Fifteen modules. Anything that shells out is behind `Runner`; anything that needs Playwright or Kokoro is behind
@@ -354,7 +409,7 @@ an extra and skipped cleanly when the extra is absent; anything that talks to a 
 
 ```bash
 uv run ruff check src tests examples
-uv run python -m pytest -q             # 229 fast tests, nothing is encoded, no network
+uv run python -m pytest -q             # 236 fast tests, nothing is encoded, no network
 uv run python -m pytest -q -m slow     # 1 test: three real seconds through the whole pipeline
 ```
 
@@ -383,13 +438,16 @@ tramoya/
 │   ├── logo.png · logo-mark.png        rendered by scripts/render-assets.sh
 │   ├── pipeline.png                    rendered from templates/pipeline.svg.in
 │   ├── gifs/demo.gif                   preview of the demo video
+│   ├── gifs/walkthrough.gif            preview of the walkthrough
 │   ├── gifs/cli.gif · assistant.gif    asciinema recordings of the installed CLI
-│   └── video/notes-demo.mp4            the demo, with narration
+│   ├── video/notes-demo.mp4            the demo, with narration
+│   └── video/walkthrough.mp4           one request -> the run -> the result
 ├── templates/pipeline.svg.in           the diagram with @COLOR_X@ tokens
 ├── scripts/
-│   ├── render-assets.sh    logos | pipeline | gif | assistant | all
+│   ├── render-assets.sh    logos | pipeline | gif | assistant | walkthrough | all
 │   ├── cli-cast.sh         what the CLI gif records
-│   └── assistant-cast.sh   what the assistant gif records (needs Ollama running)
+│   ├── assistant-cast.sh   what the assistant gif records (needs Ollama running)
+│   └── walkthrough-cast.sh what the walkthrough records (needs Ollama, Playwright and the tts extra)
 ├── pyproject.toml          hatchling, extras playwright / tts / dev, ruff, pytest markers
 └── .github/workflows/ci.yml
 ```

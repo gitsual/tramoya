@@ -32,7 +32,7 @@ DEFAULT_CLAUDE_MODEL = "claude-sonnet-5"
 CLAUDE_URL = "https://api.anthropic.com/v1/messages"
 
 # Subcommands that accept --dry-run; `run_plan(dry_run=True)` appends it there.
-DRY_RUN_CAPABLE = {"assemble", "deck", "captions", "music", "record"}
+DRY_RUN_CAPABLE = {"assemble", "deck", "captions", "music", "record", "direct"}
 
 SYSTEM_PROMPT = """You are the assistant of `tramoya`, a command-line tool that turns a
 screen recording of a software demo into a finished video. The user is not a
@@ -55,8 +55,15 @@ Commands you may use (and nothing else):
   tramoya cues marks --cues <cues-file> --out <marks.json> [--meta <meta-file> --duration <seconds>]
   tramoya cues ass --cues <cues-file> --duration <seconds> --width <w> --height <h> --out <file.ass>
   tramoya record --out <take.mp4> --geometry "<x>,<y> <w>x<h>" [--fps <n>]
+  tramoya direct <director.py> --out <dir> [--pace <factor>] [--rehearse] [--lang <en|es>]
+                                                run a director script (a Python file that
+                                                drives the app on stage and records it);
+                                                writes <dir>/take.webm and <dir>/marks.json
 
 Rules:
+- `direct` takes the director script as its first argument, before any flag:
+  `tramoya direct director.py --out out`. It records the app itself; do not
+  add a `record` step for it.
 - `tts` needs a narration script JSON (key -> {lang: text}); `marks.json` is
   not a script. Voices exist for "en" and "es" only.
 - Anything in <angle brackets> above is a placeholder: replace it with a real
@@ -277,9 +284,18 @@ _OUTPUT_FLAGS = {"--out", "--out-dir"}
 
 def _inputs_of(argv: list[str]) -> list[str]:
     inputs = [argv[i + 1] for i, a in enumerate(argv[:-1]) if a in _INPUT_FLAGS]
-    if argv[:1] == ["marks"] and len(argv) > 1:
+    if argv[:1] in (["marks"], ["direct"]) and len(argv) > 1 and not argv[1].startswith("-"):
         inputs.append(argv[1])
     return inputs
+
+
+def _outputs_of(argv: list[str]) -> set[str]:
+    outputs = {argv[j + 1] for j, a in enumerate(argv[:-1]) if a in _OUTPUT_FLAGS}
+    if argv[:1] == ["direct"]:
+        out = _flag_value(argv, "--out")
+        if out:
+            outputs.update({f"{out}/take.webm", f"{out}/marks.json"})
+    return outputs
 
 
 def _flag_value(argv: list[str], flag: str) -> str | None:
@@ -303,6 +319,9 @@ def preflight(plan: Plan, exists: Callable[[str], bool] = os.path.exists) -> lis
     problems: list[str] = []
     for i, step in enumerate(plan.steps, 1):
         argv = step.command[1:]
+        if argv[:1] == ["direct"] and (len(argv) < 2 or argv[1].startswith("-")):
+            problems.append(f"step {i} does not say which director script to run "
+                            "(tramoya direct <director.py> ...)")
         for path in _inputs_of(argv):
             if path not in produced and not exists(path):
                 problems.append(f"step {i} needs {path}, which does not exist")
@@ -319,7 +338,7 @@ def preflight(plan: Plan, exists: Callable[[str], bool] = os.path.exists) -> lis
                     f"step {i} uses {script} as a narration script, but it is not one "
                     "(a script maps each scene key to its text per language)"
                 )
-        produced.update(argv[j + 1] for j, a in enumerate(argv[:-1]) if a in _OUTPUT_FLAGS)
+        produced.update(_outputs_of(argv))
     return problems
 
 

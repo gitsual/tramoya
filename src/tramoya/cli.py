@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import shlex
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -182,6 +183,17 @@ def cmd_record(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_direct(args: argparse.Namespace) -> int:
+    argv = [sys.executable, args.script, "--out", args.out, "--pace", str(args.pace),
+            "--lang", args.lang]
+    if args.rehearse:
+        argv.insert(-2, "--rehearse")
+    if args.dry_run:
+        print(shlex.join(argv))
+        return 0
+    return subprocess.run(argv, check=False).returncode
+
+
 def cmd_tts(args: argparse.Namespace) -> int:
     script = json.loads(Path(args.script).read_text(encoding="utf-8"))
     try:
@@ -338,6 +350,16 @@ def build_parser() -> argparse.ArgumentParser:
             p.add_argument("--yes", action="store_true", help="skip the confirmation")
             _add_dry_run(p)
         p.set_defaults(fn=fn)
+
+    p = sub.add_parser("direct", help="run a director script: it drives the app on stage "
+                                       "and records the take")
+    p.add_argument("script", help="a Python file built on tramoya.stage")
+    p.add_argument("--out", required=True, help="where take.webm and marks.json go")
+    p.add_argument("--pace", type=float, default=1.0)
+    p.add_argument("--rehearse", action="store_true", help="run every scene in seconds")
+    p.add_argument("--lang", default="en")
+    _add_dry_run(p)
+    p.set_defaults(fn=cmd_direct)
 
     p = sub.add_parser("tts", help="synthesize a narration script with Kokoro")
     p.add_argument("--script", required=True, help="JSON: key -> {lang: text}")

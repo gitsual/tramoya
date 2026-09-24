@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tramoya"
-version = "0.2.0"
+version = "0.3.0"
 description = "Stage machinery for recorded software demos: scene marks, pacing, narration, a Playwright stage, screen recording and an ffmpeg post-production pipeline."
 readme = "README.md"
 license = "MIT"

@@ -198,3 +198,32 @@ def test_deck_dry_run_plans_pages_and_clip(
     out = capsys.readouterr().out
     assert "cover" in out and "clip" in out
     assert "ffmpeg" in out
+
+
+def test_direct_dry_run_prints_the_director_argv(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    script = tmp_path / "director.py"
+    script.write_text("print('hi')\n")
+    rc = cli.main([
+        "direct", str(script), "--out", str(tmp_path / "out"), "--pace", "0.8",
+        "--rehearse", "--lang", "en", "--dry-run",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert str(script) in out
+    assert f"--out {tmp_path / 'out'} --pace 0.8 --rehearse --lang en" in out
+    assert "python" in out.split()[0]
+
+
+def test_direct_runs_the_director_with_the_current_python(tmp_path: Path) -> None:
+    script = tmp_path / "director.py"
+    script.write_text(
+        "import sys, pathlib\n"
+        "out = pathlib.Path(sys.argv[sys.argv.index('--out') + 1])\n"
+        "out.mkdir(exist_ok=True)\n"
+        "(out / 'marks.json').write_text('[]')\n"
+    )
+    rc = cli.main(["direct", str(script), "--out", str(tmp_path / "out")])
+    assert rc == 0
+    assert (tmp_path / "out" / "marks.json").read_text() == "[]"
