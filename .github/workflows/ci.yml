@@ -1,0 +1,21 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        extras: ["", "playwright"]
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv python install ${{ matrix.python }}
+      - run: uv venv -p ${{ matrix.python }}
+      - run: uv pip install -e ".[dev${{ matrix.extras && format(',{0}', matrix.extras) || '' }}]"
+      - run: uv run ruff check .
+      - run: uv run python -m pytest -q
+      - run: uv run tramoya --help

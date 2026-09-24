@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tramoya"
+version = "0.1.0"
+description = "Stage machinery for recorded software demos: scene marks, pacing, narration, a Playwright stage, screen recording and an ffmpeg post-production pipeline."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Álvaro González" }]
+keywords = ["demo", "screencast", "ffmpeg", "playwright", "narration", "wf-recorder"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Multimedia :: Video",
+]
+dependencies = []
+
+[project.optional-dependencies]
+playwright = ["playwright>=1.45"]
+tts = ["kokoro>=0.9", "soundfile>=0.12", "numpy>=1.26"]
+dev = ["pytest>=8.0", "ruff>=0.5"]
+
+[project.scripts]
+tramoya = "tramoya.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/gitsual/tramoya"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tramoya"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: encodes real video with ffmpeg; opt in with -m slow"]
+addopts = "-m 'not slow'"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "BLE", "C4", "SIM", "PTH", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["BLE001", "SIM", "E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["tramoya"]

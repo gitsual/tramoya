@@ -1,0 +1,132 @@
+[
+  {
+    "t": 4.31,
+    "clave": "escena-apertura-inicio",
+    "etiqueta": "Una consola, varios proyectos: se elige sobre cuál se trabaja"
+  },
+  {
+    "t": 16.16,
+    "clave": "escena-apertura-fin",
+    "etiqueta": "Una consola, varios proyectos: se elige sobre cuál se trabaja"
+  },
+  {
+    "t": 16.16,
+    "clave": "escena-tablero-inicio",
+    "etiqueta": "El tablero es el Jira real, no una copia"
+  },
+  {
+    "t": 22.85,
+    "clave": "escena-tablero-fin",
+    "etiqueta": "El tablero es el Jira real, no una copia"
+  },
+  {
+    "t": 22.85,
+    "clave": "escena-cola-inicio",
+    "etiqueta": "La cola: automática o manual, y el modelo caliente antes de empezar"
+  },
+  {
+    "t": 31.27,
+    "clave": "escena-cola-fin",
+    "etiqueta": "La cola: automática o manual, y el modelo caliente antes de empezar"
+  },
+  {
+    "t": 31.27,
+    "clave": "escena-ejecucion-inicio",
+    "etiqueta": "Una ejecución terminada: cada fase, con su medida o su motivo"
+  },
+  {
+    "t": 51.02,
+    "clave": "escena-ejecucion-fin",
+    "etiqueta": "Una ejecución terminada: cada fase, con su medida o su motivo"
+  },
+  {
+    "t": 51.02,
+    "clave": "escena-fases-inicio",
+    "etiqueta": "Qué se hizo en cada fase, desplegado"
+  },
+  {
+    "t": 68.56,
+    "clave": "escena-fases-fin",
+    "etiqueta": "Qué se hizo en cada fase, desplegado"
+  },
+  {
+    "t": 68.56,
+    "clave": "escena-tecnico-inicio",
+    "etiqueta": "El detalle técnico: acciones, feed del modelo y auditoría"
+  },
+  {
+    "t": 76.49,
+    "clave": "escena-tecnico-fin",
+    "etiqueta": "El detalle técnico: acciones, feed del modelo y auditoría"
+  },
+  {
+    "t": 76.49,
+    "clave": "escena-auditoria-inicio",
+    "etiqueta": "Permitido, denegado, y siempre con motivo"
+  },
+  {
+    "t": 84.42,
+    "clave": "escena-auditoria-fin",
+    "etiqueta": "Permitido, denegado, y siempre con motivo"
+  },
+  {
+    "t": 84.42,
+    "clave": "escena-guardia-inicio",
+    "etiqueta": "Nuevo: si la tarea no pide subir de versión, no se sube"
+  },
+  {
+    "t": 98.5,
+    "clave": "escena-guardia-fin",
+    "etiqueta": "Nuevo: si la tarea no pide subir de versión, no se sube"
+  },
+  {
+    "t": 98.5,
+    "clave": "escena-motor-inicio",
+    "etiqueta": "La frontera del código: qué modelo ve el fuente"
+  },
+  {
+    "t": 109.79,
+    "clave": "escena-motor-fin",
+    "etiqueta": "La frontera del código: qué modelo ve el fuente"
+  },
+  {
+    "t": 109.79,
+    "clave": "escena-politica-inicio",
+    "etiqueta": "Salvaguardas por proyecto, no sólo globales"
+  },
+  {
+    "t": 123.89,
+    "clave": "escena-politica-fin",
+    "etiqueta": "Salvaguardas por proyecto, no sólo globales"
+  },
+  {
+    "t": 123.89,
+    "clave": "escena-reuniones-inicio",
+    "etiqueta": "De la transcripción a Jira, con dos firmas"
+  },
+  {
+    "t": 133.49,
+    "clave": "escena-reuniones-fin",
+    "etiqueta": "De la transcripción a Jira, con dos firmas"
+  },
+  {
+    "t": 133.49,
+    "clave": "escena-api-inicio",
+    "etiqueta": "La API y las herramientas MCP, documentadas y sin CDN"
+  },
+  {
+    "t": 142.66,
+    "clave": "escena-api-fin",
+    "etiqueta": "La API y las herramientas MCP, documentadas y sin CDN"
+  },
+  {
+    "t": 142.66,
+    "clave": "escena-cierre-inicio",
+    "etiqueta": "De la incidencia a la pull request, con una persona decidiendo"
+  },
+  {
+    "t": 145.69,
+    "clave": "escena-cierre-fin",
+    "etiqueta": "De la incidencia a la pull request, con una persona decidiendo"
+  }
+]
