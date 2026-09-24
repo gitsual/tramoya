@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 50 180 180" width="180" height="180" role="img" aria-label="tramoya">
+  <defs>
+    <linearGradient id="house" x2="0" y2="1"><stop stop-color="#1B1220"/><stop offset="1" stop-color="#2E1F33"/></linearGradient>
+    <linearGradient id="velvet" x2="0" y2="1"><stop stop-color="#C9424F"/><stop offset="1" stop-color="#7E2733"/></linearGradient>
+    <radialGradient id="spot" cx=".5" cy=".1" r=".8"><stop stop-color="#E8C66A" stop-opacity=".55"/><stop offset="1" stop-color="#E8C66A" stop-opacity="0"/></radialGradient>
+    <clipPath id="coin"><circle cx="130" cy="140" r="86"/></clipPath>
+  </defs>
+  <g clip-path="url(#coin)">
+    <circle cx="130" cy="140" r="86" fill="url(#house)"/>
+    <rect x="44" y="176" width="172" height="60" fill="#120B16"/>
+    <ellipse cx="130" cy="180" rx="70" ry="16" fill="url(#spot)"/>
+    <g stroke="#E8C66A" stroke-width="1.4" opacity=".7">
+      <line x1="76" y1="54" x2="76" y2="96"/><line x1="104" y1="54" x2="104" y2="96"/>
+      <line x1="156" y1="54" x2="156" y2="96"/><line x1="184" y1="54" x2="184" y2="96"/>
+    </g>
+    <rect x="62" y="94" width="136" height="6" rx="3" fill="#E8C66A"/>
+    <path d="M64 100 H126 C122 130 118 160 108 182 H64 Z" fill="url(#velvet)"/>
+    <path d="M196 100 H134 C138 130 142 160 152 182 H196 Z" fill="url(#velvet)"/>
+    <path d="M96 150 q12 -6 22 0" stroke="#E8C66A" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M142 150 q12 -6 22 0" stroke="#E8C66A" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="130" cy="66" r="9" fill="none" stroke="#E8C66A" stroke-width="3"/>
+    <circle cx="130" cy="66" r="2.5" fill="#E8C66A"/>
+    <line x1="130" y1="75" x2="130" y2="94" stroke="#E8C66A" stroke-width="1.4" opacity=".7"/>
+  </g>
+  <circle cx="130" cy="140" r="86" fill="none" stroke="#E8C66A" stroke-width="4"/>
+</svg>
