@@ -143,11 +143,11 @@ def test_render_ass_dialogue_fades_and_trims_the_tail() -> None:
 
 
 def test_burn_argv_matches_the_recorded_dry_run() -> None:
-    argv = burn_argv(Path("demo/demo-cci-ai-v9-es-mudo.mp4"), Path("showcase/captions/v9-es.srt"), Path("demo/demo-cci-ai-v9-es-captions.mp4"))
+    argv = burn_argv(Path("out/tour-silent.mp4"), Path("out/tour.srt"), Path("out/tour-captions.mp4"))
     assert argv == [
-        "ffmpeg", "-y", "-i", "demo/demo-cci-ai-v9-es-mudo.mp4",
-        "-vf", "subtitles=showcase/captions/v9-es.srt",
-        "-c:a", "copy", "demo/demo-cci-ai-v9-es-captions.mp4",
+        "ffmpeg", "-y", "-i", "out/tour-silent.mp4",
+        "-vf", "subtitles=out/tour.srt",
+        "-c:a", "copy", "out/tour-captions.mp4",
     ]
 
 

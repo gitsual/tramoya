@@ -420,3 +420,23 @@ def test_open_stage_raises_clear_error_without_playwright(monkeypatch):
     with pytest.raises(ImportError, match="playwright"):
         with open_stage("http://base", pacing, marks):
             pass
+
+
+def test_overlay_installs_when_page_has_a_body() -> None:
+    """Init scripts run before `document.documentElement` exists; a real
+    browser once threw `appendChild of null` and the caption hook was never
+    defined. The overlay must defer until the document is there."""
+    playwright = pytest.importorskip("playwright.sync_api")
+    with playwright.sync_playwright() as p:
+        browser = p.chromium.launch()
+        context = browser.new_context()
+        context.add_init_script(OVERLAY_JS)
+        page = context.new_page()
+        errors: list[str] = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.goto("data:text/html,<h1>hello</h1>")
+        assert page.evaluate("typeof window.__tramoyaCaption") == "function"
+        page.evaluate("window.__tramoyaCaption('scene one')")
+        assert page.evaluate("document.getElementById('tramoya-caption').textContent") == "scene one"
+        assert errors == []
+        browser.close()

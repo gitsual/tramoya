@@ -26,6 +26,8 @@ from tramoya.pacing import Pacing
 OVERLAY_JS = """
 // ids: #tramoya-cursor, #tramoya-ripple, #tramoya-caption
 (() => {
+  // Init scripts run before <html> exists; wait for it, then install once.
+  const install = () => {
   const cursor = document.createElement("div");
   cursor.id = "tramoya-cursor";
   cursor.style.cssText = [
@@ -74,6 +76,9 @@ OVERLAY_JS = """
     cursor.style.top = `${e.clientY}px`;
   });
   window.addEventListener("mousedown", (e) => ripple(e.clientX, e.clientY));
+  };
+  if (document.documentElement) install();
+  else document.addEventListener("DOMContentLoaded", install, { once: true });
 })();
 """
 

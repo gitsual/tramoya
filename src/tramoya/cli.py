@@ -16,6 +16,7 @@ from pathlib import Path
 
 from tramoya import __version__
 from tramoya.assembly import assemble_deck, assemble_marks, plan_segments
+from tramoya.assistant import ask, pick_backend, preflight, render_plan, run_plan
 from tramoya.audio import build_loop, mix_argv, render_wav
 from tramoya.captions import burn_argv, trim_plan
 from tramoya.cues import (
@@ -194,6 +195,50 @@ def cmd_tts(args: argparse.Namespace) -> int:
     return 0
 
 
+def _visible_files(limit: int = 60) -> list[str]:
+    files = sorted(
+        str(p) for p in Path().rglob("*")
+        if p.is_file() and not any(part.startswith(".") for part in p.parts)
+    )
+    return files[:limit]
+
+
+def _run_step(argv: list[str]) -> int:
+    print(f"$ tramoya {shlex.join(argv)}", flush=True)
+    return main(argv)
+
+
+def _plan_for(args: argparse.Namespace):
+    backend = pick_backend(args.backend, model=args.model)
+    return ask(backend, args.request, _visible_files())
+
+
+def cmd_ask(args: argparse.Namespace) -> int:
+    print(render_plan(_plan_for(args)))
+    return 0
+
+
+def cmd_do(args: argparse.Namespace) -> int:
+    plan = _plan_for(args)
+    print(render_plan(plan))
+    if not plan.steps:
+        return 1
+    problems = preflight(plan)
+    if problems:
+        print("\nnot running:")
+        for problem in problems:
+            print(f"  {problem}")
+        return 1
+    if not args.yes:
+        answer = input(f"\nRun these {len(plan.steps)} steps? [y/N] ").strip().lower()
+        if answer not in ("y", "yes"):
+            print("nothing run")
+            return 1
+    print()
+    codes = run_plan(plan, runner=_run_step, dry_run=args.dry_run)
+    return codes[-1] if codes else 0
+
+
 # --- parser ---------------------------------------------------------------
 
 
@@ -278,6 +323,21 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--audio-sink", default=None)
     _add_dry_run(p)
     p.set_defaults(fn=cmd_record)
+
+    for name, fn, help_text in (
+        ("ask", cmd_ask, "describe what you want; get the plan of commands, run nothing"),
+        ("do", cmd_do, "describe what you want; confirm the plan, then run it"),
+    ):
+        p = sub.add_parser(name, help=help_text)
+        p.add_argument("request", help='e.g. "make the video from take.mp4 with the English voice"')
+        p.add_argument("--backend", choices=("ollama", "claude"), default=None,
+                       help="default: $TRAMOYA_LLM, else claude when $ANTHROPIC_API_KEY is set, "
+                            "else ollama")
+        p.add_argument("--model", default=None, help="model name; default: $TRAMOYA_LLM_MODEL")
+        if name == "do":
+            p.add_argument("--yes", action="store_true", help="skip the confirmation")
+            _add_dry_run(p)
+        p.set_defaults(fn=fn)
 
     p = sub.add_parser("tts", help="synthesize a narration script with Kokoro")
     p.add_argument("--script", required=True, help="JSON: key -> {lang: text}")

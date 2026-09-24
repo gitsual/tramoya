@@ -1,0 +1,20 @@
+{
+  "scene-welcome": {
+    "en": "This is a small notes app. Nothing fancy: a list, a search box and a button. Let us record a demo of it."
+  },
+  "scene-search": {
+    "en": "Typing in the search box filters the list as you go. Two letters are enough to find the report."
+  },
+  "scene-new-note": {
+    "en": "A new note takes a title, a line of text and a tag. Save it and it lands at the top of the list."
+  },
+  "scene-done": {
+    "en": "Marking a note as done crosses it out and moves it to the Done view, where it can be brought back."
+  },
+  "scene-views": {
+    "en": "The views on the left filter by tag. Work shows only what is pending for work; Home does the same for home."
+  },
+  "scene-closing": {
+    "en": "That is the whole tour. Every scene you just saw was a function, and every cut was made from the marks it wrote."
+  }
+}

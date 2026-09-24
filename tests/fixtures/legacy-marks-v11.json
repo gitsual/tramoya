@@ -2,131 +2,141 @@
   {
     "t": 4.31,
     "clave": "escena-apertura-inicio",
-    "etiqueta": "Una consola, varios proyectos: se elige sobre cuál se trabaja"
+    "etiqueta": "A notebook in the browser: the list of every note"
   },
   {
     "t": 16.16,
     "clave": "escena-apertura-fin",
-    "etiqueta": "Una consola, varios proyectos: se elige sobre cuál se trabaja"
+    "etiqueta": "A notebook in the browser: the list of every note"
   },
   {
     "t": 16.16,
-    "clave": "escena-tablero-inicio",
-    "etiqueta": "El tablero es el Jira real, no una copia"
+    "clave": "escena-busqueda-inicio",
+    "etiqueta": "Search narrows the list as you type"
   },
   {
     "t": 22.85,
-    "clave": "escena-tablero-fin",
-    "etiqueta": "El tablero es el Jira real, no una copia"
+    "clave": "escena-busqueda-fin",
+    "etiqueta": "Search narrows the list as you type"
   },
   {
     "t": 22.85,
-    "clave": "escena-cola-inicio",
-    "etiqueta": "La cola: automática o manual, y el modelo caliente antes de empezar"
+    "clave": "escena-nueva-inicio",
+    "etiqueta": "A new note starts from a blank page"
   },
   {
     "t": 31.27,
-    "clave": "escena-cola-fin",
-    "etiqueta": "La cola: automática o manual, y el modelo caliente antes de empezar"
+    "clave": "escena-nueva-fin",
+    "etiqueta": "A new note starts from a blank page"
   },
   {
     "t": 31.27,
-    "clave": "escena-ejecucion-inicio",
-    "etiqueta": "Una ejecución terminada: cada fase, con su medida o su motivo"
+    "clave": "escena-editor-inicio",
+    "etiqueta": "The editor saves on every keystroke"
   },
   {
     "t": 51.02,
-    "clave": "escena-ejecucion-fin",
-    "etiqueta": "Una ejecución terminada: cada fase, con su medida o su motivo"
+    "clave": "escena-editor-fin",
+    "etiqueta": "The editor saves on every keystroke"
   },
   {
     "t": 51.02,
-    "clave": "escena-fases-inicio",
-    "etiqueta": "Qué se hizo en cada fase, desplegado"
+    "clave": "escena-etiquetas-inicio",
+    "etiqueta": "Tags group notes across the list"
   },
   {
     "t": 68.56,
-    "clave": "escena-fases-fin",
-    "etiqueta": "Qué se hizo en cada fase, desplegado"
+    "clave": "escena-etiquetas-fin",
+    "etiqueta": "Tags group notes across the list"
   },
   {
     "t": 68.56,
-    "clave": "escena-tecnico-inicio",
-    "etiqueta": "El detalle técnico: acciones, feed del modelo y auditoría"
+    "clave": "escena-filtro-inicio",
+    "etiqueta": "One tag, one shorter list"
   },
   {
     "t": 76.49,
-    "clave": "escena-tecnico-fin",
-    "etiqueta": "El detalle técnico: acciones, feed del modelo y auditoría"
+    "clave": "escena-filtro-fin",
+    "etiqueta": "One tag, one shorter list"
   },
   {
     "t": 76.49,
-    "clave": "escena-auditoria-inicio",
-    "etiqueta": "Permitido, denegado, y siempre con motivo"
+    "clave": "escena-archivo-inicio",
+    "etiqueta": "Archiving hides a note without deleting it"
   },
   {
     "t": 84.42,
-    "clave": "escena-auditoria-fin",
-    "etiqueta": "Permitido, denegado, y siempre con motivo"
+    "clave": "escena-archivo-fin",
+    "etiqueta": "Archiving hides a note without deleting it"
   },
   {
     "t": 84.42,
-    "clave": "escena-guardia-inicio",
-    "etiqueta": "Nuevo: si la tarea no pide subir de versión, no se sube"
+    "clave": "escena-sincronizacion-inicio",
+    "etiqueta": "The sync indicator waits for the server"
+  },
+  {
+    "t": 86.0,
+    "clave": "espera-inicio",
+    "etiqueta": "server"
+  },
+  {
+    "t": 96.0,
+    "clave": "espera-fin",
+    "etiqueta": "server"
   },
   {
     "t": 98.5,
-    "clave": "escena-guardia-fin",
-    "etiqueta": "Nuevo: si la tarea no pide subir de versión, no se sube"
+    "clave": "escena-sincronizacion-fin",
+    "etiqueta": "The sync indicator waits for the server"
   },
   {
     "t": 98.5,
-    "clave": "escena-motor-inicio",
-    "etiqueta": "La frontera del código: qué modelo ve el fuente"
+    "clave": "escena-atajos-inicio",
+    "etiqueta": "Keyboard shortcuts for the frequent moves"
   },
   {
     "t": 109.79,
-    "clave": "escena-motor-fin",
-    "etiqueta": "La frontera del código: qué modelo ve el fuente"
+    "clave": "escena-atajos-fin",
+    "etiqueta": "Keyboard shortcuts for the frequent moves"
   },
   {
     "t": 109.79,
-    "clave": "escena-politica-inicio",
-    "etiqueta": "Salvaguardas por proyecto, no sólo globales"
+    "clave": "escena-papelera-inicio",
+    "etiqueta": "The bin keeps deleted notes for a month"
   },
   {
     "t": 123.89,
-    "clave": "escena-politica-fin",
-    "etiqueta": "Salvaguardas por proyecto, no sólo globales"
+    "clave": "escena-papelera-fin",
+    "etiqueta": "The bin keeps deleted notes for a month"
   },
   {
     "t": 123.89,
-    "clave": "escena-reuniones-inicio",
-    "etiqueta": "De la transcripción a Jira, con dos firmas"
+    "clave": "escena-ajustes-inicio",
+    "etiqueta": "Settings: theme, font size, export"
   },
   {
     "t": 133.49,
-    "clave": "escena-reuniones-fin",
-    "etiqueta": "De la transcripción a Jira, con dos firmas"
+    "clave": "escena-ajustes-fin",
+    "etiqueta": "Settings: theme, font size, export"
   },
   {
     "t": 133.49,
-    "clave": "escena-api-inicio",
-    "etiqueta": "La API y las herramientas MCP, documentadas y sin CDN"
+    "clave": "escena-exportar-inicio",
+    "etiqueta": "Export everything as one Markdown file"
   },
   {
     "t": 142.66,
-    "clave": "escena-api-fin",
-    "etiqueta": "La API y las herramientas MCP, documentadas y sin CDN"
+    "clave": "escena-exportar-fin",
+    "etiqueta": "Export everything as one Markdown file"
   },
   {
     "t": 142.66,
     "clave": "escena-cierre-inicio",
-    "etiqueta": "De la incidencia a la pull request, con una persona decidiendo"
+    "etiqueta": "Back to the list"
   },
   {
     "t": 145.69,
     "clave": "escena-cierre-fin",
-    "etiqueta": "De la incidencia a la pull request, con una persona decidiendo"
+    "etiqueta": "Back to the list"
   }
 ]
