@@ -52,7 +52,7 @@ was directed, recorded and assembled with this package. No mock-ups, nothing han
   <img src="assets/gifs/cli.gif" alt="tramoya on the command line: marks table, assemble dry-run, record dry-run" width="100%">
 </p>
 
-<p align="center"><sub>A marks file from a real take becomes a scene table; <code>assemble --dry-run</code> prints the thirty-two
+<p align="center"><sub>A marks file from a real take becomes a scene table; <code>assemble --dry-run</code> prints the twenty-seven
 ffmpeg calls it would make and encodes nothing; <code>record --dry-run</code> shows the recorder argv.</sub></p>
 
 <table>
