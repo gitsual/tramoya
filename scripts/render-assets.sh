@@ -35,8 +35,10 @@ logos() {
   magick -size "${w}x${h}" xc:black -fill white \
     -draw "circle $((w / 2)),$((h / 2)) $((w / 2)),4" "$mask"
   magick -size "${w}x${h}" xc:"#$COLOR_BG" "$medallion" "$mask" -compose Over -composite "$medallion"
-  # Mark: the medallion padded on the palette background.
-  magick "$medallion" -bordercolor "#$COLOR_BG" -border 14% -resize 360x360 assets/logo-mark.png
+  # Mark: the medallion alone, transparent outside the ring (no square corners).
+  # (-border composes with the active operator, so reset it to Over first.)
+  magick "$medallion" "$mask" -alpha off -compose CopyOpacity -composite -compose Over \
+    -bordercolor none -border 6% -resize 360x360 assets/logo-mark.png
   # Logo: the mark beside the wordmark, one line, on the palette background.
   magick "$medallion" -bordercolor "#$COLOR_BG" -border 12% -resize 300x300 \
     \( -background "#$COLOR_BG" -fill "#$COLOR_FG" -font "$font" -pointsize 150 \
