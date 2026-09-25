@@ -39,15 +39,23 @@ logos() {
   # (-border composes with the active operator, so reset it to Over first.)
   magick "$medallion" "$mask" -alpha off -compose CopyOpacity -composite -compose Over \
     -bordercolor none -border 6% -resize 360x360 assets/logo-mark.png
-  # Logo: the mark beside the wordmark, one line, on the palette background.
-  magick "$medallion" -bordercolor "#$COLOR_BG" -border 12% -resize 300x300 \
-    \( -background "#$COLOR_BG" -fill "#$COLOR_FG" -font "$font" -pointsize 150 \
-       -kerning 6 label:tramoya \
-       \( -background "#$COLOR_BG" -fill "#$COLOR_ACCENT" -font "$font" -pointsize 30 \
-          -kerning 8 label:"THE MACHINERY BEHIND THE TAKE" \) \
-       -gravity west -append \) \
-    -gravity center -background "#$COLOR_BG" +smush 32 \
-    -bordercolor "#$COLOR_BG" -border 40x28 assets/logo.png
+  # Logo: the mark beside the wordmark, one per README theme, transparent
+  # background so it sits on GitHub's own page colour (README uses <picture>).
+  local ring; ring=$(mktemp --suffix=.png)
+  magick "$medallion" "$mask" -alpha off -compose CopyOpacity -composite -compose Over \
+    -bordercolor none -border 6% -resize 300x300 "$ring"
+  wordmark() {  # <fg> <accent> <out>
+    magick "$ring" \
+      \( -background none -fill "#$1" -font "$font" -pointsize 150 -kerning 6 label:tramoya \
+         \( -background none -fill "#$2" -font "$font" -pointsize 30 -kerning 8 \
+            label:"THE MACHINERY BEHIND THE TAKE" \) \
+         -gravity west -append \) \
+      -gravity center -background none +smush 32 \
+      -bordercolor none -border 24x16 +repage ""
+  }
+  wordmark "$COLOR_FG" "$COLOR_ACCENT" assets/logo-dark.png
+  wordmark "$COLOR_BG" "$COLOR_BORDER_INACTIVE" assets/logo-light.png
+  rm -f "$ring"
   rm -f "$medallion" "$mask"
 }
 
@@ -125,6 +133,32 @@ walkthrough() {
   rm -rf "$tmp"
 }
 
+filmstrip() {
+  echo "-- filmstrip (one real frame per scene of the demo take, from its marks)"
+  local app=examples/notes-app tmp; tmp=$(mktemp -d)
+  local take=$app/demo/take.webm marks=$app/demo/marks.json font; font=$(font_pick)
+  [[ -f $take && -f $marks ]] || { echo "run the walkthrough first: no take or marks under $app/demo" >&2; return 1; }
+  local i=0
+  while IFS=$'\t' read -r name label mid; do
+    ffmpeg -loglevel error -y -ss "$mid" -i "$take" -frames:v 1 -vf scale=640:-1 "$tmp/f$i.png"
+    magick "$tmp/f$i.png" -bordercolor "#$COLOR_BORDER_INACTIVE" -border 2 \
+      -background "#$COLOR_BG" -fill "#$COLOR_ACCENT" -font "$font" -pointsize 26 -gravity center \
+      \( -size 644x48 xc:"#$COLOR_BG" -fill "#$COLOR_FG" -annotate +0+0 "$label" \
+         -fill "#$COLOR_ACCENT" -pointsize 18 -gravity west -annotate +8+0 "$name" \) -append "$tmp/c$i.png"
+    i=$((i + 1))
+  done < <(python3 - "$marks" <<'PY'
+import json, sys
+marks = json.load(open(sys.argv[1]))
+starts = {m["key"].split(":")[1]: (m["t"], m["label"]) for m in marks if m["key"].endswith(":start") and m["key"].startswith("scene:")}
+ends = {m["key"].split(":")[1]: m["t"] for m in marks if m["key"].endswith(":end") and m["key"].startswith("scene:")}
+for name, (t0, label) in starts.items():
+    print(f"{name}\t{label}\t{(t0 + ends[name]) / 2:.2f}")
+PY
+)
+  magick montage "$tmp"/c*.png -tile 3x -geometry +16+16 -background "#$COLOR_BG" assets/filmstrip.png
+  rm -rf "$tmp"
+}
+
 cli_gif() {
   echo "-- cli gif (real recording of the installed command)"
   record_cast scripts/cli-cast.sh assets/gifs/cli.gif
@@ -134,11 +168,12 @@ cli_gif() {
 case "$what" in
   logos) logos ;;
   pipeline) pipeline ;;
+  filmstrip) filmstrip ;;
   gif) cli_gif ;;
   assistant) assistant_gif ;;
   walkthrough) walkthrough ;;
-  all) logos; pipeline; cli_gif; assistant_gif; walkthrough ;;
-  *) echo "usage: $0 [logos|pipeline|gif|assistant|walkthrough|all]" >&2; exit 2 ;;
+  all) logos; pipeline; filmstrip; cli_gif; assistant_gif; walkthrough ;;
+  *) echo "usage: $0 [logos|pipeline|filmstrip|gif|assistant|walkthrough|all]" >&2; exit 2 ;;
 esac
 echo "-- done"
 du -h assets/*.png assets/gifs/*.gif 2>/dev/null

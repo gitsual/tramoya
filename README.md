@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="tramoya" width="560">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png">
+  <img src="assets/logo-light.png" alt="tramoya: the machinery behind the take" width="560">
+</picture>
 
 <p>
 <em>The <strong>tramoya</strong> is the machinery behind a stage: ropes, battens, trapdoors.<br>
@@ -18,6 +21,7 @@ The audience never sees it. The show runs on time because of it.</em><br>
 
 <a href="#-install"><strong>Install</strong></a> ·
 <a href="#-the-demo"><strong>The demo</strong></a> ·
+<a href="#-scene-by-scene"><strong>Scene by scene</strong></a> ·
 <a href="#-just-say-it"><strong>Just say it</strong></a> ·
 <a href="#-why-this-exists"><strong>Why</strong></a> ·
 <a href="#-what-you-get"><strong>What you get</strong></a> ·
@@ -42,10 +46,24 @@ The audience never sees it. The show runs on time because of it.</em><br>
 <sub>Two kinds of image on this page. The logo and the diagram are <b>rendered</b> by
 <code>scripts/render-assets.sh</code> from the palette in <code>assets/theme.conf</code> (the emblem itself was generated
 once with a diffusion model and is kept under <code>assets/brand/</code>). Everything else is <b>real output</b>: the
-terminal GIFs are <code>asciinema</code> recordings of the installed command, and the demo video was directed, recorded,
-voiced and assembled by this package from the example under <code>examples/</code>. No mock-ups, nothing hand-painted.</sub>
+terminal GIFs are <code>asciinema</code> recordings of the installed command, the demo video was directed, recorded,
+voiced and assembled by this package from the example under <code>examples/</code>, and the filmstrip is six frames cut
+out of that take at the marks it wrote. No mock-ups, nothing hand-painted. tramoya made its own README.</sub>
 
 </div>
+
+---
+
+## ✂️ In three lines
+
+```bash
+pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v0.3.0"
+cd examples/notes-app
+tramoya do "record the notes app demo with director.py, give it an English voice and build the final video"
+```
+
+That is the whole loop: a director script that names its scenes, a plain-language request, and an `.mp4` at the
+end. The rest of this page shows what happened in between, with the real output at every step.
 
 ---
 
@@ -112,6 +130,18 @@ assembled final_video.mp4
 ```
 
 That file is the demo at the top of this section.
+
+## 🎞️ Scene by scene
+
+One frame per scene, cut out of `take.webm` at the midpoint of each `scene:<name>` pair in `marks.json`. The
+caption under each frame is the label the director wrote when the scene started, so the strip is also a check that
+the marks land where the story says they do.
+
+<p align="center">
+  <a href="examples/notes-app/demo/marks.json"><img src="assets/filmstrip.png" alt="Six frames of the notes app demo, one per scene: welcome, search, new-note, done, views, closing" width="100%"></a>
+</p>
+
+<p align="center"><sub>Rendered by <code>scripts/render-assets.sh filmstrip</code> from the take and the marks. Re-record the demo and the strip follows.</sub></p>
 
 ### The same thing by hand
 
@@ -199,9 +229,41 @@ pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.3.0
 pip install "tramoya[tts] @ git+https://github.com/gitsual/tramoya@v0.3.0"          # + Kokoro voice
 ```
 
-The core has **no Python dependencies**. `ffmpeg`, `ffprobe`, `wf-recorder`, `paplay` and `pactl` are
-external binaries, looked up at run time only by the command that needs them. `tramoya ask` / `do` need a running
-Ollama or an Anthropic key, nothing else. Pin the tag: the package is consumed by git URL and the tag is the contract.
+The core has **no Python dependencies**. Pin the tag: the package is consumed by git URL and the tag is the contract.
+
+> [!NOTE]
+> `ffmpeg`, `ffprobe`, `wf-recorder`, `paplay` and `pactl` are external binaries, looked up at run time only by the
+> command that needs them. `assemble`, `deck`, `captions` and `music` need ffmpeg; `record` needs wf-recorder (Wayland
+> only); `direct` needs the `[playwright]` extra plus a Chromium; `tts` needs the `[tts]` extra; `ask` / `do` need a
+> running Ollama or an Anthropic key. Nothing is checked at install time: install what the commands you use need.
+
+<details>
+<summary><b>Arch Linux</b></summary>
+
+```bash
+sudo pacman -S ffmpeg wf-recorder libpulse
+uv run python -m playwright install chromium      # only for direct
+```
+</details>
+
+<details>
+<summary><b>Debian / Ubuntu</b></summary>
+
+```bash
+sudo apt install ffmpeg wf-recorder pulseaudio-utils
+uv run python -m playwright install --with-deps chromium
+```
+</details>
+
+<details>
+<summary><b>macOS</b></summary>
+
+```bash
+brew install ffmpeg
+uv run python -m playwright install chromium
+```
+`record` is Wayland-only; on macOS use `direct` (the browser records itself) or a screen recording of your own plus a cue file.
+</details>
 
 With `uv`, from a checkout:
 
@@ -225,6 +287,16 @@ leaves nothing. Pacing lives in module globals that must be kept in sync by hand
 
 None of that depends on what is being shown. So it lives here, under one name, with tests. A product keeps
 exactly what belongs to the product: its pages, its script, its texts.
+
+| Step | The usual way | What goes wrong | With tramoya |
+|---|---|---|---|
+| Driving the app | A human with a mouse, three takes | A shaky cursor, a missed click, a typo on take three | A director script: scenes are functions, the cursor is drawn and travels legibly, every take is identical |
+| Knowing where scenes start | Notes on paper, or the editor scrubs | Nobody remembers where scene nine began | `marks.json`, flushed after every mark, so even a crashed take has its timeline |
+| The voice | Record yourself, re-record for each edit | Every script change is a new session in front of the mic | One wav per scene from a JSON script; change a line, regenerate one file |
+| Waiting on a backend | Cut it out by hand in an editor | Two minutes of nothing, or a jump cut with no explanation | Any wait over 20 s is compressed to ~4 s with a caption saying how long it really was |
+| Fitting voice to picture | Trim, stretch, guess | The narration ends after the scene did | The last frame freezes until the voice ends; short clips are padded |
+| Trying a change | Render the whole thing again | Minutes per attempt | `--dry-run` prints every ffmpeg call and encodes nothing |
+| Remembering the commands | Read the docs again | You do it once a quarter and forget | `tramoya do "…"`: a plan, a preflight, a confirmation |
 
 **The rule that shapes the package:** every ffmpeg invocation goes through a `Runner`. In `dry_run` mode
 it records the argv and touches nothing. That is what makes a video pipeline testable without paying an
@@ -405,6 +477,21 @@ an extra and skipped cleanly when the extra is absent; anything that talks to a 
 
 ---
 
+## 🚧 Status
+
+`v0.3.0`. The pipeline is used for real demos and every piece on this page is its output, but it is one person's
+tool and the edges show:
+
+- **Linux first.** Screen capture is `wf-recorder`, so `record` is Wayland only. `direct` records inside the browser
+  and works anywhere Playwright does.
+- **Two voices.** Kokoro ships English and Spanish here; `preflight` refuses a plan that asks for another language
+  rather than producing a silent video.
+- **The assistant is only as good as the model.** With `qwen3-coder` locally it gets the three requests above right;
+  a hosted Claude does better on long ones. Either way it only proposes `tramoya` commands, and nothing runs unasked.
+- **No GUI, no cloud, no telemetry.** Files in, files out.
+
+---
+
 ## ✅ Verification
 
 ```bash
@@ -435,7 +522,9 @@ tramoya/
 ├── assets/
 │   ├── theme.conf                      the palette; every rendered asset reads it
 │   ├── brand/emblem-flux.png           the generated emblem the logo is built from
-│   ├── logo.png · logo-mark.png        rendered by scripts/render-assets.sh
+│   ├── logo-dark.png · logo-light.png  rendered by scripts/render-assets.sh, one per README theme
+│   ├── logo-mark.png                   the ring alone, transparent
+│   ├── filmstrip.png                   one real frame per scene, cut from the take at the marks
 │   ├── pipeline.png                    rendered from templates/pipeline.svg.in
 │   ├── gifs/demo.gif                   preview of the demo video
 │   ├── gifs/walkthrough.gif            preview of the walkthrough
@@ -444,7 +533,7 @@ tramoya/
 │   └── video/walkthrough.mp4           one request -> the run -> the result
 ├── templates/pipeline.svg.in           the diagram with @COLOR_X@ tokens
 ├── scripts/
-│   ├── render-assets.sh    logos | pipeline | gif | assistant | walkthrough | all
+│   ├── render-assets.sh    logos | pipeline | filmstrip | gif | assistant | walkthrough | all
 │   ├── cli-cast.sh         what the CLI gif records
 │   ├── assistant-cast.sh   what the assistant gif records (needs Ollama running)
 │   └── walkthrough-cast.sh what the walkthrough records (needs Ollama, Playwright and the tts extra)
