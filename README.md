@@ -216,6 +216,12 @@ the caption for you.
 | `say [seconds]` | Play this scene's narration in the chosen language, or wait `seconds` when there is no clip yet. |
 | `beat <seconds>` | A pause, scaled by `pace`. |
 
+<p align="center">
+  <img src="assets/gifs/init.gif" alt="tramoya init from flags, a DevTools Recorder export imported as a scene, the plan of a profile, and snapshots diff catching a renamed heading" width="100%">
+</p>
+
+<p align="center"><sub>Recorded by <code>scripts/render-assets.sh init</code>: <code>init</code> from flags, <code>import</code> of a recording, the plan, and the snapshot gate failing on a renamed heading.</sub></p>
+
 **Three ways to get the file written.**
 
 | | Command | When |
@@ -654,13 +660,14 @@ tramoya/
 │   ├── pipeline.png                    rendered from templates/pipeline.svg.in
 │   ├── gifs/demo.gif                   preview of the demo video
 │   ├── gifs/walkthrough.gif            preview of the walkthrough
-│   ├── gifs/cli.gif · assistant.gif    asciinema recordings of the installed CLI
+│   ├── gifs/cli.gif · init.gif · assistant.gif   asciinema recordings of the installed CLI
 │   ├── video/notes-demo.mp4            the demo, with narration
 │   └── video/walkthrough.mp4           one request -> the run -> the result
 ├── templates/pipeline.svg.in           the diagram with @COLOR_X@ tokens
 ├── scripts/
 │   ├── render-assets.sh    logos | pipeline | filmstrip | gif | assistant | walkthrough | all
 │   ├── cli-cast.sh         what the CLI gif records
+│   ├── init-cast.sh        what the init gif records (no browser needed)
 │   ├── assistant-cast.sh   what the assistant gif records (needs Ollama running)
 │   └── walkthrough-cast.sh what the walkthrough records (needs Ollama, Playwright and the tts extra)
 ├── pyproject.toml          hatchling, extras playwright / tts / dev, ruff, pytest markers

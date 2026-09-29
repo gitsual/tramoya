@@ -164,16 +164,22 @@ cli_gif() {
   record_cast scripts/cli-cast.sh assets/gifs/cli.gif
 }
 
+init_gif() {
+  echo "-- init gif (init from flags, import a recording, the plan, the snapshot gate)"
+  record_cast scripts/init-cast.sh assets/gifs/init.gif
+}
+
 
 case "$what" in
   logos) logos ;;
+  init) init_gif ;;
   pipeline) pipeline ;;
   filmstrip) filmstrip ;;
   gif) cli_gif ;;
   assistant) assistant_gif ;;
   walkthrough) walkthrough ;;
-  all) logos; pipeline; filmstrip; cli_gif; assistant_gif; walkthrough ;;
-  *) echo "usage: $0 [logos|pipeline|filmstrip|gif|assistant|walkthrough|all]" >&2; exit 2 ;;
+  all) logos; pipeline; filmstrip; cli_gif; init_gif; assistant_gif; walkthrough ;;
+  *) echo "usage: usage: $0 [logos|pipeline|filmstrip|gif|assistant|walkthrough|all] [logos|pipeline|filmstrip|gif|init|assistant|walkthrough|all]" >&2; exit 2 ;;
 esac
 echo "-- done"
 du -h assets/*.png assets/gifs/*.gif 2>/dev/null
