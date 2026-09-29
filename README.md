@@ -14,13 +14,15 @@ The audience never sees it. The show runs on time because of it.</em><br>
 <p>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3D0115?style=for-the-badge&logo=python&logoColor=AAA875">
   <img alt="stdlib core" src="https://img.shields.io/badge/core-zero%20deps-3D0115?style=for-the-badge&labelColor=3D0115&color=E1777D">
-  <img alt="236 tests" src="https://img.shields.io/badge/236%20tests-one%20real%20encode-3D0115?style=for-the-badge&labelColor=3D0115&color=979367">
+  <img alt="294 tests" src="https://img.shields.io/badge/294%20tests-one%20real%20encode-3D0115?style=for-the-badge&labelColor=3D0115&color=979367">
   <img alt="ask and do" src="https://img.shields.io/badge/tramoya%20ask-plain%20English%20in-3D0115?style=for-the-badge&labelColor=3D0115&color=AAA875">
   <img alt="MIT" src="https://img.shields.io/badge/license-MIT-3D0115?style=for-the-badge&labelColor=3D0115&color=731F51">
 </p>
 
 <a href="#-install"><strong>Install</strong></a> ·
 <a href="#-the-demo"><strong>The demo</strong></a> ·
+<a href="#-your-app-in-one-file"><strong>Your app</strong></a> ·
+<a href="#-where-it-earns-its-keep"><strong>Enterprise uses</strong></a> ·
 <a href="#-scene-by-scene"><strong>Scene by scene</strong></a> ·
 <a href="#-just-say-it"><strong>Just say it</strong></a> ·
 <a href="#-why-this-exists"><strong>Why</strong></a> ·
@@ -39,7 +41,7 @@ The audience never sees it. The show runs on time because of it.</em><br>
 <div align="center">
 
 **stage** Playwright · **recorder** wf-recorder or the browser itself · **voice** Kokoro · **cut** ffmpeg · **marks** one JSON file<br>
-**core deps** none · **extras** `[playwright]` `[tts]` · **cli** `tramoya ask | do | marks | assemble | deck | captions | music | cues | record | tts`
+**core deps** none · **extras** `[playwright]` `[tts]` · **cli** `tramoya init | capture | import | login | direct | snapshots | ask | do | marks | assemble | deck | captions | music | cues | record | tts`
 
 <br>
 
@@ -57,13 +59,17 @@ out of that take at the marks it wrote. No mock-ups, nothing hand-painted. tramo
 ## ✂️ In three lines
 
 ```bash
-pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v0.3.0"
-cd examples/notes-app
-tramoya do "record the notes app demo with director.py, give it an English voice and build the final video"
+pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v0.4.0"
+tramoya init my-demo --url http://localhost:3000/ --scene "welcome: The dashboard" --scene "export: Export a report"
+cd my-demo && tramoya capture http://localhost:3000/ --into tramoya.toml && make
 ```
 
-That is the whole loop: a director script that names its scenes, a plain-language request, and an `.mp4` at the
-end. The rest of this page shows what happened in between, with the real output at every step.
+That is the whole loop for **your** app: a few questions write `tramoya.toml`, a real browser records what you
+click and turns it into scenes, and `make` records the take, voices the script and cuts the video. No Python to
+write. The rest of this page shows what happens in between, with the real output at every step.
+
+If you would rather describe than type: `tramoya do "record the notes app demo, give it an English voice and build
+the final video"` works out the commands and asks before running them.
 
 ---
 
@@ -152,7 +158,8 @@ The whole thing lives in [`examples/notes-app/`](examples/notes-app): a self-con
 uv pip install -e ".[dev,playwright,tts]" && uv run python -m playwright install chromium
 
 cd examples/notes-app
-tramoya direct director.py --out out                                        # directs + records (headless) -> take.webm, marks.json
+tramoya direct tramoya.toml --out out      # the six scenes as step lines  -> take.webm, marks.json, snapshots/
+tramoya direct director.py  --out out      # or the same six scenes as Python (see director.py)
 tramoya tts --script script.json --lang en --out-dir out/voices/en          # one wav per scene
 tramoya marks out/marks.json                                                # the scene table
 tramoya assemble --video out/take.webm --marks out/marks.json --voice-dir out/voices/en --out out/demo.mp4
@@ -161,6 +168,107 @@ tramoya assemble --video out/take.webm --marks out/marks.json --voice-dir out/vo
 `--rehearse` runs the same choreography in a few seconds without recording, and `--pace 0.7` slows the whole
 take down. The director is what a product would write: scenes are functions, and every scene gets the stage and a
 `say` callback that plays that scene's clip (or waits its length when the clip is missing).
+
+---
+
+## 🧭 Your app in one file
+
+A demo of your own app is a `tramoya.toml`: where the app is, how to reach it, and the scenes. No director script
+unless you want one.
+
+```toml
+[app]
+name = "Notes"
+launch = "python -m http.server 8770 --bind 127.0.0.1"   # optional: tramoya starts it and waits for `url`
+url = "http://127.0.0.1:8770/index.html"
+viewport = [1280, 720]
+# storage_state = ".tramoya/auth.json"                     # a saved session for demos behind a login
+
+[demo]
+languages = ["en", "es"]
+pace = 1.0
+
+[[scene]]
+name = "search"
+label = "Search filters as you type"
+steps = ["type #search | re", "say 5", "point .note .title", "beat 1", "clear #search"]
+
+[scene.narration]
+en = "Typing in the search box filters the list as you go."
+es = "Al escribir en el cuadro de búsqueda la lista se filtra al momento."
+```
+
+```bash
+tramoya direct tramoya.toml --out out --dry-run     # the plan, scene by scene, nothing opens
+tramoya direct tramoya.toml --out out               # take.webm · marks.json · script.json · snapshots/<scene>.txt
+tramoya direct tramoya.toml --out out --url https://staging.example.com/   # same scenes, another deployment
+```
+
+**Steps are one line each.** Eleven verbs cover a demo; the stage does the cursor travel, the click ripple and
+the caption for you.
+
+| Step | Does |
+|---|---|
+| `click <selector>` · `click_text <text>` | Move the cursor there, ripple, click. Selectors are Playwright's: CSS, `text=`, `role=button[name="Save"]`. |
+| `type <selector> \| <text>` · `select <selector> \| <value>` · `clear <selector>` | Fill, pick an option, empty a field (and fire `input`). |
+| `point <selector>` | Scroll it into view and rest the cursor on it. |
+| `scroll <px>` · `press <key>` · `goto <path>` | The obvious; `goto` is relative to the app's URL. |
+| `say [seconds]` | Play this scene's narration in the chosen language, or wait `seconds` when there is no clip yet. |
+| `beat <seconds>` | A pause, scaled by `pace`. |
+
+**Three ways to get the file written.**
+
+| | Command | When |
+|---|---|---|
+| **Ask me** | `tramoya init <dir>` | A short interview (every question has a flag, so it also runs in CI with `--no-interactive`). Writes `tramoya.toml`, `script.json` with one empty narration per scene and language, and a three-target `Makefile`. |
+| **Watch me** | `tramoya capture <url> --into tramoya.toml` | Opens a real browser through `playwright codegen`; what you click becomes step lines, one scene per page you navigate to. |
+| **Import** | `tramoya import flow.json --into tramoya.toml` | The same from a Chrome **DevTools Recorder** export or a `playwright codegen` Python file you already have. |
+
+**Behind a login.** `tramoya login <url> --out .tramoya/auth.json` opens a browser, you sign in, you press
+Enter, and the cookies and local storage are saved as a Playwright session file. The profile points at it with
+`storage_state`; the password never touches tramoya, a file, or a prompt. Add `.tramoya/` to `.gitignore`.
+
+**The assistant knows the profile.** With a `tramoya.toml` in the folder, `tramoya ask` and `tramoya do` read
+it, so *"record the demo in Spanish and build the video"* becomes `direct tramoya.toml`, `tts --lang es`,
+`assemble` with the right files, and preflight already knows what each step will write.
+
+**A snapshot per scene, so CI notices.** Every `direct` run writes `snapshots/<scene>.txt`: the page's
+accessibility tree at the end of the scene, as Playwright renders it.
+
+```
+- banner:
+  - heading "Notes" [level=1]
+  - textbox "Search notes"
+  - button "New note"
+- main:
+  - article:
+    - text: Quarterly report Draft the numbers before Thursday work
+    - button "Done"
+```
+
+Commit the approved set and add one line to CI: `tramoya snapshots diff approved/ out/snapshots`. A renamed
+button, a missing note, a scene that never ran, each shows as a unified diff and a non-zero exit, before anyone
+publishes a video of the wrong build. This repository does exactly that for its own example on every push.
+
+---
+
+## 🏢 Where it earns its keep
+
+Screen-recording tools make a video of what someone did once. tramoya makes a video of what the **build does now**,
+from a file in the repository, on every run. That difference is worth money in a few specific places.
+[`examples/`](examples/README.md) has a runnable profile and a copy-ready workflow for each.
+
+| Use | The problem it fixes | What tramoya adds | Example |
+|---|---|---|---|
+| **Validation evidence** in regulated QA | Guidance such as the FDA's Computer Software Assurance draft accepts a recording of the run as objective evidence instead of a screenshot per step, but only if the recording is of the build under test. | One scene per test step, labelled with its id; the accessibility snapshot of each step diffed against the approved set; take, marks and snapshots kept as the evidence bundle. Re-run, never edited. | [`validation-evidence/`](examples/validation-evidence) |
+| **Release-note video** per tag | Changelogs are already generated in CI; the video is the artifact nobody has time to record, so it ships late or not at all. | A workflow on `v*` tags records the changelog scenes against the tagged build and attaches one video per language to the release. | [`release-notes/`](examples/release-notes) |
+| **Support knowledge base** that does not rot | Every UI change silently outdates a help video, and the first person to notice is a customer. Vendors in this space report fewer support calls once a video KB exists. | Short "how do I" scenes regenerated nightly against `main`. When the UI changes, the video changes. | [`support-kb/`](examples/support-kb) |
+| **Localized onboarding** | Re-shooting a demo per language is where the cost of training video goes; vendors' headline savings come from not doing it. | One take, one `tts` + `assemble` per language, the cut adapts to each voice. English and Spanish ship here. | [`localized-onboarding/`](examples/localized-onboarding) |
+| **Sales demos that stay true** | Recorded demos drift from the product between releases. | Re-record on each release from the same profile. tramoya wins the "always truthful" slice only; interactive demo tools still own click-through and analytics. | any profile with `--url` at staging |
+
+Sources and the honesty notes behind this table (which figures are vendor-published, what could not be
+confirmed) are in
+[`docs/research/2026-09-28-target-app-interactive-setup-enterprise-value.md`](docs/research/2026-09-28-target-app-interactive-setup-enterprise-value.md).
 
 ---
 
@@ -224,9 +332,9 @@ fits each voice clip and writes <code>final-demo.mp4</code>. With <code>--yes</c
 ## 📥 Install
 
 ```bash
-pip install "tramoya @ git+https://github.com/gitsual/tramoya@v0.3.0"
-pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.3.0"   # + Stage
-pip install "tramoya[tts] @ git+https://github.com/gitsual/tramoya@v0.3.0"          # + Kokoro voice
+pip install "tramoya @ git+https://github.com/gitsual/tramoya@v0.4.0"
+pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.4.0"   # + Stage
+pip install "tramoya[tts] @ git+https://github.com/gitsual/tramoya@v0.4.0"          # + Kokoro voice
 ```
 
 The core has **no Python dependencies**. Pin the tag: the package is consumed by git URL and the tag is the contract.
@@ -312,6 +420,8 @@ encode per test, and what makes `tramoya do --dry-run` possible.
 | **Marks** | A tiny timeline (`scene:<name>:start\|end`, `wait:start\|end`) flushed to disk after **every** mark, so a crashed take still leaves its marks. Loads older Spanish-keyed files unchanged. | `marks.py` |
 | **Pacing** | One object for tempo, language and rehearsal mode instead of three globals. `pace` scales every sleep and timeout; `rehearse` runs the whole choreography in seconds. | `pacing.py` |
 | **Narrator** | Plays one voice clip per scene through an injectable player, falls back to a timed pause when the clip is missing, and never blocks the take on a missing file. | `narration.py` |
+| **Profile** | `tramoya.toml`: app, reach (`url` / `launch` / `storage_state`), languages and scenes written as one-line steps. The generic director runs it, writes marks, script and one accessibility snapshot per scene. | `profile.py` `director.py` `snapshots.py` |
+| **Wizard & recorders** | `init` interviews you (or takes flags in CI) and scaffolds the project; `capture` and `import` turn a real browser session, a DevTools Recorder export or a `playwright codegen` file into scenes. | `wizard.py` `recording.py` |
 | **Stage** | A Playwright page with a **visible cursor**, a click ripple and a caption band injected into any web app, plus legible mouse travel, a scene registry with decorators, and optional in-browser video recording. | `stage.py` |
 | **Recorder** | Drives `wf-recorder` and writes the **offset sidecar**: the recorder's start and the director's start read from `/proc/<pid>/stat`, not guessed. `assemble` picks it up by itself. | `record.py` |
 | **Cues** | Single-take mode: a `seconds\|text` cue file and a `k=v` meta file become marks or burn-ready ASS subtitles, recovering the pre-roll from the take's own duration. | `cues.py` |
@@ -460,7 +570,12 @@ src/tramoya/
 ├── i18n.py        Messages · t(key, lang, **kw)
 ├── narration.py   Script · DeckScript · Narrator · wav_seconds
 ├── console.py     banner · step · note · ok · warn · fail · sim
-├── stage.py       OVERLAY_JS · Stage · SceneRegistry · open_stage · AppProcess · http_ready   [playwright]
+├── stage.py       OVERLAY_JS · Stage(+snapshot) · SceneRegistry · open_stage · AppProcess · http_ready [playwright]
+├── profile.py     Profile · Scene · load_profile · dump_profile · VERBS · parse_step · run_steps
+├── director.py    run_profile · describe · launch_app                                      [playwright]
+├── snapshots.py   write_snapshot · read_snapshots · diff_snapshots
+├── wizard.py      interview · ScriptedAnswers · TtyAnswers · FlagAnswers · scaffold
+├── recording.py   scenes_from_devtools · scenes_from_codegen · scenes_from_file
 ├── record.py      Recorder · wf_recorder_argv · offset_sidecar · read_sidecar · NullSink
 ├── cues.py        parse_cues_with_total · parse_meta · offset_from_duration · cues_to_marks · cues_to_ass
 ├── tts.py         synthesize · synthesize_script                                              [tts]
@@ -468,10 +583,10 @@ src/tramoya/
 ├── assembly.py    assemble_marks · plan_segments · assemble_deck · Segment
 ├── captions.py    split · wrap · page_cues · render_srt · render_ass · burn_argv · trim_plan
 ├── audio.py       build_loop · render_wav · duck_filter · solo_filter · mix_argv
-└── cli.py         tramoya ask | do | direct | marks | assemble | deck | captions | music | cues | record | tts
+└── cli.py         tramoya init | capture | import | login | direct | snapshots | ask | do | marks | assemble | …
 ```
 
-Fifteen modules. Anything that shells out is behind `Runner`; anything that needs Playwright or Kokoro is behind
+Twenty modules. Anything that shells out is behind `Runner`; anything that needs Playwright or Kokoro is behind
 an extra and skipped cleanly when the extra is absent; anything that talks to a model is behind an injectable
 `post` function, so the assistant's tests never open a socket.
 
@@ -479,7 +594,7 @@ an extra and skipped cleanly when the extra is absent; anything that talks to a 
 
 ## 🚧 Status
 
-`v0.3.0`. The pipeline is used for real demos and every piece on this page is its output, but it is one person's
+`v0.4.0`. The pipeline is used for real demos and every piece on this page is its output, but it is one person's
 tool and the edges show:
 
 - **Linux first.** Screen capture is `wf-recorder`, so `record` is Wayland only. `direct` records inside the browser
@@ -488,6 +603,8 @@ tool and the edges show:
   rather than producing a silent video.
 - **The assistant is only as good as the model.** With `qwen3-coder` locally it gets the three requests above right;
   a hosted Claude does better on long ones. Either way it only proposes `tramoya` commands, and nothing runs unasked.
+- **Selectors are yours.** `capture` keeps what the recorder chose (CSS first, then visible text, then a role);
+  when the app's markup changes, the step fails loudly and the snapshot diff says where.
 - **No GUI, no cloud, no telemetry.** Files in, files out.
 
 ---
@@ -496,7 +613,7 @@ tool and the edges show:
 
 ```bash
 uv run ruff check src tests examples
-uv run python -m pytest -q             # 236 fast tests, nothing is encoded, no network
+uv run python -m pytest -q             # 294 fast tests, nothing is encoded, no network
 uv run python -m pytest -q -m slow     # 1 test: three real seconds through the whole pipeline
 ```
 
@@ -506,7 +623,9 @@ voice clip longer than the scene, and checks the output duration: the freeze hap
 typo in an `ffprobe` flag that no dry run could see, and the one that taught us `loudnorm` returns NaN on digital
 silence, so the fixture is a quiet tone.
 
-CI runs the fast suite on Python 3.11 and 3.12, with and without the `playwright` extra
+CI runs the fast suite on Python 3.11 and 3.12, with and without the `playwright` extra, and on the
+`playwright` leg it also runs `examples/notes-app/tramoya.toml` for real (rehearsal, headless Chromium) and diffs
+the accessibility snapshots against the approved set in `examples/notes-app/snapshots/`
 (`.github/workflows/ci.yml`).
 
 ---
@@ -516,8 +635,15 @@ CI runs the fast suite on Python 3.11 and 3.12, with and without the `playwright
 ```
 tramoya/
 ├── src/tramoya/            the package (see the module map)
-├── examples/notes-app/     index.html · script.json · director.py: the demo above, end to end
-├── tests/                  one file per module + test_cli.py + test_slow_pipeline.py
+├── examples/
+│   ├── README.md               what each example shows and how it runs
+│   ├── notes-app/              index.html · tramoya.toml · snapshots/ · script.json · director.py: the demo above
+│   ├── release-notes/          one scene per changelog entry, en+es, workflow on v* tags
+│   ├── validation-evidence/    one scene per test step, approved snapshots, evidence bundle workflow
+│   ├── support-kb/             three how-do-I answers, nightly workflow
+│   └── localized-onboarding/   one take, one video per language, Makefile
+├── docs/research/          the research note behind the profile, the wizard and the enterprise table
+├── tests/                  one file per module + test_cli.py + test_examples.py + test_slow_pipeline.py
 │   └── fixtures/           legacy-marks-v11.json: thirteen scenes in the older key format
 ├── assets/
 │   ├── theme.conf                      the palette; every rendered asset reads it
@@ -549,7 +675,9 @@ tramoya/
 |---|---|
 | This README | The whole flow and the module map. |
 | `tramoya <cmd> --help` | Every flag; the parser is the documentation of record. |
-| `examples/notes-app/` | A complete director, script and page you can copy and rename. |
+| `examples/notes-app/` | The demo as a profile (`tramoya.toml`) and as a director script; copy either and rename. |
+| `examples/*/` | Release notes, validation evidence, support KB, localized onboarding: a profile and a workflow each. |
+| `docs/research/` | Why the profile looks like it does, and the sources behind the enterprise table. |
 | Module docstrings | Each file opens with what it owns and why. |
 
 ---
