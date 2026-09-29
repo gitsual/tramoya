@@ -75,14 +75,14 @@ the final video"` works out the commands and asks before running them.
 
 ## 🎬 The demo
 
-A one-page notes app, six scenes, one minute. Every frame below was produced by the pipeline: the director drove
+A one-page notes app, six scenes, under a minute. Every frame below was produced by the pipeline: the profile drove
 the page, the browser recorded itself, Kokoro read the script, `assemble` cut it per scene and fitted the voice.
 
 <p align="center">
   <a href="assets/video/notes-demo.mp4"><img src="assets/gifs/demo.gif" alt="The notes app demo: cursor travels, clicks with a ripple, captions change per scene" width="720"></a>
 </p>
 
-<p align="center"><sub>Preview GIF (8 fps, no sound). <a href="assets/video/notes-demo.mp4"><b>Watch the full video with narration</b></a> (59 s, h264 + aac).</sub></p>
+<p align="center"><sub>Preview GIF (8 fps, no sound). <a href="assets/video/notes-demo.mp4"><b>Watch the full video with narration</b></a> (48 s, h264 + aac).</sub></p>
 
 ### How it was made, start to finish
 
@@ -95,47 +95,50 @@ recording of the installed command, and the video at the end is the file it prod
 
 <p align="center"><sub><a href="assets/video/walkthrough.mp4"><b>Watch the walkthrough</b></a> (73 s, h264 + aac): the request, the run, and the result.</sub></p>
 
-**Before.** The folder holds exactly three files, and none of them is a video:
+**Before.** The folder holds sources only, and none of them is a video:
 
 ```
 examples/notes-app/
-├── index.html    the app under demo: a one-page notes list, no build step
-├── script.json   what the voice says, one entry per scene, per language
-└── director.py   the choreography: six scene functions built on tramoya.stage
+├── index.html     the app under demo: a one-page notes list, no build step
+├── tramoya.toml   the profile: where the app lives and six scenes as one-line steps
+├── script.json    what the voice says, one entry per scene, per language
+├── snapshots/     the approved accessibility snapshot of each scene
+└── director.py    the same six scenes written as Python, for when a step is not enough
 ```
 
 **During.** One request, and the assistant turns it into a plan, checks it, and runs it step by step:
 
 ```
-$ tramoya do "record the notes app demo with director.py, give it an English voice and build the final video" --yes
+$ tramoya do "record the notes app demo, give it an English voice and build the final video" --yes
 
 1. Record the demo
-   $ tramoya direct director.py --out demo
-2. Generate English voiceover
-   $ tramoya tts --script script.json --lang en --out-dir voices
+   $ tramoya direct tramoya.toml --out demo --lang en
+2. Generate voice clips
+   $ tramoya tts --script demo/script.json --lang en --out-dir voices
 3. Assemble final video
-   $ tramoya assemble --video demo/take.webm --marks demo/marks.json --voice-dir voices --out final_video.mp4
+   $ tramoya assemble --video demo/take.webm --marks demo/marks.json --voice-dir voices --out final-demo.mp4
 ```
 
-`direct` launches the director: a headless Chromium opens `index.html`, the injected cursor travels and clicks,
-the caption band changes per scene, the browser records itself and the director writes `marks.json` as it goes.
-`tts` reads `script.json` through Kokoro, one wav per scene. `assemble` cuts the take at the marks, fits each
+Nobody told it to use the profile: it found `tramoya.toml` in the folder. `direct` runs it: a headless Chromium
+opens `index.html`, the injected cursor travels and clicks, the caption band changes per scene, the browser
+records itself, and the director writes `marks.json`, the script and one snapshot per scene as it goes.
+`tts` reads that script through Kokoro, one wav per scene. `assemble` cuts the take at the marks, fits each
 scene to its clip and concatenates.
 
-**After.** The folder now has the take, the marks, six voice clips and `final_video.mp4`, and the terminal shows
+**After.** The folder now has the take, the marks, six voice clips and `final-demo.mp4`, and the terminal shows
 the per-scene table `assemble` printed:
 
 ```
-scene welcome:    7.6s raw ->  7.8s final
-scene search:     7.0s raw ->  7.0s final
-scene new-note:  11.1s raw -> 11.2s final
-scene done:       7.1s raw ->  7.1s final
-scene views:      8.4s raw ->  8.4s final
-scene closing:    7.3s raw ->  7.3s final
-assembled final_video.mp4
+scene welcome:    7.6s raw ->    7.8s final
+scene search:     6.7s raw ->    6.7s final
+scene new-note:  10.8s raw ->   10.8s final
+scene done:       7.1s raw ->    7.1s final
+scene views:      8.4s raw ->    8.4s final
+scene closing:    7.3s raw ->    7.5s final
+assembled final-demo.mp4
 ```
 
-That file is the demo at the top of this section.
+The demo at the top of this section is the same profile through the same three commands.
 
 ## 🎞️ Scene by scene
 
@@ -144,7 +147,7 @@ caption under each frame is the label the director wrote when the scene started,
 the marks land where the story says they do.
 
 <p align="center">
-  <a href="examples/notes-app/demo/marks.json"><img src="assets/filmstrip.png" alt="Six frames of the notes app demo, one per scene: welcome, search, new-note, done, views, closing" width="100%"></a>
+  <a href="examples/notes-app/tramoya.toml"><img src="assets/filmstrip.png" alt="Six frames of the notes app demo, one per scene: welcome, search, new-note, done, views, closing" width="100%"></a>
 </p>
 
 <p align="center"><sub>Rendered by <code>scripts/render-assets.sh filmstrip</code> from the take and the marks. Re-record the demo and the strip follows.</sub></p>
