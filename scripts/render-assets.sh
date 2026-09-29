@@ -92,7 +92,10 @@ record_cast() {  # <script> <gif> [<dir>]
 
 assistant_gif() {
   echo "-- assistant gif (real session against a local Ollama model)"
-  record_cast scripts/assistant-cast.sh assets/gifs/assistant.gif examples/notes-app/out
+  local demo=examples/notes-app/demo
+  [[ -f $demo/notes-demo.mp4 ]] || { echo "run the demo first: no video under $demo" >&2; return 1; }
+  cp "$demo/notes-demo.mp4" "$demo/demo.mp4"
+  record_cast scripts/assistant-cast.sh assets/gifs/assistant.gif "$demo"
 }
 
 card() {  # <text> <png>
@@ -116,7 +119,7 @@ walkthrough() {
   echo "-- walkthrough video (one request, the real run, the result)"
   local app=examples/notes-app tmp; tmp=$(mktemp -d)
   # Start from the three sources only, so the assistant sees a clean folder.
-  fd -I --min-depth 1 . "$app" -E index.html -E script.json -E director.py -X rm -rf
+  fd -I --min-depth 1 . "$app" -E index.html -E script.json -E director.py -E tramoya.toml -E snapshots -X rm -rf
   record_cast scripts/walkthrough-cast.sh "$tmp/terminal.gif" "$app"
   local result; result=$(fd -I -e mp4 . "$app" -x stat -c '%Y %n' | sort -n | tail -1 | cut -d' ' -f2-)
   [[ -n $result ]] || { echo "no video came out of the run" >&2; return 1; }
@@ -133,11 +136,26 @@ walkthrough() {
   rm -rf "$tmp"
 }
 
+demo() {
+  echo "-- demo video (the profile directed, voiced and assembled by the package itself)"
+  local app=examples/notes-app runner="uv run --project $PWD"
+  [[ -n ${TRAMOYA_BIN:-} ]] && runner="env PATH=$TRAMOYA_BIN:$PATH"
+  rm -rf "$app/demo"
+  (cd "$app" && $runner tramoya direct tramoya.toml --out demo \
+    && $runner tramoya tts --script demo/script.json --lang en --out-dir demo/voices/en \
+    && $runner tramoya assemble --video demo/take.webm --marks demo/marks.json \
+         --voice-dir demo/voices/en --out demo/notes-demo.mp4 --lang en)
+  cp "$app/demo/notes-demo.mp4" assets/video/notes-demo.mp4
+  ffmpeg -loglevel error -y -i assets/video/notes-demo.mp4 \
+    -vf "fps=8,scale=720:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer" \
+    assets/gifs/demo.gif
+}
+
 filmstrip() {
   echo "-- filmstrip (one real frame per scene of the demo take, from its marks)"
   local app=examples/notes-app tmp; tmp=$(mktemp -d)
   local take=$app/demo/take.webm marks=$app/demo/marks.json font; font=$(font_pick)
-  [[ -f $take && -f $marks ]] || { echo "run the walkthrough first: no take or marks under $app/demo" >&2; return 1; }
+  [[ -f $take && -f $marks ]] || { echo "run the demo first: no take or marks under $app/demo" >&2; return 1; }
   local i=0
   while IFS=$'\t' read -r name label mid; do
     ffmpeg -loglevel error -y -ss "$mid" -i "$take" -frames:v 1 -vf scale=640:-1 "$tmp/f$i.png"
@@ -174,12 +192,13 @@ case "$what" in
   logos) logos ;;
   init) init_gif ;;
   pipeline) pipeline ;;
+  demo) demo ;;
   filmstrip) filmstrip ;;
   gif) cli_gif ;;
   assistant) assistant_gif ;;
   walkthrough) walkthrough ;;
-  all) logos; pipeline; filmstrip; cli_gif; init_gif; assistant_gif; walkthrough ;;
-  *) echo "usage: usage: $0 [logos|pipeline|filmstrip|gif|assistant|walkthrough|all] [logos|pipeline|filmstrip|gif|init|assistant|walkthrough|all]" >&2; exit 2 ;;
+  all) logos; pipeline; demo; filmstrip; cli_gif; init_gif; assistant_gif; walkthrough ;;
+  *) echo "usage: $0 [logos|pipeline|demo|filmstrip|gif|init|assistant|walkthrough|all]" >&2; exit 2 ;;
 esac
 echo "-- done"
 du -h assets/*.png assets/gifs/*.gif 2>/dev/null
