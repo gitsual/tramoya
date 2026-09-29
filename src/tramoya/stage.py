@@ -149,6 +149,15 @@ class Stage:
     def scroll(self, dy: int, dx: int = 0) -> None:
         self.page.mouse.wheel(dx, dy)
 
+    def snapshot(self, selector: str = "body") -> str:
+        """The page's accessibility tree as text (roles and names, no pixels):
+        what `tramoya snapshots diff` compares between two runs. A page double
+        without `aria_snapshot` yields an empty snapshot rather than an error."""
+        try:
+            return str(self.page.locator(selector).aria_snapshot())
+        except Exception:  # noqa: BLE001 -- a double or an old playwright: no snapshot
+            return ""
+
     def read(self, selector: str, timeout: int = 5000) -> str:
         """Read an element's text, or an empty string if it never appears."""
         locator = self.page.locator(selector).first
@@ -287,9 +296,12 @@ def open_stage(
     video_dir: Path | None = None,
     viewport: tuple[int, int] = (1600, 900),
     headless: bool = True,
+    storage_state: str | Path | None = None,
 ) -> Iterator[Stage]:
     """Open a browser, install the overlay before any app script runs, and
-    yield a `Stage` bound to the resulting page.
+    yield a `Stage` bound to the resulting page. `storage_state` is a
+    Playwright session file (cookies and local storage) saved by
+    `tramoya login`, so a demo behind a sign-in never sees a password.
 
     playwright is imported lazily here -- this is the only function in the
     module that touches it -- so importing `tramoya.stage` never fails when
@@ -307,6 +319,8 @@ def open_stage(
     if video_dir is not None:
         record_kwargs["record_video_dir"] = str(video_dir)
         record_kwargs["record_video_size"] = {"width": viewport[0], "height": viewport[1]}
+    if storage_state is not None:
+        record_kwargs["storage_state"] = str(storage_state)
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=headless)

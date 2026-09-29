@@ -440,3 +440,23 @@ def test_overlay_installs_when_page_has_a_body() -> None:
         assert page.evaluate("document.getElementById('tramoya-caption').textContent") == "scene one"
         assert errors == []
         browser.close()
+
+
+def test_snapshot_reads_the_aria_tree_and_tolerates_doubles_without_it() -> None:
+    class Loc:
+        first = None
+
+        def aria_snapshot(self) -> str:
+            return '- heading "Notes"'
+
+    class Page:
+        def locator(self, sel: str) -> Loc:
+            return Loc()
+
+    stage = Stage(Page(), Pacing(pace=1.0, rehearse=True, lang="en"), Marks())
+    assert stage.snapshot() == '- heading "Notes"'
+
+    class Bare:
+        pass
+
+    assert Stage(Bare(), Pacing(pace=1.0, rehearse=True, lang="en"), Marks()).snapshot() == ""
