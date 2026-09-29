@@ -1,0 +1,45 @@
+# Localized onboarding: one take, one voice per language. The scenes are
+# recorded once; `tts` and `assemble` run once per language, and the cut
+# adapts to each voice (the last frame freezes while a longer narration
+# finishes). Kokoro ships English and Spanish here; add a language by
+# adding its narration and a voice in `tts.py`.
+
+[app]
+name = "Notes onboarding"
+launch = "python -m http.server 8774 --bind 127.0.0.1 --directory ../notes-app"
+url = "http://127.0.0.1:8774/index.html"
+viewport = [1280, 720]
+
+[demo]
+languages = ["en", "es"]
+pace = 1.0
+
+[[scene]]
+name = "welcome"
+label = "Welcome"
+steps = ["point h1", "say 5", "beat 1"]
+
+[scene.narration]
+en = "Welcome to Notes. This short tour shows the three things you will do every day."
+es = "Bienvenido a Notes. Este breve recorrido muestra las tres cosas que harás cada día."
+
+[[scene]]
+name = "your-first-note"
+label = "Your first note"
+steps = ["click_text New note", "beat 0.6", "type #title | My first note",
+         "type #text | Notes takes a title, a line and a tag", "select #tag | work",
+         "say 5", "click #save", "beat 1"]
+
+[scene.narration]
+en = "Press New note. A title, a line of text and a tag are all it takes. Save, and it is on the list."
+es = "Pulsa Nueva nota. Basta con un título, una línea de texto y una etiqueta. Guarda, y ya está en la lista."
+
+[[scene]]
+name = "finding-things"
+label = "Finding things"
+steps = ["type #search | first", "say 4", "beat 0.5", "clear #search", "click_text Work",
+         "beat 1", "click_text All notes"]
+
+[scene.narration]
+en = "Search finds notes by title or text as you type, and the views on the left filter by tag."
+es = "La búsqueda encuentra notas por título o texto mientras escribes, y las vistas de la izquierda filtran por etiqueta."

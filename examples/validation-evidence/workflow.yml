@@ -1,0 +1,28 @@
+# Copy to .github/workflows/validation-evidence.yml. Runs the test-step
+# scenes against the build, fails if any accessibility snapshot differs from
+# the approved set, and keeps take + marks + snapshots as the evidence bundle.
+name: validation evidence
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv venv && uv pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.4.0"
+      - run: uv run playwright install --with-deps chromium
+      - working-directory: examples/validation-evidence
+        run: |
+          uv run tramoya direct tramoya.toml --out out --rehearse
+          uv run tramoya snapshots diff snapshots out/snapshots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidence-${{ github.sha }}
+          path: |
+            examples/validation-evidence/out/take.webm
+            examples/validation-evidence/out/marks.json
+            examples/validation-evidence/out/snapshots

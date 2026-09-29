@@ -1,0 +1,56 @@
+# Release-note video per tag. One scene per changelog entry, re-voiced in two
+# languages from the same take. The workflow next to this file runs it on
+# every `v*` tag and attaches the videos to the GitHub release.
+#
+# The app under demo is the notes app one folder up; replace `launch` and
+# `url` with your own build (or pass --url on the command line to point the
+# same scenes at a staging deployment).
+
+[app]
+name = "Notes 1.4"
+launch = "python -m http.server 8771 --bind 127.0.0.1 --directory ../notes-app"
+url = "http://127.0.0.1:8771/index.html"
+viewport = [1280, 720]
+
+[demo]
+languages = ["en", "es"]
+pace = 1.0
+
+[[scene]]
+name = "whats-new"
+label = "What is new in 1.4"
+steps = ["point h1", "say 5", "beat 1"]
+
+[scene.narration]
+en = "Notes 1.4 is out. Three changes this release: search as you type, tags on every note, and a Done view."
+es = "Notes 1.4 ya está disponible. Tres cambios en esta versión: búsqueda al escribir, etiquetas en cada nota y una vista de completadas."
+
+[[scene]]
+name = "search-as-you-type"
+label = "Search as you type"
+steps = ["type #search | re", "say 4", "point .note .title", "beat 1", "clear #search"]
+
+[scene.narration]
+en = "The search box now filters the list on every keystroke. No Enter, no reload."
+es = "El cuadro de búsqueda ahora filtra la lista con cada tecla. Sin Intro, sin recargar."
+
+[[scene]]
+name = "tags"
+label = "Tags on every note"
+steps = ["click_text New note", "beat 0.6", "type #title | Water the plants",
+         "type #text | Balcony first", "select #tag | home", "point #tag", "say 4",
+         "click #save", "beat 1"]
+
+[scene.narration]
+en = "Every note carries a tag. Pick one when you create the note and the views on the left use it."
+es = "Cada nota lleva una etiqueta. Elige una al crear la nota y las vistas de la izquierda la usan."
+
+[[scene]]
+name = "done-view"
+label = "The Done view"
+steps = ["click button[data-toggle='1']", "beat 0.6", "click_text Done", "say 4", "beat 1",
+         "click_text All notes"]
+
+[scene.narration]
+en = "Marking a note as done moves it to the new Done view, where it can be brought back with one click."
+es = "Al marcar una nota como completada pasa a la nueva vista de completadas, desde donde se recupera con un clic."

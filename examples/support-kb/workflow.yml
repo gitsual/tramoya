@@ -1,0 +1,27 @@
+# Copy to .github/workflows/support-kb.yml. Every night, regenerate the
+# how-do-I videos against the current main and publish them where the help
+# centre reads them (here: a build artifact; swap the last step for your CDN).
+name: support kb
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+jobs:
+  videos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv venv && uv pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v0.4.0"
+      - run: uv run playwright install --with-deps chromium
+      - run: sudo apt-get install -y ffmpeg
+      - working-directory: examples/support-kb
+        run: |
+          uv run tramoya direct tramoya.toml --out out
+          uv run tramoya tts --script out/script.json --lang en --out-dir out/voices/en
+          uv run tramoya assemble --video out/take.webm --marks out/marks.json \
+            --voice-dir out/voices/en --out out/help-en.mp4 --lang en
+      - uses: actions/upload-artifact@v4
+        with:
+          name: support-kb-videos
+          path: examples/support-kb/out/help-en.mp4

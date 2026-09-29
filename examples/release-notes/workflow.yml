@@ -1,0 +1,27 @@
+# Copy to .github/workflows/release-video.yml in the repository of the app.
+# On every v* tag: record the release-note scenes against the tagged build,
+# voice them in English and Spanish, attach both videos to the release.
+name: release video
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv venv && uv pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v0.4.0"
+      - run: uv run playwright install --with-deps chromium
+      - run: sudo apt-get install -y ffmpeg
+      - working-directory: examples/release-notes
+        run: |
+          uv run tramoya direct tramoya.toml --out out
+          for lang in en es; do
+            uv run tramoya tts --script out/script.json --lang $lang --out-dir out/voices/$lang
+            uv run tramoya assemble --video out/take.webm --marks out/marks.json \
+              --voice-dir out/voices/$lang --out out/release-$lang.mp4 --lang $lang
+          done
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: examples/release-notes/out/release-*.mp4

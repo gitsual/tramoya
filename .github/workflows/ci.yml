@@ -19,3 +19,10 @@ jobs:
       - run: uv run ruff check .
       - run: uv run python -m pytest -q
       - run: uv run tramoya --help
+      - if: matrix.extras == 'playwright'
+        run: uv run playwright install --with-deps chromium
+      - if: matrix.extras == 'playwright'
+        name: the example demo still runs and its accessibility snapshots match
+        run: |
+          uv run tramoya direct examples/notes-app/tramoya.toml --out /tmp/notes --rehearse
+          uv run tramoya snapshots diff examples/notes-app/snapshots /tmp/notes/snapshots

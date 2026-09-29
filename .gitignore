@@ -11,3 +11,5 @@ examples/notes-app/*
 !examples/notes-app/index.html
 !examples/notes-app/script.json
 !examples/notes-app/director.py
+!examples/notes-app/tramoya.toml
+!examples/notes-app/snapshots/

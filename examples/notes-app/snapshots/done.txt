@@ -1,0 +1,22 @@
+- banner:
+  - heading "Notes" [level=1]
+  - textbox "Search notes":
+    - /placeholder: Search notes…
+  - button "New note"
+- main:
+  - complementary:
+    - link "All notes":
+      - /url: "#"
+    - link "Work":
+      - /url: "#"
+    - link "Home":
+      - /url: "#"
+    - link "Done":
+      - /url: "#"
+  - article:
+    - text: Quarterly report Draft the numbers before Thursday work
+    - button "Undo"
+  - article:
+    - text: Call the plumber The kitchen tap still drips home
+    - button "Undo"
+- text: Marked as done

@@ -1,0 +1,27 @@
+- banner:
+  - heading "Notes" [level=1]
+  - textbox "Search notes":
+    - /placeholder: Search notes…
+  - button "New note"
+- main:
+  - complementary:
+    - link "All notes":
+      - /url: "#"
+    - link "Work":
+      - /url: "#"
+    - link "Home":
+      - /url: "#"
+    - link "Done":
+      - /url: "#"
+  - article:
+    - text: Quarterly report Draft the numbers before Thursday work
+    - button "Done"
+  - article:
+    - text: Buy lightbulbs Two warm white, one for the hallway home
+    - button "Done"
+  - article:
+    - text: Call the plumber The kitchen tap still drips home
+    - button "Undo"
+  - article:
+    - text: Review pull request The one about the login page work
+    - button "Done"

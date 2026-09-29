@@ -1,0 +1,66 @@
+# The notes demo as a profile: the same six scenes director.py drives in
+# Python, written as step lines instead. `tramoya direct tramoya.toml --out out`
+# starts the static server below, records the take and writes the marks, the
+# narration script and one accessibility snapshot per scene.
+
+[app]
+name = "Notes"
+launch = "python -m http.server 8770 --bind 127.0.0.1"
+url = "http://127.0.0.1:8770/index.html"
+viewport = [1280, 720]
+
+[demo]
+languages = ["en"]
+pace = 1.0
+
+[[scene]]
+name = "welcome"
+label = "A small notes app"
+steps = ["point h1", "say 6", "point .note", "beat 1"]
+
+[scene.narration]
+en = "This is a small notes app. Nothing fancy: a list, a search box and a button. Let us record a demo of it."
+
+[[scene]]
+name = "search"
+label = "Search filters as you type"
+steps = ["type #search | re", "say 5", "point .note .title", "beat 1", "clear #search"]
+
+[scene.narration]
+en = "Typing in the search box filters the list as you go. Two letters are enough to find the report."
+
+[[scene]]
+name = "new-note"
+label = "Create a note"
+steps = [
+  "click_text New note", "beat 0.6",
+  "type #title | Water the plants", "type #text | Balcony first, then the kitchen",
+  "select #tag | home", "point #save", "say 5", "click #save", "point .note", "beat 1.5",
+]
+
+[scene.narration]
+en = "A new note takes a title, a line of text and a tag. Save it and it lands at the top of the list."
+
+[[scene]]
+name = "done"
+label = "Mark a note as done"
+steps = ["click button[data-toggle='1']", "say 5", "click_text Done", "beat 1.5"]
+
+[scene.narration]
+en = "Marking a note as done crosses it out and moves it to the Done view, where it can be brought back."
+
+[[scene]]
+name = "views"
+label = "Views filter by tag"
+steps = ["click_text Work", "beat 1", "say 5", "click_text Home", "beat 1.5", "click_text All notes"]
+
+[scene.narration]
+en = "The views on the left filter by tag. Work shows only what is pending for work; Home does the same for home."
+
+[[scene]]
+name = "closing"
+label = "That is the whole tour"
+steps = ["point h1", "say 6", "beat 1"]
+
+[scene.narration]
+en = "That is the whole tour. Every scene you just saw was a step line, and every cut was made from the marks it wrote."

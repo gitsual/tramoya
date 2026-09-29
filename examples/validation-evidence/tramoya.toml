@@ -1,0 +1,54 @@
+# Validation evidence: the demo as objective evidence that a build behaves as
+# specified. Each scene is one test step, labelled with its id, and the take
+# comes with one accessibility snapshot per step. The workflow diffs those
+# snapshots against the approved set in `snapshots/`: a change in the UI
+# fails the job before anyone signs the record.
+#
+# Regulated QA guidance (for example the FDA's Computer Software Assurance
+# draft) accepts a recording of the run as evidence in place of a screenshot
+# per step. What matters is that the recording is of the build under test:
+# this profile is re-run against the build, never edited by hand.
+
+[app]
+name = "Notes (validation)"
+launch = "python -m http.server 8772 --bind 127.0.0.1 --directory ../notes-app"
+url = "http://127.0.0.1:8772/index.html"
+viewport = [1280, 720]
+
+[demo]
+languages = ["en"]
+pace = 1.0
+
+[[scene]]
+name = "TC-01-list"
+label = "TC-01 The list shows the seeded notes"
+steps = ["point .note", "say 3", "beat 0.5"]
+
+[scene.narration]
+en = "Test case one. On load the list shows the four seeded notes with their tags."
+
+[[scene]]
+name = "TC-02-search"
+label = "TC-02 Search filters by title and text"
+steps = ["type #search | plumber", "say 3", "point .note .title", "beat 0.5", "clear #search"]
+
+[scene.narration]
+en = "Test case two. Typing plumber leaves exactly one note in the list."
+
+[[scene]]
+name = "TC-03-create"
+label = "TC-03 A new note is saved with its tag"
+steps = ["click_text New note", "beat 0.5", "type #title | Evidence note",
+         "type #text | Created by the validation run", "select #tag | work",
+         "click #save", "say 3", "point .note", "beat 0.5"]
+
+[scene.narration]
+en = "Test case three. The saved note appears at the top of the list with the work tag."
+
+[[scene]]
+name = "TC-04-done"
+label = "TC-04 Done moves a note to the Done view"
+steps = ["click button[data-toggle='2']", "beat 0.5", "click_text Done", "say 3", "beat 0.5"]
+
+[scene.narration]
+en = "Test case four. The note marked as done is listed under the Done view."
