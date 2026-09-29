@@ -321,3 +321,30 @@ def test_preflight_reports_direct_without_a_script() -> None:
     assert preflight(plan, exists=lambda p: True) == [
         "step 1 does not say which director script to run (tramoya direct <director.py> ...)"
     ]
+
+
+def test_ask_tells_the_model_about_the_profile(tmp_path) -> None:
+    from tramoya.profile import Profile, Scene
+    profile = Profile(name="Notes", url="http://x/", languages=["en", "es"],
+                      scenes=[Scene("welcome", "A small notes app", {"en": "Hi"}, ["say"])])
+    reply = json.dumps({"summary": "ok", "steps": []})
+    post = FakePost(json.dumps({"message": {"content": reply}}))
+    backend = OllamaBackend(post=post)
+    ask(backend, "make the demo", ["tramoya.toml"], profile=profile)
+    user = post.calls[0][1]["messages"][1]["content"]
+    assert "Notes" in user and "welcome" in user and "tramoya.toml" in user
+    assert "en, es" in user
+    system = post.calls[0][1]["messages"][0]["content"]
+    assert "tramoya direct tramoya.toml" in system
+
+
+def test_preflight_accepts_direct_with_a_profile_and_its_outputs() -> None:
+    from tramoya.assistant import preflight
+    plan = Plan("x", [
+        Step("take", "why", ["tramoya", "direct", "tramoya.toml", "--out", "out"]),
+        Step("voice", "why", ["tramoya", "tts", "--script", "out/script.json", "--lang", "en",
+                              "--out-dir", "out/voices/en"]),
+        Step("cut", "why", ["tramoya", "assemble", "--video", "out/take.webm", "--marks",
+                            "out/marks.json", "--voice-dir", "out/voices/en", "--out", "d.mp4"]),
+    ])
+    assert preflight(plan, exists=lambda p: p == "tramoya.toml") == []

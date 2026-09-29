@@ -227,3 +227,133 @@ def test_direct_runs_the_director_with_the_current_python(tmp_path: Path) -> Non
     rc = cli.main(["direct", str(script), "--out", str(tmp_path / "out")])
     assert rc == 0
     assert (tmp_path / "out" / "marks.json").read_text() == "[]"
+
+
+# --- the profile path: init, direct tramoya.toml, import, capture, login, snapshots -------------
+
+
+def test_help_lists_the_profile_subcommands(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        cli.main(["--help"])
+    out = capsys.readouterr().out
+    for name in ("init", "import", "capture", "login", "snapshots"):
+        assert name in out
+
+
+def test_init_non_interactive_writes_a_project(tmp_path: Path, capsys) -> None:
+    rc = cli.main(["init", str(tmp_path), "--no-interactive", "--name", "Notes",
+                   "--url", "http://x/", "--lang", "en,es",
+                   "--scene", "welcome: Hi", "--scene", "search: Find"])
+    assert rc == 0
+    assert (tmp_path / "tramoya.toml").exists()
+    assert (tmp_path / "script.json").exists()
+    assert (tmp_path / "Makefile").exists()
+    out = capsys.readouterr().out
+    assert "tramoya direct tramoya.toml" in out
+
+
+def test_init_non_interactive_names_the_missing_flag(tmp_path: Path, capsys) -> None:
+    rc = cli.main(["init", str(tmp_path), "--no-interactive", "--name", "Notes",
+                   "--url", "http://x/"])
+    assert rc == 2
+    assert "--scene" in capsys.readouterr().err
+
+
+def test_init_interactive_reads_answers_from_stdin(tmp_path: Path, monkeypatch, capsys) -> None:
+    replies = iter(["Notes", "url", "http://x/", "n", "en", "welcome: Hi", ""])
+    monkeypatch.setattr("builtins.input", lambda prompt="": next(replies))
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    rc = cli.main(["init", str(tmp_path)])
+    assert rc == 0
+    assert "welcome" in (tmp_path / "tramoya.toml").read_text()
+
+
+def test_direct_with_a_profile_dry_run_prints_the_scene_plan(tmp_path: Path, capsys) -> None:
+    cli.main(["init", str(tmp_path), "--no-interactive", "--name", "Notes", "--url",
+              "http://x/", "--scene", "welcome: Hi"])
+    capsys.readouterr()
+    rc = cli.main(["direct", str(tmp_path / "tramoya.toml"), "--out", str(tmp_path / "out"),
+                   "--dry-run"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "1 scenes at http://x/" in out and "welcome" in out
+    assert not (tmp_path / "out").exists()
+
+
+def test_direct_with_a_profile_runs_the_generic_director(tmp_path: Path, monkeypatch) -> None:
+    cli.main(["init", str(tmp_path), "--no-interactive", "--name", "Notes", "--url",
+              "http://x/", "--scene", "welcome: Hi"])
+    seen: dict = {}
+
+    def fake_run(profile, out, **kw):
+        seen.update(name=profile.name, out=Path(out), **kw)
+        from tramoya.director import Result
+        return Result(Path(out))
+
+    monkeypatch.setattr("tramoya.cli.run_profile", fake_run)
+    rc = cli.main(["direct", str(tmp_path / "tramoya.toml"), "--out", str(tmp_path / "out"),
+                   "--rehearse", "--url", "http://staging/", "--headed"])
+    assert rc == 0
+    assert seen["name"] == "Notes" and seen["rehearse"] is True
+    assert seen["url"] == "http://staging/" and seen["headless"] is False
+
+
+def test_import_appends_recorded_scenes_to_the_profile(tmp_path: Path, capsys) -> None:
+    cli.main(["init", str(tmp_path), "--no-interactive", "--name", "Notes", "--url",
+              "http://x/", "--scene", "welcome: Hi"])
+    flow = tmp_path / "flow.json"
+    flow.write_text(json.dumps({"steps": [
+        {"type": "navigate", "url": "http://x/index.html"},
+        {"type": "click", "selectors": [["#new"]]},
+        {"type": "navigate", "url": "http://x/settings.html"},
+        {"type": "click", "selectors": [["#save"]]},
+    ]}))
+    capsys.readouterr()
+    rc = cli.main(["import", str(flow), "--into", str(tmp_path / "tramoya.toml")])
+    assert rc == 0
+    from tramoya.profile import load_profile
+    profile = load_profile(tmp_path / "tramoya.toml")
+    assert [s.name for s in profile.scenes] == ["welcome", "index", "settings"]
+    assert profile.scenes[1].steps == ["click #new", "say"]
+    assert profile.scenes[1].narration == {"en": ""}
+    # the script follows the profile
+    script = json.loads((tmp_path / "script.json").read_text())
+    assert "scene-settings" in script
+    assert "2 scenes" in capsys.readouterr().out
+
+
+def test_import_into_a_missing_profile_creates_one_from_the_recording(tmp_path: Path) -> None:
+    flow = tmp_path / "flow.json"
+    flow.write_text(json.dumps({"steps": [
+        {"type": "navigate", "url": "http://x/index.html"},
+        {"type": "click", "selectors": [["#new"]]},
+    ]}))
+    into = tmp_path / "demo" / "tramoya.toml"  # the folder does not exist yet
+    rc = cli.main(["import", str(flow), "--into", str(into), "--name", "Notes"])
+    assert rc == 0
+    from tramoya.profile import load_profile
+    profile = load_profile(into)
+    assert profile.url == "http://x/index.html" and profile.name == "Notes"
+
+
+def test_capture_dry_run_prints_the_codegen_command(capsys) -> None:
+    rc = cli.main(["capture", "http://x/", "--out", "flow.py", "--dry-run"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "playwright codegen" in out and "--target python" in out and "http://x/" in out
+
+
+def test_login_dry_run_says_where_the_session_goes(capsys) -> None:
+    rc = cli.main(["login", "http://x/", "--dry-run"])
+    assert rc == 0
+    assert ".tramoya/auth.json" in capsys.readouterr().out
+
+
+def test_snapshots_diff_exits_nonzero_when_a_scene_changed(tmp_path: Path, capsys) -> None:
+    from tramoya.snapshots import write_snapshot
+    write_snapshot(tmp_path / "a", "welcome", "- heading Notes\n")
+    write_snapshot(tmp_path / "b", "welcome", "- heading Notas\n")
+    assert cli.main(["snapshots", "diff", str(tmp_path / "a"), str(tmp_path / "a")]) == 0
+    rc = cli.main(["snapshots", "diff", str(tmp_path / "a"), str(tmp_path / "b")])
+    assert rc == 1
+    assert "welcome: changed" in capsys.readouterr().out

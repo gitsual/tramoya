@@ -59,11 +59,18 @@ Commands you may use (and nothing else):
                                                 run a director script (a Python file that
                                                 drives the app on stage and records it);
                                                 writes <dir>/take.webm and <dir>/marks.json
+  tramoya direct tramoya.toml --out <dir> [--pace <factor>] [--rehearse] [--lang <en|es>]
+                                                run the app profile: every scene in
+                                                tramoya.toml; writes <dir>/take.webm,
+                                                <dir>/marks.json and <dir>/script.json
+                                                (the narration script for tts)
 
 Rules:
-- `direct` takes the director script as its first argument, before any flag:
-  `tramoya direct director.py --out out`. It records the app itself; do not
-  add a `record` step for it.
+- `direct` takes the director script or the profile as its first argument,
+  before any flag: `tramoya direct director.py --out out` or
+  `tramoya direct tramoya.toml --out out`. It records the app itself; do not
+  add a `record` step for it. When an app profile is described below, prefer
+  `direct tramoya.toml` and then `tts --script <dir>/script.json`.
 - `tts` needs a narration script JSON (key -> {lang: text}); `marks.json` is
   not a script. Voices exist for "en" and "es" only.
 - Anything in <angle brackets> above is a placeholder: replace it with a real
@@ -228,6 +235,16 @@ def parse_plan(text: str) -> Plan:
     return Plan(summary=str(raw.get("summary", "")), steps=steps)
 
 
+def describe_profile(profile: Any) -> str:
+    """The app profile for the model: name, where it runs, languages, scenes."""
+    where = profile.url or profile.ready or "?"
+    lines = [f"App profile (tramoya.toml): {profile.name} at {where}",
+             f"  narration languages: {', '.join(profile.languages)}",
+             "  scenes:"]
+    lines += [f"    {s.name}: {s.label}" for s in profile.scenes]
+    return "\n".join(lines)
+
+
 def describe_files(files: list[str]) -> str:
     if not files:
         return "The working directory is empty."
@@ -240,6 +257,7 @@ def ask(
     files: list[str],
     exists: Callable[[str], bool] = os.path.exists,
     repairs: int = 1,
+    profile: Any = None,
 ) -> Plan:
     """Turn `request` into a `Plan`, telling the model which files exist.
 
@@ -247,7 +265,10 @@ def ask(
     model once (`repairs` times) so it can fix its own mistakes, typically
     a placeholder file name. The caller still runs `preflight` before running.
     """
-    user = f"{describe_files(files)}\n\nRequest: {request}"
+    context = describe_files(files)
+    if profile is not None:
+        context += "\n\n" + describe_profile(profile)
+    user = f"{context}\n\nRequest: {request}"
     plan = parse_plan(backend.complete(SYSTEM_PROMPT, user))
     for _ in range(repairs):
         problems = preflight(plan, exists)
@@ -294,7 +315,8 @@ def _outputs_of(argv: list[str]) -> set[str]:
     if argv[:1] == ["direct"]:
         out = _flag_value(argv, "--out")
         if out:
-            outputs.update({f"{out}/take.webm", f"{out}/marks.json"})
+            outputs.update({f"{out}/take.webm", f"{out}/marks.json", f"{out}/script.json",
+                            f"{out}/snapshots"})
     return outputs
 
 
