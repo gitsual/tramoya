@@ -14,7 +14,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
-LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=11"
+# loudnorm upsamples to 192 kHz internally and does not come back down; without the
+# aresample the AAC goes out at 96 kHz, which the Windows decoder plays as silence.
+LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000"
 
 _DRAWTEXT_FONTCOLOR = "white"
 _DRAWTEXT_FONTSIZE = 42

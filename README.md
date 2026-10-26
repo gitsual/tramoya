@@ -59,7 +59,7 @@ out of that take at the marks it wrote. No mock-ups, nothing hand-painted. tramo
 ## ✂️ In three lines
 
 ```bash
-pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v0.4.0"
+pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v0.4.1"
 tramoya init my-demo --url http://localhost:3000/ --scene "welcome: The dashboard" --scene "export: Export a report"
 cd my-demo && tramoya capture http://localhost:3000/ --into tramoya.toml && make
 ```
@@ -341,9 +341,9 @@ fits each voice clip and writes <code>final-demo.mp4</code>. With <code>--yes</c
 ## 📥 Install
 
 ```bash
-pip install "tramoya @ git+https://github.com/gitsual/tramoya@v0.4.0"
-pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.4.0"   # + Stage
-pip install "tramoya[tts] @ git+https://github.com/gitsual/tramoya@v0.4.0"          # + Kokoro voice
+pip install "tramoya @ git+https://github.com/gitsual/tramoya@v0.4.1"
+pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.4.1"   # + Stage
+pip install "tramoya[tts] @ git+https://github.com/gitsual/tramoya@v0.4.1"          # + Kokoro voice
 ```
 
 The core has **no Python dependencies**. Pin the tag: the package is consumed by git URL and the tag is the contract.
@@ -603,7 +603,7 @@ an extra and skipped cleanly when the extra is absent; anything that talks to a 
 
 ## 🚧 Status
 
-`v0.4.0`. The pipeline is used for real demos and every piece on this page is its output, but it is one person's
+`v0.4.1`. The pipeline is used for real demos and every piece on this page is its output, but it is one person's
 tool and the edges show:
 
 - **Linux first.** Screen capture is `wf-recorder`, so `record` is Wayland only. `direct` records inside the browser

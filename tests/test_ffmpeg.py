@@ -25,7 +25,7 @@ from tramoya.ffmpeg import (
 
 
 def test_loudnorm_matches_the_shipped_normalisation() -> None:
-    assert LOUDNORM == "loudnorm=I=-16:TP=-1.5:LRA=11"
+    assert LOUDNORM == "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000"
 
 
 def test_runner_dry_run_records_calls_without_shelling_out(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -59,3 +59,10 @@ def test_three_seconds_go_through_the_real_pipeline(tmp_path: Path) -> None:
     assert out.exists() and out.stat().st_size > 0
     assert [name for name, _, _ in table] == ["a", "b"]
     assert runner.probe_duration(out) == pytest.approx(4.0, abs=0.3)  # 2.5 + 1.5
+    # loudnorm resamples to 192 kHz internally; the AAC that comes out must be back at
+    # 48 kHz, or the Windows decoder (Films & TV, Media Player, Teams) plays it silent.
+    rate = subprocess.run([
+        "ffprobe", "-v", "error", "-select_streams", "a", "-show_entries",
+        "stream=sample_rate", "-of", "csv=p=0", str(out),
+    ], check=True, capture_output=True, text=True).stdout.strip()
+    assert rate == "48000"
