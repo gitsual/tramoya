@@ -60,7 +60,10 @@ internal sealed class MainWindow : Form
         var opciones = new CoreWebView2EnvironmentOptions
         {
             Language = "es",
-            AdditionalBrowserArguments = "--lang=es --disable-features=Translate",
+            // La ventana solo habla con 127.0.0.1. En los portátiles de empresa la política de
+            // Chromium impone un proxy que deja esa dirección en blanco (visto en Indra con el
+            // kit de Python: Edge sí llegaba, el Chromium del kit no), así que aquí nunca hay proxy.
+            AdditionalBrowserArguments = "--lang=es --disable-features=Translate --no-proxy-server",
         };
         Directory.CreateDirectory(Paths.Ventana);
         var entorno = await CoreWebView2Environment.CreateAsync(null, Paths.Ventana, opciones);

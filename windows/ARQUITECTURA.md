@@ -124,3 +124,15 @@ windows/
   single-file) y deja en `dist/` el exe, la carpeta `.playwright` que necesita el paquete,
   `ffmpeg\ffmpeg.exe` y `navegador\` con Chromium; y un zip `Tramoya-<v>-windows.zip`.
   La firma de código se hace fuera (signtool), no en este script.
+
+## Lecciones del kit de Python en los portátiles de Indra (27-10-2026)
+
+- Las políticas corporativas de Chromium (proxy, extensiones forzadas) se aplican también al
+  Chromium de Playwright del kit y **mandan sobre las opciones de línea de comandos**: con
+  `--no-proxy-server` la ventana de `127.0.0.1` seguía en blanco; Edge sí llegaba. Por eso la
+  ventana del `.exe` es WebView2 (motor de Edge) y arranca con `--no-proxy-server`; si aun así
+  WebView2 heredara una política de proxy, el plan B es abrir la interfaz con `msedge.exe --app=`.
+- El Chromium de grabación y reproducción sí debe seguir con el proxy corporativo: es el que
+  abre las webs de la empresa (inicio de sesión integrado, certificados internos).
+- El proxy de Indra corta descargas grandes: la descarga de Chromium por Playwright puede
+  fallar allí; por eso el kit lleva `navegador\` dentro y el `.exe` solo descarga si falta.
