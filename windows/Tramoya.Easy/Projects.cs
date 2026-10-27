@@ -24,27 +24,6 @@ public static class Proyectos
     private static readonly Regex Separadores = new(@"[,\s]+", RegexOptions.CultureInvariant);
     private static readonly Regex Esquema = new("^https?://", RegexOptions.CultureInvariant);
 
-    // Las letras del latín-1 y del latín extendido-A que NFKD descompone en una letra ASCII
-    // más una marca (que después se tira). Las que NFKD no descompone (æ, ø, ł, ß, đ…) no
-    // están y se van, como en el Python.
-    private static readonly Dictionary<char, string> SinAcento = Tabla(
-        ("A", "ÀÁÂÃÄÅĀĂĄ"), ("a", "àáâãäåāăą"), ("C", "ÇĆĈĊČ"), ("c", "çćĉċč"), ("D", "Ď"), ("d", "ď"),
-        ("E", "ÈÉÊËĒĔĖĘĚ"), ("e", "èéêëēĕėęě"), ("G", "ĜĞĠĢ"), ("g", "ĝğġģ"), ("H", "Ĥ"), ("h", "ĥ"),
-        ("I", "ÌÍÎÏĨĪĬĮİ"), ("i", "ìíîïĩīĭį"), ("IJ", "Ĳ"), ("ij", "ĳ"), ("J", "Ĵ"), ("j", "ĵ"),
-        ("K", "Ķ"), ("k", "ķ"), ("L", "ĹĻĽĿ"), ("l", "ĺļľŀ"), ("N", "ÑŃŅŇ"), ("n", "ñńņňŉ"),
-        ("O", "ÒÓÔÕÖŌŎŐ"), ("o", "òóôõöōŏő"), ("R", "ŔŖŘ"), ("r", "ŕŗř"), ("S", "ŚŜŞŠ"), ("s", "śŝşšſ"),
-        ("T", "ŢŤ"), ("t", "ţť"), ("U", "ÙÚÛÜŨŪŬŮŰŲ"), ("u", "ùúûüũūŭůűų"), ("W", "Ŵ"), ("w", "ŵ"),
-        ("Y", "ÝŶŸ"), ("y", "ýÿŷ"), ("Z", "ŹŻŽ"), ("z", "źżž"));
-
-    private static Dictionary<char, string> Tabla(params (string Base, string Variantes)[] filas)
-    {
-        var d = new Dictionary<char, string>();
-        foreach (var (b, variantes) in filas)
-            foreach (var v in variantes)
-                d[v] = b;
-        return d;
-    }
-
     /// <summary>Los ajustes de fábrica; solo estas claves se guardan (<c>AJUSTES_DEFECTO</c>).</summary>
     public static JsonObject AjustesDefecto() => new()
     {
@@ -69,17 +48,15 @@ public static class Proyectos
     /// </summary>
     public static string Slug(string texto)
     {
-        // NFKD y quitar lo que no sea ASCII (las marcas diacríticas separadas se van con ello),
-        // igual que `normalize("NFKD").encode("ascii", "ignore")`. La solución compila con
-        // InvariantGlobalization y en ese modo Normalize devuelve el texto tal cual, así que las
-        // letras latinas con acento se descomponen a mano: si no, «Mi vídeo» sería «mi-vdeo».
+        // NFKD de verdad y quitar lo que no sea ASCII (las marcas diacríticas separadas se van
+        // con ello), igual que `normalize("NFKD").encode("ascii", "ignore")`: «vídeo» → «video»,
+        // «ＡＢＣ» → «ABC», «ﬃ» → «ffi»; lo que NFKD no descompone (æ, ø, ß…) se va, como en el
+        // Python. Hace falta ICU: la solución compila con InvariantGlobalization en false a
+        // propósito, porque sin él Normalize no descompone nada y «Mi vídeo» sería «mi-vdeo».
         var descompuesto = texto.Normalize(NormalizationForm.FormKD);
         var sb = new StringBuilder(descompuesto.Length);
         foreach (var c in descompuesto)
-        {
             if (c < 128) sb.Append(c);
-            else if (SinAcento.TryGetValue(c, out var basica)) sb.Append(basica);
-        }
         var t = sb.ToString().ToLowerInvariant();
         t = NoAlfanumerico.Replace(t, "-").Trim('-');
         if (t.Length > 40) t = t[..40];

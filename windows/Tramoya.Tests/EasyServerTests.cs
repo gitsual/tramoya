@@ -45,6 +45,37 @@ public class EasyServerTests : IDisposable
         catch (UnauthorizedAccessException) { }
     }
 
+    /// <summary>Las mismas opciones con otro «motor»; <c>Motor</c> es de solo lectura.</summary>
+    private ServerOptions Opciones(string[] motor) => new()
+    {
+        Datos = _o.Datos,
+        MisVideos = _o.MisVideos,
+        Casa = _o.Casa,
+        Motor = motor,
+        Entorno = _o.Entorno,
+        ExePath = null,
+        Windows = true,
+    };
+
+    /// <summary>
+    /// Un «motor» que ignora sus argumentos y escribe las líneas dadas por su salida, una por
+    /// <c>echo</c> de un <c>.cmd</c>: es la forma más corta de fingir lo que dice el de verdad.
+    /// </summary>
+    private string[] MotorQueDice(params string[] lineas)
+    {
+        var ruta = Path.Combine(Path.GetDirectoryName(_datos)!, "motor.cmd");
+        File.WriteAllText(ruta, "@echo off\r\n" + string.Concat(lineas.Select(l => $"echo {l}\r\n")), new UTF8Encoding(false));
+        return ["cmd.exe", "/c", ruta];
+    }
+
+    /// <summary>Deja <c>proyecto.json</c> como una carpeta: ni se puede leer ni se puede sustituir.</summary>
+    private void RomperProyecto(string id)
+    {
+        var ruta = Path.Combine(_datos, id, "proyecto.json");
+        File.Delete(ruta);
+        Directory.CreateDirectory(ruta);
+    }
+
     private static JsonObject Obj(string s) => Json.Parse(s)!.AsObject();
 
     private static void Espera(Func<bool> listo, int ms = 15000)
@@ -66,6 +97,10 @@ public class EasyServerTests : IDisposable
     [InlineData("¡¡¡", "video")]
     [InlineData("", "video")]
     [InlineData("Ñandú & Co.", "nandu-co")]
+    [InlineData("año", "ano")]
+    [InlineData("ＡＢＣ", "abc")] // compatibilidad NFKD: anchura completa → ASCII
+    [InlineData("ﬃ", "ffi")] // ligadura → tres letras
+    [InlineData("Straße", "strae")] // ß no se descompone: se va, como en el Python
     public void SlugQuitaAcentosYSignos(string texto, string esperado) =>
         Assert.Equal(esperado, Proyectos.Slug(texto));
 
@@ -176,6 +211,31 @@ public class EasyServerTests : IDisposable
         Assert.True(lista[1]!["video"]!.GetValue<bool>());
         Assert.Equal("quieto", lista[0]!["tarea"]!.GetValue<string>());
         Assert.Equal(1000.0, lista[1]!["creado"]!.GetValue<double>());
+    }
+
+    [Fact]
+    public void ListaToleraUnProyectoAMedioEscribirOIlegible()
+    {
+        var bueno = Proyectos.Crear(_o, "Bueno", "https://a.b/");
+        // Guardar escribe proyecto.tmp y lo renombra encima: si se corta a mitad, queda un
+        // proyecto.json vacío o a medias y un .tmp al lado. Ninguno de los dos cuenta.
+        Directory.CreateDirectory(Path.Combine(_datos, "a-medias"));
+        File.WriteAllText(Path.Combine(_datos, "a-medias", "proyecto.json"), "", Encoding.UTF8);
+        File.WriteAllText(Path.Combine(_datos, "a-medias", "proyecto.tmp"), """{"id":"a-medias","nombre":"x","creado":5}""", Encoding.UTF8);
+        Directory.CreateDirectory(Path.Combine(_datos, "truncado"));
+        File.WriteAllText(Path.Combine(_datos, "truncado", "proyecto.json"), """{"id":"truncado","nombre":"x","cre""", Encoding.UTF8);
+        var ilegible = Proyectos.Crear(_o, "Ilegible", "https://a.b/");
+        RomperProyecto(ilegible);
+        Assert.Equal([bueno], Proyectos.Lista(_o).Select(x => x!["id"]!.GetValue<string>()).ToArray());
+        Assert.Single(Proyectos.Webs(_o));
+        Assert.False(Proyectos.Existe(_o, ilegible));
+        // Y guardar encima de uno bueno no deja rastro del .tmp aunque se guarde varias veces.
+        var p = Proyectos.Leer(_o, bueno);
+        p["nombre"] = "Otro";
+        Proyectos.Guardar(_o, bueno, p);
+        Proyectos.Guardar(_o, bueno, p);
+        Assert.Equal(["proyecto.json"], Directory.GetFiles(Path.Combine(_datos, bueno)).Select(f => Path.GetFileName(f)).ToArray());
+        Assert.Equal("Otro", Proyectos.Leer(_o, bueno)["nombre"]!.GetValue<string>());
     }
 
     [Fact]
@@ -297,6 +357,21 @@ public class EasyServerTests : IDisposable
         Assert.Equal("grabar", Proyectos.Leer(_o, id)["fase"]!.GetValue<string>());
         Tareas.Cancelar(id);
         Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void ConvertirConUnProyectoIlegibleDejaElErrorYNoLanza()
+    {
+        var id = Proyectos.Crear(_o, "Roto", "https://a.b/");
+        File.WriteAllText(Path.Combine(_datos, id, "grabacion.json"),
+            """{"pasos": [{"id": 1, "tipo": "clic", "selector": "#b", "desc": "Pulsa «B»"}], "avisos": [], "inicio": 1}""", Encoding.UTF8);
+        RomperProyecto(id);
+        Tareas.Convertir(_o, id);
+        var t = Tareas.Tarea(id);
+        Assert.Equal("error", t["estado"]!.GetValue<string>());
+        Assert.StartsWith("No he podido guardar la grabación en el proyecto (", t["msg"]!.GetValue<string>());
+        Assert.EndsWith(").", t["msg"]!.GetValue<string>());
+        Assert.Contains("proyecto.json", File.ReadAllText(Path.Combine(_datos, id, "ultimo-error.txt"), Encoding.UTF8));
     }
 
     [Fact]
@@ -532,6 +607,92 @@ public class EasyServerTests : IDisposable
         await Post(c, $"/api/p/{id}/cancelar");
         (_, q) = await Get(c, $"/api/p/{id}");
         Assert.Equal("quieto", q["tarea"]!["estado"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task HacerVideoConUnMotorQueEscribeBasuraAcabaEnErrorYElServidorSigue()
+    {
+        // Un motor que no habla JSON: nada de lo que dice se entiende, no hay «ok» ni «error»,
+        // y lo que dijo queda como rastro.
+        var o = Opciones(["cmd.exe", "/c", "echo", "not json"]);
+        using var s = Server.Start(o);
+        using var c = Cliente(s);
+        var (_, creado) = await Post(c, "/api/crear", """{"nombre":"Basura","url":"https://a.b/"}""");
+        var id = creado["id"]!.GetValue<string>();
+        var (code, _) = await Post(c, $"/api/p/{id}/video");
+        Assert.Equal(HttpStatusCode.OK, code);
+        Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "listo");
+        var t = Tareas.Tarea(id);
+        Assert.Equal("error", t["estado"]!.GetValue<string>());
+        Assert.Equal("El vídeo no se ha podido hacer.", t["msg"]!.GetValue<string>());
+        Assert.Contains("not json", File.ReadAllText(Path.Combine(_datos, id, "ultimo-error.txt"), Encoding.UTF8));
+        Assert.Equal("grabar", Proyectos.Leer(_o, id)["fase"]!.GetValue<string>());
+        (code, var inicio) = await Get(c, "/api/inicio");
+        Assert.Equal(HttpStatusCode.OK, code);
+        Assert.Equal("error", inicio["proyectos"]![0]!["tarea"]!.GetValue<string>());
+        (code, _) = await Post(c, $"/api/p/{id}/cancelar");
+        Assert.Equal(HttpStatusCode.OK, code);
+        Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task HacerVideoConElProyectoIlegibleAlTerminarAcabaEnErrorYElServidorSigue()
+    {
+        // El motor dice que el vídeo está hecho, pero al ir a apuntarlo proyecto.json ya no se
+        // puede leer ni sustituir. Eso pasa en el hilo que escucha al motor, sin nadie encima:
+        // tiene que acabar en «error» con rastro, no tumbar la app. Se rompe el proyecto con
+        // el cerrojo cogido para que el hilo del motor no llegue antes.
+        var o = Opciones(MotorQueDice("""{"msg": "Montando", "p": 0.5}""", """{"ok": true, "video": "C:\\no\\existe.mp4"}"""));
+        var id = Proyectos.Crear(o, "Montar", "https://a.b/");
+        using var s = Server.Start(o);
+        using var c = Cliente(s);
+        lock (Tareas.Cerrojo)
+        {
+            Tareas.HacerVideo(o, id, voz: false);
+            RomperProyecto(id);
+        }
+        Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "listo");
+        var t = Tareas.Tarea(id);
+        Assert.Equal("error", t["estado"]!.GetValue<string>());
+        Assert.StartsWith("No he podido terminar el vídeo (", t["msg"]!.GetValue<string>());
+        Assert.EndsWith(").", t["msg"]!.GetValue<string>());
+        Assert.Contains("proyecto.json", File.ReadAllText(Path.Combine(_datos, id, "ultimo-error.txt"), Encoding.UTF8));
+        // El servidor sigue contestando: la portada no cuenta el proyecto roto y el detalle es un 404.
+        var (code, inicio) = await Get(c, "/api/inicio");
+        Assert.Equal(HttpStatusCode.OK, code);
+        Assert.Empty(inicio["proyectos"]!.AsArray());
+        (code, _) = await Get(c, $"/api/p/{id}");
+        Assert.Equal(HttpStatusCode.NotFound, code);
+        Tareas.Cancelar(id);
+        Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task AbrirWebConElProyectoIlegibleAlCerrarAcabaEnErrorYElServidorSigue()
+    {
+        // El grabador llega a empezar y, al cerrarse, la grabación hay que pasarla al proyecto;
+        // si proyecto.json no se deja, «error» con el motivo en vez de un hilo muerto.
+        var o = Opciones(MotorQueDice("""{"estado": "grabando"}""", """{"fin": true, "inicio": 1.5}"""));
+        var id = Proyectos.Crear(o, "Grabar", "https://a.b/");
+        File.WriteAllText(Path.Combine(_datos, id, "grabacion.json"),
+            """{"pasos": [{"id": 1, "tipo": "clic", "selector": "#b", "desc": "Pulsa «B»"}], "avisos": [], "inicio": 1.5}""", Encoding.UTF8);
+        using var s = Server.Start(o);
+        using var c = Cliente(s);
+        lock (Tareas.Cerrojo)
+        {
+            Tareas.AbrirWeb(o, id);
+            RomperProyecto(id);
+        }
+        Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "quieto");
+        var t = Tareas.Tarea(id);
+        Assert.Equal("error", t["estado"]!.GetValue<string>());
+        Assert.StartsWith("No he podido guardar la grabación en el proyecto (", t["msg"]!.GetValue<string>());
+        var (code, inicio) = await Get(c, "/api/inicio");
+        Assert.Equal(HttpStatusCode.OK, code);
+        Assert.Empty(inicio["proyectos"]!.AsArray());
+        // Mandar órdenes a un grabador que ya se fue no hace nada ni falla.
+        Tareas.Orden(id, "terminar");
+        Assert.Equal("error", Tareas.Tarea(id)["estado"]!.GetValue<string>());
     }
 
     [Fact]

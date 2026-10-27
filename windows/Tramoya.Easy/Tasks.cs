@@ -94,31 +94,113 @@ public static class Tareas
     /// <summary>
     /// Lee la salida y los errores del proceso línea a línea en dos hilos (el Python los mezcla
     /// en una sola tubería), llama a <paramref name="linea"/> con cada una bajo el cerrojo y,
-    /// cuando el proceso termina, a <paramref name="fin"/>.
+    /// cuando el proceso termina, a <paramref name="fin"/>. Si cualquiera de los dos revienta,
+    /// se llama una sola vez a <paramref name="fallo"/> y no se vuelve a interpretar nada.
     /// </summary>
-    private static void Escuchar(Process proc, Action<string> linea, Action fin)
+    /// <remarks>
+    /// Estos hilos son el único sitio donde una excepción no tiene a nadie encima: en el
+    /// Python una excepción en <c>leer_salida</c> mata ese hilo y ya está, pero en .NET una
+    /// excepción sin atrapar en un hilo tumba el proceso entero, o sea, la ventana. Por eso
+    /// aquí todo va dentro de un cortafuegos: la tarea acaba en «error», el proceso se libera
+    /// en <c>finally</c> pase lo que pase y, si hasta apuntar el fallo falla, el hilo muere
+    /// callado. Tras un fallo se sigue vaciando la tubería para que el hijo no se quede
+    /// atascado escribiendo.
+    /// </remarks>
+    private static void Escuchar(Process proc, Action<string> linea, Action fin, Action<Exception> fallo)
     {
         var candado = new object();
+        var roto = false;
+        void Fallar(Exception e)
+        {
+            try { fallo(e); }
+            catch (Exception)
+            {
+                // Ni el cortafuegos ha podido apuntarlo; la interfaz lo verá como una tarea colgada.
+            }
+        }
         Thread Lector(StreamReader r) => new(() =>
         {
             try
             {
                 while (r.ReadLine() is { } l)
-                    lock (candado) linea(l);
+                {
+                    Exception? e = null;
+                    lock (candado)
+                    {
+                        if (roto) continue;
+                        try { linea(l); }
+                        catch (Exception x) { roto = true; e = x; }
+                    }
+                    if (e is not null) Fallar(e);
+                }
             }
             catch (Exception e) when (e is IOException or ObjectDisposedException or InvalidOperationException)
             {
                 // El proceso murió o lo matamos: se acabó lo que había que leer.
+            }
+            catch (Exception e)
+            {
+                lock (candado) roto = true;
+                Fallar(e);
             }
         }) { IsBackground = true };
         var hilos = new[] { Lector(proc.StandardOutput), Lector(proc.StandardError) };
         foreach (var h in hilos) h.Start();
         new Thread(() =>
         {
-            foreach (var h in hilos) h.Join();
-            try { proc.WaitForExit(); } catch (Exception e) when (e is InvalidOperationException or SystemException) { }
-            fin();
+            try
+            {
+                foreach (var h in hilos) h.Join();
+                try { proc.WaitForExit(); } catch (Exception e) when (e is InvalidOperationException or SystemException) { }
+                bool seguir;
+                lock (candado) seguir = !roto;
+                if (seguir) fin();
+            }
+            catch (Exception e)
+            {
+                Fallar(e);
+            }
+            finally
+            {
+                try { proc.Dispose(); } catch (Exception) { }
+            }
         }) { IsBackground = true }.Start();
+    }
+
+    /// <summary>
+    /// El cortafuegos de las tareas: deja el vídeo en «error» con el motivo (si la tarea sigue
+    /// siendo de este proceso: si se canceló entre medias, no hay nada que decir) y guarda en
+    /// <c>ultimo-error.txt</c> el rastro, igual que cuando es el motor el que falla.
+    /// </summary>
+    private static void Fallo(ServerOptions o, string pid, Process proc, string que, Exception e, IEnumerable<string>? cola)
+    {
+        lock (Cerrojo)
+        {
+            if (!EsMio(pid, proc)) return;
+            Mapa[pid] = new Entrada
+            {
+                Datos = new JsonObject { ["estado"] = "error", ["msg"] = $"{que} ({Motivo(e)})." },
+            };
+        }
+        Rastro(o, pid, (cola ?? []).Append("").Append(e.ToString()));
+    }
+
+    // El mensaje de la excepción sin el punto final, para meterlo entre paréntesis.
+    private static string Motivo(Exception e) => e.Message.Trim().TrimEnd('.');
+
+    // Escribe ultimo-error.txt en la carpeta del proyecto; si no se puede, el error le llega
+    // igual a la persona por el estado de la tarea.
+    private static void Rastro(ServerOptions o, string pid, IEnumerable<string> lineas)
+    {
+        try
+        {
+            File.WriteAllText(Path.Combine(Proyectos.Carpeta(o, pid), "ultimo-error.txt"),
+                string.Join("\n", lineas), new UTF8Encoding(false));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Sin rastro escrito, pero el error le llega igual a la persona.
+        }
     }
 
     private static bool EsMio(string pid, Process proc) =>
@@ -183,7 +265,7 @@ public static class Tareas
                 }
                 Convertir(o, pid);
             }
-        });
+        }, e => Fallo(o, pid, proc, "No he podido guardar la grabación en el proyecto", e, cola: null));
     }
 
     /// <summary>Le dice al grabador «empezar» o «terminar» por su entrada estándar.</summary>
@@ -194,7 +276,10 @@ public static class Tareas
         {
             if (!Mapa.TryGetValue(pid, out var t)) return;
             proc = t.Proc;
-            if (proc is null || proc.HasExited) return;
+            // La tarea suelta su proceso antes de que Escuchar lo libere, pero si alguna vez
+            // quedara uno liberado, HasExited lanzaría: equivale a «ya no hay grabador».
+            try { if (proc is null || proc.HasExited) return; }
+            catch (InvalidOperationException) { return; }
             if (texto == "terminar")
                 t.Datos["estado"] = "convirtiendo";
         }
@@ -233,20 +318,33 @@ public static class Tareas
                 + "a grabar» y luego haz los clics en la ventana de la web.");
             return;
         }
-        var p = Proyectos.Leer(o, pid);
-        var viejos = new Dictionary<string, JsonNode?>();
-        foreach (var x in (p["pasos"] as JsonArray ?? []).OfType<JsonObject>())
-            viejos[Pasos.Str(x, "desc")] = x["texto"]?.DeepClone() ?? "";
-        foreach (var x in pasos.OfType<JsonObject>())
-            x["texto"] = viejos.TryGetValue(Pasos.Str(x, "desc"), out var texto) ? texto?.DeepClone() ?? "" : "";
-        p["pasos"] = pasos.DeepClone();
-        p["avisos"] = res["avisos"]?.DeepClone();
-        p["inicio"] = res["inicio"]?.DeepClone();
-        p["fase"] = "explicar";
-        p["video"] = null;
-        var titulo = res["titulo"];
-        p["titulo_web"] = Pasos.Bool(res, "titulo") ? titulo!.DeepClone() : p["titulo_web"]?.DeepClone();
-        Proyectos.Guardar(o, pid, p);
+        // De aquí en adelante se toca proyecto.json. Esto corre al cerrarse la ventana de la
+        // web, sin nadie que atrape una excepción, así que un proyecto roto o ilegible (lo
+        // borraron, lo tiene otro programa, se llenó el disco) se convierte en un «error» con
+        // su motivo, como la grabación ilegible de arriba, en vez de reventar el hilo.
+        try
+        {
+            var p = Proyectos.Leer(o, pid);
+            var viejos = new Dictionary<string, JsonNode?>();
+            foreach (var x in (p["pasos"] as JsonArray ?? []).OfType<JsonObject>())
+                viejos[Pasos.Str(x, "desc")] = x["texto"]?.DeepClone() ?? "";
+            foreach (var x in pasos.OfType<JsonObject>())
+                x["texto"] = viejos.TryGetValue(Pasos.Str(x, "desc"), out var texto) ? texto?.DeepClone() ?? "" : "";
+            p["pasos"] = pasos.DeepClone();
+            p["avisos"] = res["avisos"]?.DeepClone();
+            p["inicio"] = res["inicio"]?.DeepClone();
+            p["fase"] = "explicar";
+            p["video"] = null;
+            var titulo = res["titulo"];
+            p["titulo_web"] = Pasos.Bool(res, "titulo") ? titulo!.DeepClone() : p["titulo_web"]?.DeepClone();
+            Proyectos.Guardar(o, pid, p);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+        {
+            Poner(pid, Estado("error"), "msg", $"No he podido guardar la grabación en el proyecto ({Motivo(e)}).");
+            Rastro(o, pid, [e.ToString()]);
+            return;
+        }
         Poner(pid, Estado("quieto"));
     }
 
@@ -320,15 +418,7 @@ public static class Tareas
                 }
                 else
                 {
-                    try
-                    {
-                        File.WriteAllText(Path.Combine(Proyectos.Carpeta(o, pid), "ultimo-error.txt"),
-                            string.Join("\n", cola), new UTF8Encoding(false));
-                    }
-                    catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-                    {
-                        // Sin rastro escrito, pero el error le llega igual a la persona.
-                    }
+                    Rastro(o, pid, cola);
                     var error = Pasos.Str(fin, "error");
                     Mapa[pid] = new Entrada
                     {
@@ -341,7 +431,7 @@ public static class Tareas
                     };
                 }
             }
-        });
+        }, e => Fallo(o, pid, proc, "No he podido terminar el vídeo", e, cola));
     }
 
     /// <summary>Olvida la tarea de un vídeo y mata su proceso si sigue vivo.</summary>
