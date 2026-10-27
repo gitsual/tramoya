@@ -4,11 +4,16 @@
 // the exact argv instead, so a whole pipeline can be checked without paying a single
 // encode. The subcommands, flags, defaults and printed text are those of the Python
 // version; where Windows cannot do what Linux does (wf-recorder, Python director
-// scripts, `playwright codegen`) the command says so and exits with 2, but the
-// `--dry-run` echoes stay identical so the two versions can be compared line by line.
+// scripts) the command says so and exits with 2, but the `--dry-run` echoes stay
+// identical so the two versions can be compared line by line.
+//
+// Every command that opens a browser (`direct` with a profile, `login`, `capture`,
+// `easy`, the `easy-engine` workers) first makes sure Playwright's Chromium is there
+// (Browsers.EnsureAsync); `--dry-run` never installs anything.
 //
 // What the Python tests monkeypatch on the module (`pick_backend`, `_run_step`,
-// `run_profile`, `sys.stdin.isatty`) is a swappable static delegate here.
+// `run_profile`, `sys.stdin.isatty`) is a swappable static delegate here, and so is
+// the browser check.
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
@@ -45,6 +50,42 @@ internal static class Cli
                 .GetAwaiter().GetResult();
 
     internal static Func<bool> StdinIsTty { get; set; } = () => !Console.IsInputRedirected;
+
+    /// <summary>Chromium check before a browser command: null when it is there, else the exit code after printing why.</summary>
+    internal static Func<int?> EnsureBrowser { get; set; } = EnsureBrowserDefault;
+
+    private sealed class StderrProgress : IProgress<string>
+    {
+        public void Report(string value) => Console.Error.WriteLine(value);
+    }
+
+    private static int? EnsureBrowserDefault()
+    {
+        var error = Browsers.EnsureAsync(new StderrProgress(), CancellationToken.None).GetAwaiter().GetResult();
+        if (error is null)
+            return null;
+        Console.Error.WriteLine(error);
+        return 2;
+    }
+
+    /// <summary>`tramoya browser install`: the first-run download, runnable by hand (publish.ps1 can use it too).</summary>
+    private static int CmdBrowser(string[] rest)
+    {
+        if (rest.Length == 1 && rest[0] == "install")
+        {
+            if (Browsers.Installed())
+            {
+                Console.WriteLine($"Chromium ya está en {Paths.Navegador}");
+                return 0;
+            }
+            if (EnsureBrowser() is { } rc)
+                return rc;
+            Console.WriteLine($"Chromium instalado en {Paths.Navegador}");
+            return 0;
+        }
+        Console.Error.WriteLine("usage: tramoya browser install");
+        return 2;
+    }
 
     // --- helpers -----------------------------------------------------------------------
 
@@ -298,6 +339,8 @@ internal static class Cli
                 Console.WriteLine(Director.Describe(profile));
                 return 0;
             }
+            if (EnsureBrowser() is { } missing)
+                return missing;
             var result = RunProfile(
                 profile, @out, pace, args.Flag("rehearse"), lang,
                 args.Get("url"), args.Get("launch"), args.Get("storage_state"),
@@ -341,6 +384,14 @@ internal static class Cli
         var script = Json.LoadNode(args.GetRequired("script"))!.AsObject();
         var lang = args.GetRequired("lang");
         var outDir = args.GetRequired("out_dir");
+        // The Python picks the Kokoro voice of the language; here it is the Windows voice
+        // of the language, and without one the narration must not come out in Spanish.
+        if (Sapi.VozPara(lang) is null)
+        {
+            Console.Error.WriteLine($"tts: no Windows voice installed for '{lang}'; installed: " +
+                                    string.Join(", ", Sapi.Voces()));
+            return 2;
+        }
         var texts = new Dictionary<string, string>(StringComparer.Ordinal);
         var paths = new List<string>();
         foreach (var (key, value) in script)
@@ -352,7 +403,7 @@ internal static class Cli
             paths.Add(path);
         }
         Directory.CreateDirectory(outDir);
-        Sapi.Hablar(texts);
+        Sapi.Hablar(texts, idioma: lang);
         foreach (var p in paths)
             Console.WriteLine(p);
         return 0;
@@ -496,9 +547,12 @@ internal static class Cli
                 n++;
             }
             known.Add(sceneName);
-            profile.Scenes.Add(new Scene(sceneName, scene.Label,
-                                         profile.Languages.ToDictionary(l => l, _ => "", StringComparer.Ordinal),
-                                         scene.Steps));
+            // `{lang: "" for lang in profile.languages}`: a language listed twice just
+            // overwrites itself, where ToDictionary would throw.
+            var narration = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var language in profile.Languages)
+                narration[language] = "";
+            profile.Scenes.Add(new Scene(sceneName, scene.Label, narration, scene.Steps));
             added++;
         }
         Directory.CreateDirectory(parent);
@@ -524,16 +578,46 @@ internal static class Cli
 
     private static int CmdCapture(ParsedArgs args)
     {
-        var argv = CodegenArgv(args.GetRequired("url"), args.GetRequired("out"));
+        var url = args.GetRequired("url");
+        var @out = args.GetRequired("out");
+        var argv = CodegenArgv(url, @out);
         if (args.Flag("dry_run"))
         {
+            // The echo is the Python one (`python -m playwright codegen ...`) so the two
+            // versions compare line by line; what runs here is the same codegen through
+            // the .NET package's driver.
             Console.WriteLine(Shell.Join(argv));
             return 0;
         }
-        Console.Error.WriteLine("capture needs `playwright codegen`, which is part of the Python version; " +
-                                "on Windows the recorder is `tramoya easy`: it records what you click and " +
-                                "makes the video");
-        return 2;
+        if (EnsureBrowser() is { } missing)
+            return missing;
+        Console.WriteLine("a browser opens: click through the demo, then close it");
+        Console.Out.Flush();
+        var rc = Codegen(new[] { "codegen", "--target", "python", "-o", @out, url });
+        if (rc != 0 || !File.Exists(@out))
+        {
+            Console.Error.WriteLine($"capture: playwright codegen failed ({rc}); " +
+                                    "is Chromium installed? tramoya browser install");
+            return rc != 0 ? rc : 1;
+        }
+        Console.WriteLine($"recording written to {@out}");
+        if (args.Get("into") is { Length: > 0 } into)
+            return Import(@out, into, args.Get("name"), null);
+        return 0;
+    }
+
+    /// <summary>Playwright's codegen through the package's own driver (`playwright.ps1 codegen ...`); -1 when the driver cannot start.</summary>
+    private static int Codegen(string[] driverArgs)
+    {
+        try
+        {
+            return Microsoft.Playwright.Program.Main(driverArgs);
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine($"capture: cannot start the Playwright driver ({e.Message})");
+            return -1;
+        }
     }
 
     private static int CmdLogin(ParsedArgs args)
@@ -546,6 +630,8 @@ internal static class Cli
                               $"(cookies and local storage, never the password) is saved to {@out}");
             return 0;
         }
+        if (EnsureBrowser() is { } missing)
+            return missing;
         if (Path.GetDirectoryName(Path.GetFullPath(@out)) is { } parent)
             Directory.CreateDirectory(parent);
         LoginAsync(url, @out).GetAwaiter().GetResult();
@@ -573,7 +659,12 @@ internal static class Cli
     private static int EasyServerRun(bool noWindow)
     {
         if (noWindow)
+        {
+            // The window asks for the browser with its own dialog; here it is the terminal.
+            if (EnsureBrowser() is { } missing)
+                return missing;
             return Tramoya.Easy.Server.Run(EasyHost.Options(), noWindow: true);
+        }
         return Program.RunWindow();
     }
 
@@ -770,7 +861,16 @@ internal static class Cli
     {
         // Hidden worker entry point, like `python -m tramoya.easy.engine`: not in the help.
         if (args.Length > 0 && args[0] == "easy-engine")
+        {
+            // `grabar` and `video` open Chromium; the server reads the progress lines on
+            // stderr as the trail of a failure, so they never break its JSON protocol.
+            if (args.Length > 1 && args[1] is "grabar" or "video" && EnsureBrowser() is { } missing)
+                return missing;
             return EasyEngineMain(args.Skip(1).ToArray());
+        }
+        // Hidden too: `tramoya browser install`, the first-run download by hand.
+        if (args.Length > 0 && args[0] == "browser")
+            return CmdBrowser(args.Skip(1).ToArray());
         ParsedArgs parsed;
         try
         {

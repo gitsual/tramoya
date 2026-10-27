@@ -4,8 +4,26 @@ using Tramoya.Voice;
 namespace Tramoya.Tests;
 
 /// <summary>
-/// Tests de <c>Tramoya.Voice.Sapi</c>. Lo que necesita voces instaladas se salta sin fallar
-/// cuando la máquina no tiene ninguna; <c>Oir</c> no se prueba porque hace ruido.
+/// Un <c>[Fact]</c> que se marca como omitido (no como superado) cuando la máquina no tiene
+/// voces SAPI, o ninguna del idioma pedido: así el recuento de omitidos dice la verdad.
+/// xunit 2 no tiene una excepción de «skip» en ejecución, pero sí lee <c>Skip</c> al
+/// descubrir el test, que es cuando corre este constructor.
+/// </summary>
+internal sealed class VoiceFactAttribute : FactAttribute
+{
+    public VoiceFactAttribute(string? idioma = null)
+    {
+        if (Sapi.Voces().Count == 0)
+            Skip = "no hay voces SAPI en esta máquina";
+        else if (idioma is not null && Sapi.VozPara(idioma) is null)
+            Skip = $"no hay ninguna voz de «{idioma}» en esta máquina";
+    }
+}
+
+/// <summary>
+/// Tests de <c>Tramoya.Voice.Sapi</c>. Lo que necesita voces instaladas se omite (con
+/// <see cref="VoiceFactAttribute"/>) cuando la máquina no tiene ninguna; <c>Oir</c> no se
+/// prueba porque hace ruido.
 /// </summary>
 public class VoiceTests
 {
@@ -31,12 +49,9 @@ public class VoiceTests
         Assert.All(voces, v => Assert.False(string.IsNullOrWhiteSpace(v)));
     }
 
-    [Fact]
+    [VoiceFact]
     public void HablarEscribeWav48kHzMono16Bit()
     {
-        if (Sapi.Voces().Count == 0)
-            return; // sin voces en esta máquina no hay nada que sintetizar
-
         var carpeta = Path.Combine(Path.GetTempPath(), "tramoya-voice-" + Guid.NewGuid().ToString("N"));
         try
         {
@@ -58,13 +73,10 @@ public class VoiceTests
         }
     }
 
-    [Fact]
+    [VoiceFact]
     public void HablarConVozPorNombre()
     {
         var voces = Sapi.Voces();
-        if (voces.Count == 0)
-            return;
-
         var carpeta = Path.Combine(Path.GetTempPath(), "tramoya-voice-" + Guid.NewGuid().ToString("N"));
         try
         {
@@ -74,6 +86,52 @@ public class VoiceTests
             Sapi.Hablar(new Dictionary<string, string> { [ruta] = "Prueba." }, voces[^1], velocidad: 99);
             var (canales, frecuencia, bits, _) = LeerCabeceraWav(ruta);
             Assert.Equal((1, 48000, 16), (canales, frecuencia, bits));
+        }
+        finally
+        {
+            if (Directory.Exists(carpeta))
+                Directory.Delete(carpeta, recursive: true);
+        }
+    }
+
+    [VoiceFact("es")]
+    public void VozParaEsDevuelveUnaVozEnEspanol()
+    {
+        var voz = Sapi.VozPara("es");
+        Assert.NotNull(voz);
+        Assert.True(Sapi.EsEspanol(voz), voz);
+        Assert.Contains(voz, Sapi.Voces());
+        // El idioma puede venir con región, como en un guion («es-ES»): misma voz.
+        Assert.Equal(voz, Sapi.VozPara("es-ES"));
+        Assert.Equal(voz, Sapi.VozPara("es_MX"));
+    }
+
+    [VoiceFact("en")]
+    public void VozParaEnNoEsUnaVozEnEspanol()
+    {
+        var voz = Sapi.VozPara("en");
+        Assert.NotNull(voz);
+        Assert.False(Sapi.EsEspanol(voz), voz);
+    }
+
+    [Theory]
+    [InlineData("zz")]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void VozParaIdiomaDesconocidoEsNull(string idioma) =>
+        Assert.Null(Sapi.VozPara(idioma));
+
+    [VoiceFact("en")]
+    public void HablarConIdiomaEscribeElWav()
+    {
+        var carpeta = Path.Combine(Path.GetTempPath(), "tramoya-voice-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var ruta = Path.Combine(carpeta, "en.wav");
+            Sapi.Hablar(new Dictionary<string, string> { [ruta] = "Hello, this is a test." }, idioma: "en");
+            var (canales, frecuencia, bits, datos) = LeerCabeceraWav(ruta);
+            Assert.Equal((1, 48000, 16), (canales, frecuencia, bits));
+            Assert.True(datos > 0, "el wav no tiene muestras");
         }
         finally
         {

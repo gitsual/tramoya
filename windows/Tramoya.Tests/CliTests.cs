@@ -229,6 +229,45 @@ public class CliTests
     [Fact(Skip = "the Python test patches the Kokoro extra; on Windows tts speaks through SAPI and has no optional extra")]
     public void TtsWithoutTheExtraFailsWithAClearMessage() { }
 
+    private static string ScriptFile(TempDir tmp)
+    {
+        var script = tmp.File("script.json");
+        WriteJson(script, new JsonObject
+        {
+            ["intro"] = new JsonObject { ["en"] = "Hello.", ["es"] = "Hola.", ["zz"] = "x" },
+            ["end"] = new JsonObject { ["en"] = "Bye.", ["es"] = "Adiós.", ["zz"] = "y" },
+        });
+        return script;
+    }
+
+    [VoiceFact("en")]
+    public void TtsWithLangEnWritesOneWavPerKeyWithAnEnglishVoice()
+    {
+        using var tmp = new TempDir();
+        using var cap = new Capture();
+        var outDir = tmp.File("voices");
+        var rc = Run("tts", "--script", ScriptFile(tmp), "--lang", "en", "--out-dir", outDir);
+        Assert.Equal(0, rc);
+        foreach (var key in new[] { "intro", "end" })
+        {
+            var wav = Path.Combine(outDir, $"{key}.wav");
+            Assert.True(new FileInfo(wav).Length > 44, wav);
+            Assert.Contains(wav, cap.Out);
+        }
+    }
+
+    [Fact]
+    public void TtsWithoutAVoiceForTheLanguageExitsTwoAndListsTheInstalledOnes()
+    {
+        using var tmp = new TempDir();
+        using var cap = new Capture();
+        var outDir = tmp.File("voices");
+        var rc = Run("tts", "--script", ScriptFile(tmp), "--lang", "zz", "--out-dir", outDir);
+        Assert.Equal(2, rc);
+        Assert.Contains("tts: no Windows voice installed for 'zz'; installed:", cap.Err);
+        Assert.False(Directory.Exists(outDir));
+    }
+
     [Fact]
     public void DeckDryRunPlansPagesAndClip()
     {
@@ -346,6 +385,7 @@ public class CliTests
         Run("init", tmp.Path, "--no-interactive", "--name", "Notes", "--url", "http://x/", "--scene", "welcome: Hi");
         var seen = new Dictionary<string, object?>();
         var real = Cli.RunProfile;
+        var browser = Cli.EnsureBrowser;
         Cli.RunProfile = (profile, @out, pace, rehearse, lang, url, launch, storageState, headless) =>
         {
             seen["name"] = profile.Name;
@@ -355,6 +395,8 @@ public class CliTests
             seen["headless"] = headless;
             return new Result(@out);
         };
+        // A fake director needs no Chromium: the check is patched like run_profile is.
+        Cli.EnsureBrowser = () => { seen["browser"] = true; return null; };
         try
         {
             var rc = Run("direct", tmp.File("tramoya.toml"), "--out", tmp.File("out"), "--rehearse", "--url", "http://staging/", "--headed");
@@ -363,7 +405,9 @@ public class CliTests
         finally
         {
             Cli.RunProfile = real;
+            Cli.EnsureBrowser = browser;
         }
+        Assert.Equal(true, seen["browser"]);
         Assert.Equal("Notes", seen["name"]);
         Assert.Equal(true, seen["rehearse"]);
         Assert.Equal("http://staging/", seen["url"]);
@@ -473,6 +517,63 @@ public class CliTests
         Assert.Contains("unrecognized arguments: --bogus", cap.Err);
         Assert.Equal(2, Run("assemble"));
         Assert.Contains("the following arguments are required: --video, --marks, --voice-dir, --out", cap.Err);
+    }
+
+    [Fact]
+    public void DirectWithAProfileStopsWhenChromiumCannotBeInstalled()
+    {
+        using var tmp = new TempDir();
+        using var cap = new Capture();
+        Run("init", tmp.Path, "--no-interactive", "--name", "Notes", "--url", "http://x/", "--scene", "welcome: Hi");
+        var real = Cli.RunProfile;
+        var browser = Cli.EnsureBrowser;
+        var directed = false;
+        Cli.RunProfile = (_, @out, _, _, _, _, _, _, _) => { directed = true; return new Result(@out); };
+        Cli.EnsureBrowser = () => { Console.Error.WriteLine("No he podido descargar el navegador Chromium: prueba."); return 2; };
+        try
+        {
+            Assert.Equal(2, Run("direct", tmp.File("tramoya.toml"), "--out", tmp.File("out")));
+        }
+        finally
+        {
+            Cli.RunProfile = real;
+            Cli.EnsureBrowser = browser;
+        }
+        Assert.False(directed);
+        Assert.Contains("Chromium", cap.Err);
+    }
+
+    [Fact]
+    public void BrowserWithoutInstallIsAUsageError()
+    {
+        using var cap = new Capture();
+        Assert.Equal(2, Run("browser"));
+        Assert.Contains("tramoya browser install", cap.Err);
+        Assert.Equal(2, Run("browser", "uninstall"));
+    }
+
+    [Fact]
+    public void ImportToleratesALanguageListedTwice()
+    {
+        // `{lang: "" for lang in languages}` in Python keeps one entry; ToDictionary would throw.
+        using var tmp = new TempDir();
+        using var cap = new Capture();
+        Run("init", tmp.Path, "--no-interactive", "--name", "Notes", "--url", "http://x/", "--scene", "welcome: Hi");
+        var toml = tmp.File("tramoya.toml");
+        File.WriteAllText(toml, File.ReadAllText(toml).Replace("languages = [\"en\"]", "languages = [\"en\", \"en\"]"));
+        Assert.Equal(new[] { "en", "en" }, ProfileFile.Load(toml).Languages);
+        var flow = tmp.File("flow.json");
+        WriteJson(flow, new JsonObject
+        {
+            ["steps"] = new JsonArray
+            {
+                new JsonObject { ["type"] = "navigate", ["url"] = "http://x/index.html" },
+                new JsonObject { ["type"] = "click", ["selectors"] = new JsonArray(new JsonArray("#new")) },
+            },
+        });
+        Assert.Equal(0, Run("import", flow, "--into", toml));
+        var profile = ProfileFile.Load(toml);
+        Assert.Equal(new Dictionary<string, string> { ["en"] = "" }, profile.Scenes[1].Narration);
     }
 
     [Fact]

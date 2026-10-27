@@ -56,12 +56,95 @@ public static class Sapi
         return nombres.OrderBy(n => EsEspanol(n) ? 0 : 1).ToList();
     }
 
+    // Identificador primario de idioma de Windows (los 10 bits bajos del LCID) por código
+    // de dos letras: es lo que comparten «40A» (es-ES), «C0A» (es-ES moderno) y «80A» (es-MX).
+    private static readonly Dictionary<string, int> IdiomasPrimarios = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["es"] = 0x0A, ["en"] = 0x09, ["fr"] = 0x0C, ["de"] = 0x07, ["it"] = 0x10, ["pt"] = 0x16,
+        ["ca"] = 0x03, ["gl"] = 0x56, ["eu"] = 0x2D, ["nl"] = 0x13, ["ru"] = 0x19, ["ja"] = 0x11, ["zh"] = 0x04,
+    };
+
+    /// <summary>
+    /// La descripción de la primera voz instalada que hable <paramref name="idioma"/> («es»,
+    /// «en», también «es-ES» o «en_US»), o null si no hay ninguna o el idioma no se conoce.
+    /// </summary>
+    /// <remarks>
+    /// El atributo <c>Language</c> del token de SAPI es una lista de LCID en hexadecimal
+    /// separados por «;» («40A;C0A» para Helena, «409» para Zira); se compara solo el
+    /// idioma primario, que es lo que pide el guion.
+    /// </remarks>
+    public static string? VozPara(string idioma)
+    {
+        if (string.IsNullOrWhiteSpace(idioma))
+            return null;
+        var codigo = idioma.Split('-', '_')[0].Trim();
+        if (!IdiomasPrimarios.TryGetValue(codigo, out var primario))
+            return null;
+        try
+        {
+            dynamic voz = Com("SAPI.SpVoice");
+            try
+            {
+                dynamic todas = voz.GetVoices();
+                try
+                {
+                    int n = todas.Count;
+                    for (var i = 0; i < n; i++)
+                    {
+                        dynamic token = todas.Item(i);
+                        if (HablaIdioma(token, primario))
+                            return (string)token.GetDescription();
+                    }
+                    return null;
+                }
+                finally
+                {
+                    Marshal.FinalReleaseComObject(todas);
+                }
+            }
+            finally
+            {
+                Marshal.FinalReleaseComObject(voz);
+            }
+        }
+        catch (Exception)
+        {
+            // Sin SAPI no hay voz de ningún idioma.
+            return null;
+        }
+    }
+
+    private static bool HablaIdioma(dynamic token, int primario)
+    {
+        string lcids;
+        try
+        {
+            lcids = (string)token.GetAttribute("Language");
+        }
+        catch (Exception)
+        {
+            return false; // un token sin atributo Language: no se sabe qué habla
+        }
+        foreach (var lcid in lcids.Split(';'))
+        {
+            if (int.TryParse(lcid.Trim(), System.Globalization.NumberStyles.HexNumber,
+                             System.Globalization.CultureInfo.InvariantCulture, out var valor)
+                && (valor & 0x3FF) == primario)
+                return true;
+        }
+        return false;
+    }
+
     /// <summary>
     /// Sintetiza cada texto a su ruta (wav de 48 kHz, 16 bits, mono) con la voz pedida; si no
-    /// se pide ninguna, la primera voz en español. La velocidad va de -10 a 10, como en SAPI.
+    /// se pide ninguna, la primera voz de <paramref name="idioma"/> cuando se da uno, y si no,
+    /// la primera voz en español. La velocidad va de -10 a 10, como en SAPI.
     /// </summary>
-    public static void Hablar(IDictionary<string, string> textos, string? nombre = null, int velocidad = 0)
+    public static void Hablar(IDictionary<string, string> textos, string? nombre = null, int velocidad = 0,
+                              string? idioma = null)
     {
+        if (string.IsNullOrEmpty(nombre) && !string.IsNullOrEmpty(idioma))
+            nombre = VozPara(idioma); // null si no hay ninguna: se cae a la de siempre
         dynamic voz = Voz(nombre, velocidad);
         try
         {
