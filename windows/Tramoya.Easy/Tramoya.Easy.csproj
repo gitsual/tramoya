@@ -13,6 +13,7 @@
     <ProjectReference Include="..\Tramoya.Core\Tramoya.Core.csproj" />
     <ProjectReference Include="..\Tramoya.Stage\Tramoya.Stage.csproj" />
     <ProjectReference Include="..\Tramoya.Voice\Tramoya.Voice.csproj" />
+    <ProjectReference Include="..\Tramoya.Agent\Tramoya.Agent.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Tramoya.Tests" />
