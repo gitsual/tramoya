@@ -377,7 +377,9 @@ class H(BaseHTTPRequestHandler):
             return self.responder({
                 "proyectos": lista(), "voces": voces(), "webs": webs(), "ajustes": leer_ajustes(),
                 "windows": sys.platform == "win32", "carpeta": str(MIS_VIDEOS),
-                "acceso": bool(esc and (esc / "Tramoya.lnk").exists())})
+                "acceso": bool(esc and (esc / "Tramoya.lnk").exists()),
+                # Pedírselo a la IA solo existe en la versión de Windows: aquí se oculta.
+                "agente": False})
         if m := re.fullmatch(r"/api/p/([a-z0-9-]+)", ruta):
             if not (DATOS / m[1] / "proyecto.json").exists():
                 return self.responder({"error": "no existe"}, 404)

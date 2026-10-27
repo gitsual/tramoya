@@ -181,6 +181,31 @@ public class EasyEngineTests
     }
 
     [Fact]
+    public void MainAgenteWithoutAFolderReportsTheFailureInOneLine()
+    {
+        // Antes de abrir ningún navegador ni preguntar a ningún modelo: sin carpeta no hay dónde
+        // dejar el resultado, y se dice en la misma línea de error que lee el servidor.
+        var carpeta = Path.Combine(Path.GetTempPath(), $"tramoya-sin-carpeta-{Guid.NewGuid():N}");
+        var perfil = Path.Combine(carpeta, "_navegador");
+        var (codigo, lineas) = Correr("agente", carpeta, "https://a.b/", perfil, "{}", "Entra en Pedidos");
+        Assert.Equal(1, codigo);
+        var salida = Assert.Single(lineas);
+        Assert.StartsWith("La IA no ha podido hacerlo: ", Pasos.Str(salida, "error"));
+        Assert.Contains("no existe la carpeta", Pasos.Str(salida, "error"));
+        Assert.EndsWith(".", Pasos.Str(salida, "error"));
+        Assert.False(Directory.Exists(carpeta));
+    }
+
+    [Fact]
+    public void MainAgenteWithMissingArgumentsReportsTheFailureInOneLine()
+    {
+        var (codigo, lineas) = Correr("agente", Path.GetTempPath(), "https://a.b/");
+        Assert.Equal(1, codigo);
+        var salida = Assert.Single(lineas);
+        Assert.StartsWith("La IA no ha podido hacerlo: faltan datos", Pasos.Str(salida, "error"));
+    }
+
+    [Fact]
     public void EmitirWritesOneCompactUnescapedLine()
     {
         lock (Consola)

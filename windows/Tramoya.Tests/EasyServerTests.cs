@@ -19,9 +19,12 @@ public class EasyServerTests : IDisposable
 {
     private readonly string _datos;
     private readonly ServerOptions _o;
+    private readonly Func<bool> _modeloAntes = Tareas.ModeloDisponible;
 
     public EasyServerTests()
     {
+        // Ningún test sondea a un Ollama de verdad: sin modelo salvo que un test diga lo contrario.
+        Tareas.ModeloDisponible = () => false;
         var raiz = Path.Combine(Path.GetTempPath(), "tramoya-easy-tests", Guid.NewGuid().ToString("N"));
         _datos = Path.Combine(raiz, "datos");
         Directory.CreateDirectory(_datos);
@@ -40,6 +43,7 @@ public class EasyServerTests : IDisposable
     public void Dispose()
     {
         Tareas.Reiniciar();
+        Tareas.ModeloDisponible = _modeloAntes;
         try { Directory.Delete(Path.GetDirectoryName(_datos)!, recursive: true); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
@@ -341,6 +345,44 @@ public class EasyServerTests : IDisposable
     }
 
     [Fact]
+    public void ConvertirPrefiereElTextoQueTraeLaGrabacion()
+    {
+        // La IA escribe la frase de cada paso: ese texto manda; donde viene vacío, se recupera el
+        // del paso igual de antes, como al regrabar a mano.
+        var id = Proyectos.Crear(_o, "Con IA", "https://a.b/");
+        var p = Proyectos.Leer(_o, id);
+        p["pasos"] = new JsonArray(
+            Obj("""{"id":1,"tipo":"clic","selector":"#a","desc":"Pulsa «A»","texto":"Lo de antes."}"""),
+            Obj("""{"id":2,"tipo":"clic","selector":"#b","desc":"Pulsa «B»","texto":"B de antes."}"""));
+        Proyectos.Guardar(_o, id, p);
+        File.WriteAllText(Path.Combine(_datos, id, "grabacion.json"), """
+            {"pasos": [{"id": 1, "tipo": "clic", "selector": "#a", "desc": "Pulsa «A»", "texto": "Abrimos A."},
+                       {"id": 2, "tipo": "clic", "selector": "#b", "desc": "Pulsa «B»", "texto": "  "},
+                       {"id": 3, "tipo": "clic", "selector": "#c", "desc": "Pulsa «C»"}],
+             "avisos": [], "inicio": "https://a.b/", "titulo": "A", "resumen": "Hecho: A y B.", "ok": true}
+            """, Encoding.UTF8);
+        Tareas.Convertir(_o, id);
+        var q = Proyectos.Leer(_o, id);
+        Assert.Equal(["Abrimos A.", "B de antes.", ""], q["pasos"]!.AsArray().Select(x => x!["texto"]!.GetValue<string>()).ToArray());
+        Assert.Equal("explicar", q["fase"]!.GetValue<string>());
+        Assert.Equal("Hecho: A y B.", q["resumen"]!.GetValue<string>());
+        Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void HayModeloSeInyectaYSeRecuerdaUnMinuto()
+    {
+        var veces = 0;
+        Tareas.ModeloDisponible = () => { veces++; return true; };
+        Assert.True(Tareas.HayModelo(_o));
+        Assert.True(Tareas.HayModelo(_o));
+        Assert.Equal(1, veces); // la segunda vez sale de la caché
+        Tareas.Reiniciar();
+        Tareas.ModeloDisponible = () => false;
+        Assert.False(Tareas.HayModelo(_o));
+    }
+
+    [Fact]
     public void ConvertirAvisaSiNoHayPasosOGrabacion()
     {
         var id = Proyectos.Crear(_o, "Nada", "https://a.b/");
@@ -418,7 +460,8 @@ public class EasyServerTests : IDisposable
 
         var (code, inicio) = await Get(c, "/api/inicio");
         Assert.Equal(HttpStatusCode.OK, code);
-        Assert.Equal(["proyectos", "voces", "webs", "ajustes", "windows", "carpeta", "acceso"], inicio.Select(kv => kv.Key).ToArray());
+        Assert.Equal(["proyectos", "voces", "webs", "ajustes", "windows", "carpeta", "acceso", "agente"], inicio.Select(kv => kv.Key).ToArray());
+        Assert.False(inicio["agente"]!.GetValue<bool>()); // nadie contesta: la tarjeta de la IA no se enseña
         Assert.Empty(inicio["proyectos"]!.AsArray());
         Assert.Empty(inicio["voces"]!.AsArray());
         Assert.Empty(inicio["webs"]!.AsArray());
@@ -577,6 +620,93 @@ public class EasyServerTests : IDisposable
         (code, _) = await Post(c, $"/api/p/{id}/cancelar");
         Assert.Equal(HttpStatusCode.OK, code);
         Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task ElInicioDiceQueHayIaCuandoElModeloContesta()
+    {
+        Tareas.ModeloDisponible = () => true;
+        using var s = Server.Start(_o);
+        using var c = Cliente(s);
+        var (_, inicio) = await Get(c, "/api/inicio");
+        Assert.True(inicio["agente"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public async Task AgentePorHttpRechazaUnObjetivoVacioYConUnoArranca()
+    {
+        using var s = Server.Start(_o);
+        using var c = Cliente(s);
+        var (_, creado) = await Post(c, "/api/crear", """{"nombre":"Con IA","url":"https://a.b/"}""");
+        var id = creado["id"]!.GetValue<string>();
+        var (code, j) = await Post(c, $"/api/p/{id}/agente", """{"objetivo":"   "}""");
+        Assert.Equal(HttpStatusCode.BadRequest, code);
+        Assert.Equal("Escribe qué quieres que haga la IA.", j["error"]!.GetValue<string>());
+        Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
+        (code, j) = await Post(c, $"/api/p/{id}/agente", """{"objetivo":" Entra en Pedidos y abre el 1234 "}""");
+        Assert.Equal(HttpStatusCode.OK, code);
+        Assert.True(j["ok"]!.GetValue<bool>());
+        // El objetivo se queda en el proyecto, recortado.
+        Assert.Equal("Entra en Pedidos y abre el 1234", Proyectos.Leer(_o, id)["objetivo"]!.GetValue<string>());
+        // El «motor» sale al instante sin decir ni «fin» ni «error»: la IA se ha ido sin terminar.
+        Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "quieto");
+        var t = Tareas.Tarea(id);
+        Assert.Equal("error", t["estado"]!.GetValue<string>());
+        Assert.Equal("La IA se ha cerrado sin terminar.", t["msg"]!.GetValue<string>());
+        Assert.Equal("grabar", Proyectos.Leer(_o, id)["fase"]!.GetValue<string>());
+        (code, _) = await Post(c, $"/api/p/{id}/cancelar");
+        Assert.Equal(HttpStatusCode.OK, code);
+        Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void AgenteConUnMotorQueTerminaPasaLosPasosYSusFrasesAlProyecto()
+    {
+        // El motor va contando lo que piensa y los pasos que apunta, y al final dice «fin»; la
+        // grabación que deja (aquí escrita de antemano) pasa al proyecto con sus frases.
+        var o = Opciones(MotorQueDice(
+            """{"fase": "agente", "msg": "El boton 3 abre Pedidos", "p": 0}""",
+            """{"fase": "agente", "msg": "Paso 1: Pulsa el boton Pedidos", "p": 0.04}""",
+            """{"paso": "Pulsa el boton Pedidos", "n": 1}""",
+            """{"fin": true, "n": 1, "inicio": "https://a.b/"}"""));
+        var id = Proyectos.Crear(o, "Con IA", "https://a.b/");
+        File.WriteAllText(Path.Combine(_datos, id, "grabacion.json"), """
+            {"pasos": [{"id": 1, "tipo": "clic", "selector": "#p", "desc": "Pulsa el botón «Pedidos»", "texto": "Entramos en Pedidos."}],
+             "avisos": [], "inicio": "https://a.b/", "titulo": "Pedidos", "resumen": "Pedidos abierto.", "ok": true}
+            """, Encoding.UTF8);
+        lock (Tareas.Cerrojo)
+        {
+            Tareas.Agente(o, id, "Entra en Pedidos");
+            var t = Tareas.Tarea(id);
+            Assert.Equal("pensando", t["estado"]!.GetValue<string>());
+            Assert.Equal("Pensando…", t["msg"]!.GetValue<string>());
+            Assert.Equal(0.0, t["p"]!.GetValue<double>());
+        }
+        Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "quieto");
+        Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
+        var p = Proyectos.Leer(o, id);
+        Assert.Equal("explicar", p["fase"]!.GetValue<string>());
+        Assert.Equal("Entra en Pedidos", p["objetivo"]!.GetValue<string>());
+        Assert.Equal("Entramos en Pedidos.", p["pasos"]![0]!["texto"]!.GetValue<string>());
+        Assert.Equal("Pedidos", p["titulo_web"]!.GetValue<string>());
+        Assert.Equal("Pedidos abierto.", p["resumen"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void AgenteConUnMotorQueFallaEnsenaLoQueDijoElModelo()
+    {
+        var o = Opciones(MotorQueDice(
+            """{"fase": "agente", "msg": "Paso 1: Pulsa Entrar", "p": 0.04}""",
+            """{"paso": "Pulsa Entrar", "n": 1}""",
+            """{"error": "La IA no ha podido hacerlo: no encuentro Pedidos en esta web."}"""));
+        var id = Proyectos.Crear(o, "Con IA", "https://a.b/");
+        Tareas.Agente(o, id, "Entra en Pedidos");
+        Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "quieto");
+        var t = Tareas.Tarea(id);
+        Assert.Equal("error", t["estado"]!.GetValue<string>());
+        Assert.Equal("La IA no ha podido hacerlo: no encuentro Pedidos en esta web.", t["msg"]!.GetValue<string>());
+        Assert.Equal("grabar", Proyectos.Leer(o, id)["fase"]!.GetValue<string>());
+        Assert.True(File.Exists(Path.Combine(_datos, id, "ultimo-error.txt")));
     }
 
     [Fact]
