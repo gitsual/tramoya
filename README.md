@@ -20,6 +20,7 @@ The audience never sees it. The show runs on time because of it.</em><br>
 </p>
 
 <a href="#-install"><strong>Install</strong></a> ·
+<a href="#-no-terminal-tramoya-easy"><strong>No terminal</strong></a> ·
 <a href="#-the-demo"><strong>The demo</strong></a> ·
 <a href="#-your-app-in-one-file"><strong>Your app</strong></a> ·
 <a href="#-where-it-earns-its-keep"><strong>Enterprise uses</strong></a> ·
@@ -41,7 +42,7 @@ The audience never sees it. The show runs on time because of it.</em><br>
 <div align="center">
 
 **stage** Playwright · **recorder** wf-recorder or the browser itself · **voice** Kokoro · **cut** ffmpeg · **marks** one JSON file<br>
-**core deps** none · **extras** `[playwright]` `[tts]` · **cli** `tramoya init | capture | import | login | direct | snapshots | ask | do | marks | assemble | deck | captions | music | cues | record | tts`
+**core deps** none · **extras** `[playwright]` `[tts]` · **cli** `tramoya easy | init | capture | import | login | direct | snapshots | ask | do | marks | assemble | deck | captions | music | cues | record | tts`
 
 <br>
 
@@ -59,7 +60,7 @@ out of that take at the marks it wrote. No mock-ups, nothing hand-painted. tramo
 ## ✂️ In three lines
 
 ```bash
-pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v0.4.1"
+pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v0.5.0"
 tramoya init my-demo --url http://localhost:3000/ --scene "welcome: The dashboard" --scene "export: Export a report"
 cd my-demo && tramoya capture http://localhost:3000/ --into tramoya.toml && make
 ```
@@ -70,6 +71,45 @@ write. The rest of this page shows what happens in between, with the real output
 
 If you would rather describe than type: `tramoya do "record the notes app demo, give it an English voice and build
 the final video"` works out the commands and asks before running them.
+
+---
+
+## 🪄 No terminal: `tramoya easy`
+
+For the person who knows the process and has never opened a terminal. A window, in Spanish, three steps:
+
+<p align="center">
+  <img src="assets/easy/grabando.png" alt="tramoya easy while recording: a live count of the steps and the last one it understood" width="49%">
+  <img src="assets/easy/explicar.png" alt="tramoya easy, step 2: every recorded step in plain words, a sentence box under each" width="49%">
+</p>
+
+1. **Grabar.** Paste the address of any web page and press *Abrir la web*. Sign in as usual, go to where the
+   process starts, press *Empezar a grabar* and do it once. Nothing is recorded before that button, so a password
+   never is; the browser profile is kept, so the next video is already signed in.
+2. **Explicar.** Every click, typed value, choice and key comes back as a sentence ("Pulsa el botón «Guardar»").
+   Write what to say on the steps that need it, listen to it, change a typed value, drop the steps that were
+   mistakes, or mark a button as *solo señalar* so the replay points at it without pressing it (the last saving
+   button is marked that way by default, so the replay never saves twice).
+3. **Vídeo.** tramoya replays the steps on stage, reads the sentences with a Windows voice (SAPI, offline) and
+   assembles the video, plus an `.srt` next to it. A step that fails is named, with the reason, and the window
+   takes you to it.
+
+No model is involved. Selectors come from Playwright's own generator (role and accessible name first, never the
+generated ids that change on every page load), iframes are followed, cookie banners become optional steps, Windows
+integrated sign-in is allowed for the site's own domain, and a session that expired is reported as such instead of
+as a missing button.
+
+```bash
+pip install "tramoya[easy] @ git+https://github.com/gitsual/tramoya@v0.5.0"
+python -m playwright install chromium
+tramoya easy                      # alias: tramoya facil
+```
+
+On a locked-down Windows laptop (no admin, a proxy that cuts big downloads) use the **portable kit** instead: one
+folder with Python, Chromium and ffmpeg inside; unzip, double-click *Abrir Tramoya*, and it adds a shortcut with
+its icon. Build it on any Windows machine with `python scripts/build_easy_kit.py`
+(→ `dist/Tramoya-<version>-windows.zip`), or take it from the
+[releases](https://github.com/gitsual/tramoya/releases).
 
 ---
 
@@ -341,9 +381,9 @@ fits each voice clip and writes <code>final-demo.mp4</code>. With <code>--yes</c
 ## 📥 Install
 
 ```bash
-pip install "tramoya @ git+https://github.com/gitsual/tramoya@v0.4.1"
-pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.4.1"   # + Stage
-pip install "tramoya[tts] @ git+https://github.com/gitsual/tramoya@v0.4.1"          # + Kokoro voice
+pip install "tramoya @ git+https://github.com/gitsual/tramoya@v0.5.0"
+pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v0.5.0"   # + Stage
+pip install "tramoya[tts] @ git+https://github.com/gitsual/tramoya@v0.5.0"          # + Kokoro voice
 ```
 
 The core has **no Python dependencies**. Pin the tag: the package is consumed by git URL and the tag is the contract.
@@ -592,10 +632,11 @@ src/tramoya/
 ├── assembly.py    assemble_marks · plan_segments · assemble_deck · Segment
 ├── captions.py    split · wrap · page_cues · render_srt · render_ass · burn_argv · trim_plan
 ├── audio.py       build_loop · render_wav · duck_filter · solo_filter · mix_argv
-└── cli.py         tramoya init | capture | import | login | direct | snapshots | ask | do | marks | assemble | …
+├── easy/          app (window + HTTP) · engine (record · steps · scenes · SAPI voice · srt) · ui/  [easy]
+└── cli.py         tramoya easy | init | capture | import | login | direct | snapshots | ask | do | marks | …
 ```
 
-Twenty modules. Anything that shells out is behind `Runner`; anything that needs Playwright or Kokoro is behind
+Twenty modules and the `easy` package. Anything that shells out is behind `Runner`; anything that needs Playwright or Kokoro is behind
 an extra and skipped cleanly when the extra is absent; anything that talks to a model is behind an injectable
 `post` function, so the assistant's tests never open a socket.
 
@@ -603,7 +644,7 @@ an extra and skipped cleanly when the extra is absent; anything that talks to a 
 
 ## 🚧 Status
 
-`v0.4.1`. The pipeline is used for real demos and every piece on this page is its output, but it is one person's
+`v0.5.0`. The pipeline is used for real demos and every piece on this page is its output, but it is one person's
 tool and the edges show:
 
 - **Linux first.** Screen capture is `wf-recorder`, so `record` is Wayland only. `direct` records inside the browser
@@ -614,7 +655,9 @@ tool and the edges show:
   a hosted Claude does better on long ones. Either way it only proposes `tramoya` commands, and nothing runs unasked.
 - **Selectors are yours.** `capture` keeps what the recorder chose (CSS first, then visible text, then a role);
   when the app's markup changes, the step fails loudly and the snapshot diff says where.
-- **No GUI, no cloud, no telemetry.** Files in, files out.
+- **One GUI, in Spanish.** `tramoya easy` is the only window; it runs on 127.0.0.1 and its voice is Windows'
+  SAPI, so elsewhere its videos carry captions without a voice. The kit is Windows only.
+- **No cloud, no telemetry.** Files in, files out.
 
 ---
 

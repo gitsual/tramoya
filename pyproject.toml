@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tramoya"
-version = "0.4.1"
+version = "0.5.0"
 description = "Stage machinery for recorded software demos: scene marks, pacing, narration, a Playwright stage, screen recording and an ffmpeg post-production pipeline."
 readme = "README.md"
 license = "MIT"
@@ -23,6 +23,7 @@ dependencies = []
 [project.optional-dependencies]
 playwright = ["playwright>=1.45"]
 tts = ["kokoro>=0.9", "soundfile>=0.12", "numpy>=1.26"]
+easy = ["playwright>=1.45", "comtypes>=1.4; sys_platform == 'win32'"]
 dev = ["pytest>=8.0", "ruff>=0.5"]
 
 [project.scripts]

@@ -411,6 +411,16 @@ def cmd_login(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_easy(args: argparse.Namespace) -> int:
+    try:
+        from tramoya.easy.app import main as easy_main
+    except ImportError as exc:
+        print(f"easy needs the optional extra: pip install 'tramoya[easy]' ({exc})",
+              file=sys.stderr)
+        return 2
+    return easy_main(["--no-window"] if args.no_window else [])
+
+
 def cmd_snapshots_diff(args: argparse.Namespace) -> int:
     problems = diff_snapshots(Path(args.expected), Path(args.actual))
     if not problems:
@@ -574,6 +584,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default=SESSION_FILE)
     _add_dry_run(p)
     p.set_defaults(fn=cmd_login)
+
+    p = sub.add_parser("easy", aliases=["facil"],
+                       help="the point-and-click app (Spanish): do the process once in the "
+                            "browser, write a sentence per step, get the video")
+    p.add_argument("--no-window", action="store_true",
+                   help="serve the app and print its URL instead of opening a window")
+    p.set_defaults(fn=cmd_easy)
 
     p = sub.add_parser("snapshots", help="accessibility snapshots written by direct")
     ss = p.add_subparsers(dest="snapshots_cmd", required=True)
