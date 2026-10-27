@@ -136,3 +136,59 @@ windows/
   abre las webs de la empresa (inicio de sesión integrado, certificados internos).
 - El proxy de Indra corta descargas grandes: la descarga de Chromium por Playwright puede
   fallar allí; por eso el kit lleva `navegador\` dentro y el `.exe` solo descarga si falta.
+
+## Agente: «descríbelo y la IA lo hace» (`Tramoya.Agent`, 27-10-2026)
+
+Siguiente pieza grande, solo en la versión Windows por ahora. Un modelo de lenguaje mira la
+página, decide el siguiente clic y escribe la frase de cada paso; el resultado es un proyecto
+de `easy` (pasos con selectores duraderos y su frase) que se puede revisar en la ventana y
+convertir en vídeo con voz, y con `--video` se hace del tirón.
+
+```
+Tramoya.exe agent "<objetivo en lenguaje natural>" --url <web> [--backend ollama|claude] [--model X]
+                  [--max-pasos 25] [--nombre "título del vídeo"] [--video] [--voz] [--capturas]
+```
+
+**Flujo** (`Tramoya.App/Cli.cs`, `CmdAgent`): 1) `Browsers.EnsureAsync`; 2) abre la web en el perfil
+persistente de `easy` (`Paths.PerfilWeb`, `PWDEBUG=console`, `Engine.ArgumentosNavegador`, viewport de
+`ajustes.tamano`, con ventana); 3) `Agent.RunAsync` con el progreso por consola (pensamiento,
+acción, frase de cada paso); 4) guarda `auth.json` (storage state) y crea el proyecto con
+`Proyectos.Crear` + `Guardar` (`pasos` = `Pasos.Limpiar(resultado.Pasos)` conservando `texto`,
+`fase = "explicar"`, `inicio`, `titulo_web`, `avisos`), e imprime el id y la carpeta; 5) con `--video`
+rellena `mis_videos`/`ajustes`/`voz` como hace `Tareas.HacerVideo` y llama a
+`Engine.HacerVideoAsync(carpeta, voz)` en el mismo proceso, imprimiendo la ruta del mp4.
+
+**Biblioteca** (`Tramoya.Agent`, net9.0, referencias Core y Stage):
+- `Observer.cs`: JS inyectado que numera los elementos interactivos visibles (`button`, `a[href]`,
+  `input`, `select`, `textarea`, `summary`, `label`, `[onclick]`, roles `button|link|tab|menuitem|
+  option|checkbox|radio|switch|combobox|treeitem|gridcell`) poniéndoles `data-tramoya-ref="N"` y
+  devuelve una lista `N | tipo | nombre | valor | estado` (máx. 150, nombres recortados a 60), más
+  `url`, `title` y los primeros 1500 caracteres de texto visible. Recorre también los marcos
+  (`page.Frames`) y prefija la ruta del marco como `Engine.PrefijoMarcoAsync`. `ObserveAsync(IPage)`
+  → `Observation { Url, Title, Text, Elements: List<ObservedElement(Ref, Frame, Tipo, Nombre, Valor,
+  Estado)> }`. `SelectorDuraderoAsync(frame, ref)` = `window.playwright.selector(el)` sobre el
+  elemento (como el grabador de `easy`); si no existe, un CSS mínimo (`#id`, `[name=]`, `text=`).
+- `Protocol.cs`: system prompt en español con el objetivo y las reglas; cada turno el usuario manda
+  la observación y el resultado de la última acción; el modelo responde SOLO JSON:
+  `{"pensamiento":"…","accion":"clic|escribir|elegir|tecla|ir|esperar|terminar|fallo","ref":N,
+  "valor":"…","frase":"lo que se dirá en el vídeo en este paso, o vacío","resumen":"al terminar"}`.
+  `ParseDecision(string)` tolera vallas ```json y texto alrededor; JSON inválido → se reintenta una
+  vez con el error como mensaje. Historial: últimas 6 interacciones completas + lista resumida de
+  las acciones hechas. Tope `MaxPasos`; una acción que falla se le cuenta al modelo (no aborta).
+- `Backends.cs`: `IChatBackend { Task<string> CompleteAsync(string system, IReadOnlyList<ChatMessage>
+  messages, CancellationToken ct); }`, `ChatMessage(string Role, string Text, byte[]? ImagePng = null)`;
+  `OllamaChatBackend` (`POST /api/chat`, `stream=false`, `format="json"`, `options.temperature=0.1`,
+  `think=false`), `ClaudeChatBackend` (Messages API, imagen base64 PNG cuando `Capturas`);
+  `Backends.Pick(name, model, env)` con la lógica de `Assistant.PickBackend` (`TRAMOYA_LLM`,
+  `ANTHROPIC_API_KEY` → claude, si no ollama; `TRAMOYA_LLM_MODEL`; ollama por defecto `qwen3-coder:30b`).
+- `Agent.cs`: `AgentOptions(Goal, Lang = "es", MaxPasos = 25, Capturas = false)`,
+  `AgentResult { Ok, Resumen, Pasos: List<JsonObject> (formato de easy: tipo/selector/valor/desc/
+  guarda/opcional + texto = frase), Avisos, Inicio, Titulo }`, `Agent.RunAsync(IPage page, AgentOptions,
+  IChatBackend, IProgress<string>? log, CancellationToken)`. Ejecuta cada acción sobre la página con
+  Playwright (clic por `[data-tramoya-ref=N]` dentro del marco, escribir con `FillAsync`, elegir con
+  `SelectOptionAsync`, tecla con `Keyboard.PressAsync`, ir con `GotoAsync`, esperar 1 s), espera a que
+  la página se asiente (`networkidle` con tope 5 s) y apunta el paso con el selector duradero
+  capturado ANTES de actuar. Los botones que guardan (`Vocabulario.Guardan`) se apuntan con
+  `guarda=true` pero se pulsan igual (el agente explora en vivo; el modo «solo señalar» es del vídeo).
+- Tests: `AgentTests.cs` con un backend falso que devuelve decisiones programadas y una página de
+  NSubstitute, más un `[BrowserFact]` con una página `data:` que recorre dos clics y un texto.

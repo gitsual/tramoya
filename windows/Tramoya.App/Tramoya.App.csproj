@@ -24,5 +24,6 @@
     <ProjectReference Include="..\Tramoya.Stage\Tramoya.Stage.csproj" />
     <ProjectReference Include="..\Tramoya.Voice\Tramoya.Voice.csproj" />
     <ProjectReference Include="..\Tramoya.Easy\Tramoya.Easy.csproj" />
+    <ProjectReference Include="..\Tramoya.Agent\Tramoya.Agent.csproj" />
   </ItemGroup>
 </Project>
