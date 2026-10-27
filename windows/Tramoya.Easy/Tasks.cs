@@ -474,7 +474,9 @@ public static class Tareas
         try
         {
             var url = Backends.UrlOllama(Environment.GetEnvironmentVariable("OLLAMA_HOST"));
-            using var r = Sonda.GetAsync($"{url}/api/tags").GetAwaiter().GetResult();
+            // /api/version responde al instante; /api/tags recorre los manifiestos de cada
+            // modelo y en un disco lento tarda segundos, más que la sonda.
+            using var r = Sonda.GetAsync($"{url}/api/version").GetAwaiter().GetResult();
             return r.IsSuccessStatusCode;
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException or UriFormatException)
