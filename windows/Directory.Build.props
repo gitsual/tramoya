@@ -8,7 +8,8 @@
     <NoWarn>$(NoWarn);MSB3277</NoWarn>
     <Authors>Álvaro González</Authors>
     <Product>tramoya</Product>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- ICU stays available (Unicode normalisation needs it); every culture-sensitive call is invariant on purpose. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <DebugType>embedded</DebugType>
   </PropertyGroup>

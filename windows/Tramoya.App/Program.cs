@@ -3,6 +3,7 @@
 // tramoya.easy` does). With arguments it is the CLI. A WinExe has no console,
 // so the CLI first attaches to the one that launched it; that way the same exe
 // serves both the double-click and `Tramoya.exe grabar ...` from a terminal.
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
@@ -17,6 +18,12 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // Numbers and dates are formatted the invariant way everywhere (the files are shared
+        // with the Python version); the user-facing text is Spanish by construction, not by culture.
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
         Paths.ConfigureEnvironment();
         return args.Length > 0 ? RunCli(args) : RunWindow();
     }
