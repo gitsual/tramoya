@@ -14,6 +14,8 @@ public static class Json
     public static readonly JsonSerializerOptions Pretty = new()
     {
         WriteIndented = true,
+        NewLine = "
+",
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         PropertyNamingPolicy = null,
     };
