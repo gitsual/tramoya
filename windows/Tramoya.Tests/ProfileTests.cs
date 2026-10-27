@@ -231,6 +231,16 @@ public class ProfileTests
         public Task PressAsync(string k) { Calls.Add($"press {k}"); return Task.CompletedTask; }
         public Task GotoAsync(string u) { Calls.Add($"goto {u}"); return Task.CompletedTask; }
         public Task BeatAsync(double b) { Calls.Add($"beat {Fmt.Py(b)}"); return Task.CompletedTask; }
+        public Task WaitForAsync(string s, double t) { Calls.Add($"wait {s} {Fmt.Py(t)}"); return Task.CompletedTask; }
+    }
+
+    [Fact]
+    public async Task RunStepsWaitOpensAWaitWindowOnTheStage()
+    {
+        var stage = new FakeStage();
+        await Steps.RunAsync(stage, new[] { "wait #listo | 180", "point #listo" }, say: _ => Task.CompletedTask);
+        Assert.Equal(new[] { "wait #listo 180.0", "point #listo" }, stage.Calls);
+        Assert.Throws<StepError>(() => Steps.Parse("wait #listo"));
     }
 
     [Fact]

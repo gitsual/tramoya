@@ -18,4 +18,6 @@ public interface IStage
     Task PressAsync(string key);
     Task GotoAsync(string url);
     Task BeatAsync(double seconds);
+    /// <summary>Wait up to <paramref name="seconds"/> for <paramref name="selector"/> to be visible, inside a <c>wait:start</c>/<c>wait:end</c> window the montage can speed up.</summary>
+    Task WaitForAsync(string selector, double seconds);
 }

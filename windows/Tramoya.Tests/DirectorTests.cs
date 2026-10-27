@@ -28,6 +28,7 @@ public sealed class DirectorTests
         public Task PressAsync(string key) { Log.Add($"press {key}"); return Task.CompletedTask; }
         public Task GotoAsync(string url) { Log.Add($"goto {url}"); return Task.CompletedTask; }
         public Task BeatAsync(double b) { Log.Add($"beat {b.ToString(CultureInfo.InvariantCulture)}"); return Task.CompletedTask; }
+        public Task WaitForAsync(string sel, double t) { Log.Add($"wait {sel} {t.ToString(CultureInfo.InvariantCulture)}"); return Task.CompletedTask; }
         public Task CaptionAsync(string t) { Log.Add($"caption '{t}'"); return Task.CompletedTask; }
         public Task<string> SnapshotAsync(string selector = "body") => Task.FromResult(Tree);
     }

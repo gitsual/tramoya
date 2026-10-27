@@ -138,6 +138,7 @@ class FakeStage:
     def dispatch_event(self, s: str, e: str) -> None: self.calls.append(("event", s, e))
     def keyboard_press(self, k: str) -> None: self.calls.append(("press", k))
     def goto(self, u: str) -> None: self.calls.append(("goto", u))
+    def wait_for(self, s: str, t: float) -> None: self.calls.append(("wait", s, t))
 
     @property
     def keyboard(self):
@@ -160,6 +161,14 @@ def test_run_steps_drives_the_stage_in_order() -> None:
         ("press", "Enter"), ("beat", 2.0), ("goto", "http://app/x"),
     ]
     assert said == [4.0]
+
+
+def test_run_steps_wait_opens_a_wait_window_on_the_stage() -> None:
+    stage = FakeStage()
+    run_steps(stage, ["wait #listo | 180", "point #listo"], say=lambda fallback: None)
+    assert stage.calls == [("wait", "#listo", 180.0), ("point", "#listo")]
+    with pytest.raises(StepError):
+        parse_step("wait #listo")
 
 
 def test_run_steps_names_the_failing_line() -> None:

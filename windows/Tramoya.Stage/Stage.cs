@@ -181,6 +181,31 @@ public sealed class Stage : IDirectedStage
     public Task GotoAsync(string url) => Page.GotoAsync(url);
 
     /// <summary>
+    /// Wait for something slow (a model thinking, a build) inside a wait window: the marks
+    /// get <c>wait:start</c>/<c>wait:end</c>, and <c>assemble</c> speeds any window longer
+    /// than 20 s up to a few seconds with a caption. Not finding the element is not an
+    /// error here: the next step will fail with a clearer message if it mattered.
+    /// </summary>
+    public async Task WaitForAsync(string selector, double seconds)
+    {
+        using (Marks.Wait(selector))
+        {
+            try
+            {
+                await Page.Locator(selector).First.WaitForAsync(new LocatorWaitForOptions
+                {
+                    State = WaitForSelectorState.Visible,
+                    Timeout = (float)(seconds * 1000),
+                }).ConfigureAwait(false);
+            }
+            catch (PlaywrightException)
+            {
+                // the window closes anyway: the marks must stay balanced
+            }
+        }
+    }
+
+    /// <summary>
     /// The page's accessibility tree as text (roles and names, no pixels): what
     /// <c>tramoya snapshots diff</c> compares between two runs. A page that cannot give
     /// one (a double, an old browser) yields an empty snapshot rather than an error.

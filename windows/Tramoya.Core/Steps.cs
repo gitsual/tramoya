@@ -34,6 +34,7 @@ public static class Steps
             ["goto"] = (1, 1, "goto <path or url>"),
             ["beat"] = (1, 1, "beat <seconds>"),
             ["say"] = (0, 1, "say [fallback seconds]  (plays this scene's narration)"),
+            ["wait"] = (2, 2, "wait <selector> | <max seconds>  (a wait window the montage speeds up)"),
         };
 
     public static Step Parse(string line)
@@ -102,6 +103,7 @@ public static class Steps
                 }
                 case "beat": await stage.BeatAsync(Float(a[0])); break;
                 case "say": await say(a.Count > 0 ? Float(a[0]) : 0.0); break;
+                case "wait": await stage.WaitForAsync(a[0], Float(a[1])); break;
             }
         }
     }
