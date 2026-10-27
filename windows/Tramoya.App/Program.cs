@@ -23,7 +23,7 @@ internal static class Program
 
     // --- app window ----------------------------------------------------------------
 
-    private static int RunWindow()
+    internal static int RunWindow()
     {
         // One window per session: a second double-click just raises the first one.
         using var mutex = new Mutex(initiallyOwned: true, @"Local\Tramoya", out var primera);

@@ -569,22 +569,16 @@ internal static class Cli
 
     private static int CmdEasy(ParsedArgs args) => EasyServerRun(args.Flag("no_window"));
 
-    // TODO(integration): replace the body with `return Tramoya.Easy.Server.Run(options, noWindow);`
-    // once Tramoya.Easy lands (the `tramoya easy` entry point: serve the app and open the window).
+    /// <summary>`tramoya easy`: serve the app; with `--no-window` print the URL and stay up, else open the window.</summary>
     private static int EasyServerRun(bool noWindow)
     {
-        Console.Error.WriteLine("easy: pendiente de integración");
-        return 2;
+        if (noWindow)
+            return Tramoya.Easy.Server.Run(EasyHost.Options(), noWindow: true);
+        return Program.RunWindow();
     }
 
-    // TODO(integration): replace the body with `return Tramoya.Easy.Engine.Main(rest);` once
-    // Tramoya.Easy lands (the hidden `easy-engine grabar|video|voces|oir|pasos` worker the
-    // server launches as a child process).
-    private static int EasyEngineMain(string[] rest)
-    {
-        Console.Error.WriteLine("easy-engine: pendiente de integración");
-        return 2;
-    }
+    /// <summary>The hidden `easy-engine grabar|video|voces|oir|pasos` worker the server launches as a child process.</summary>
+    private static int EasyEngineMain(string[] rest) => Tramoya.Easy.Engine.Main(rest);
 
     private static int CmdSnapshotsDiff(ParsedArgs args)
     {
