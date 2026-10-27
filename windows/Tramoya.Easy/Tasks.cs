@@ -172,6 +172,13 @@ public static class Tareas
     /// siendo de este proceso: si se canceló entre medias, no hay nada que decir) y guarda en
     /// <c>ultimo-error.txt</c> el rastro, igual que cuando es el motor el que falla.
     /// </summary>
+    /// <remarks>
+    /// La entrada de error se queda con el proceso. Un fallo del lector puede llegar con el
+    /// motor aún vivo (la ventana de la web abierta, un montaje a medias): si la tarea lo
+    /// soltara, <see cref="Cancelar"/> y <see cref="CancelarTodas"/> ya no podrían matarlo y
+    /// la ventana cerraría con un Chromium huérfano. <see cref="Escuchar"/> lo libera cuando
+    /// termina; <see cref="Matar"/> y <see cref="Orden"/> saben tratar con uno ya liberado.
+    /// </remarks>
     private static void Fallo(ServerOptions o, string pid, Process proc, string que, Exception e, IEnumerable<string>? cola)
     {
         lock (Cerrojo)
@@ -180,9 +187,21 @@ public static class Tareas
             Mapa[pid] = new Entrada
             {
                 Datos = new JsonObject { ["estado"] = "error", ["msg"] = $"{que} ({Motivo(e)})." },
+                Proc = proc,
             };
         }
         Rastro(o, pid, (cola ?? []).Append("").Append(e.ToString()));
+    }
+
+    /// <summary>Para los tests: el id del proceso que la tarea de un vídeo tiene a su cargo, o null si no tiene ninguno (o ya se liberó).</summary>
+    internal static int? ProcesoDe(string pid)
+    {
+        lock (Cerrojo)
+        {
+            if (!Mapa.TryGetValue(pid, out var t) || t.Proc is null) return null;
+            try { return t.Proc.Id; }
+            catch (InvalidOperationException) { return null; }
+        }
     }
 
     // El mensaje de la excepción sin el punto final, para meterlo entre paréntesis.

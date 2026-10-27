@@ -3,6 +3,19 @@ using Xunit;
 
 namespace Tramoya.Tests;
 
+/// <summary>
+/// A fact that needs the real ffmpeg: without one on PATH it is reported as skipped, so a
+/// machine without ffmpeg shows the gap instead of a pass that checked nothing.
+/// </summary>
+internal sealed class FfmpegFactAttribute : FactAttribute
+{
+    public FfmpegFactAttribute()
+    {
+        if (!Runner.Available("ffmpeg"))
+            Skip = "ffmpeg no está en el PATH";
+    }
+}
+
 public class CaptionsTests
 {
     private sealed record Seg(string Kind, string Name, double Duration) : ISegment;
@@ -72,23 +85,27 @@ public class CaptionsTests
         Assert.Equal("subtitles='C\\:/v/it\\'\\''s.srt'", Captions.BurnArgv("in.mp4", @"C:\v\it's.srt", "out.mp4")[5]);
         Assert.Equal("subtitles='a,b;[c].srt'", Captions.BurnArgv("in.mp4", "a,b;[c].srt", "out.mp4")[5]);
     }
-    [Fact] public void BurnArgvRunsThroughTheRealFfmpegWithASpacedWindowsPath()
+    [FfmpegFact] public void BurnArgvRunsThroughTheRealFfmpegWithTheAwkwardWindowsPaths()
     {
         // The escaping above is only right if ffmpeg agrees: burn a one-second black clip
-        // with a subtitle file whose path has the drive colon and a space. Without ffmpeg
-        // on PATH there is nothing to check, so the test simply ends.
-        if (!Runner.Available("ffmpeg")) return;
+        // with subtitle files whose paths have the drive colon plus each of the characters
+        // the string-only test covers (a space, an apostrophe, the filter separators).
         string dir = Path.Combine(Path.GetTempPath(), "tramoya captions " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
-            string video = Path.Combine(dir, "base.mp4"), srt = Path.Combine(dir, "mis captions.srt"), outPath = Path.Combine(dir, "burned.mp4");
-            Assert.Contains(':', srt);  // the temp dir is an absolute Windows path
-            File.WriteAllText(srt, "1\n00:00:00,000 --> 00:00:01,000\nhola\n");
+            string video = Path.Combine(dir, "base.mp4");
+            Assert.Contains(':', video);  // the temp dir is an absolute Windows path
             var runner = new Runner();
             runner.Run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=black:s=64x64:d=1", "-pix_fmt", "yuv420p", video]);
-            runner.Run(Captions.BurnArgv(video, srt, outPath));
-            Assert.True(new FileInfo(outPath).Length > 0);
+            foreach (var name in new[] { "mis captions.srt", "it's.srt", "a,b;[c].srt" })
+            {
+                string srt = Path.Combine(dir, name), outPath = Path.Combine(dir, "burned.mp4");
+                File.WriteAllText(srt, "1\n00:00:00,000 --> 00:00:01,000\nhola\n");
+                runner.Run(Captions.BurnArgv(video, srt, outPath));
+                Assert.True(new FileInfo(outPath).Length > 0, name);
+                File.Delete(outPath);
+            }
         }
         finally { Directory.Delete(dir, true); }
     }
