@@ -17,11 +17,18 @@ otherwise the folder of the ffmpeg found in PATH.
 
 .PARAMETER SkipBrowser
 Do not download Chromium (fast builds while developing).
+
+.PARAMETER Navegador
+A folder that already holds the Playwright browsers this build needs (for example
+%LOCALAPPDATA%\Tramoya
+avegador after a first run): the newest chromium-*,
+chromium_headless_shell-*, winldd-* and ffmpeg-* are copied instead of downloaded.
 #>
 [CmdletBinding()]
 param(
     [string]$Ffmpeg,
-    [switch]$SkipBrowser
+    [switch]$SkipBrowser,
+    [string]$Navegador
 )
 
 $ErrorActionPreference = 'Stop'
@@ -123,6 +130,16 @@ Get-ChildItem $dist -File | Where-Object { $_.Extension -in '.pdb', '.xml' -or $
 $navegador = Join-Path $dist 'navegador'
 if ($SkipBrowser) {
     Write-Host '== Chromium: omitido (-SkipBrowser) =='
+} elseif ($Navegador) {
+    Write-Host "== Chromium: copiado de $Navegador =="
+    New-Item -ItemType Directory -Force $navegador | Out-Null
+    foreach ($prefijo in @('chromium-', 'chromium_headless_shell-', 'winldd-', 'ffmpeg-')) {
+        $ultimo = Get-ChildItem $Navegador -Directory | Where-Object { $_.Name -like "$prefijo*" -and (Test-Path (Join-Path $_.FullName 'INSTALLATION_COMPLETE')) } |
+            Sort-Object { [int]($_.Name.Substring($prefijo.Length)) } | Select-Object -Last 1
+        if (-not $ultimo) { throw "No hay ninguna carpeta $prefijo* completa en $Navegador." }
+        Copy-Item $ultimo.FullName (Join-Path $navegador $ultimo.Name) -Recurse -Force
+        Write-Host "   $($ultimo.Name)"
+    }
 } else {
     Write-Host '== Chromium (Playwright install) =='
     # playwright.ps1 loads Microsoft.Playwright.dll from its own folder and calls
