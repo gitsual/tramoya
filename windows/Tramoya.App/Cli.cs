@@ -19,6 +19,8 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using Microsoft.Playwright;
 using Tramoya.Core;
+using Tramoya.Easy;
+using Tramoya.Agent;
 using Tramoya.Stage;
 using Tramoya.Voice;
 
@@ -53,6 +55,141 @@ internal static class Cli
 
     /// <summary>Chromium check before a browser command: null when it is there, else the exit code after printing why.</summary>
     internal static Func<int?> EnsureBrowser { get; set; } = EnsureBrowserDefault;
+
+    internal delegate Task<AgentResult> RunAgentFn(string url, AgentOptions options,
+        string? backend, string? model, JsonObject ajustes, string authPath);
+
+    internal static RunAgentFn RunAgent { get; set; } = RunAgentDefault;
+
+    internal static Func<string, bool, Task<int>> MakeAgentVideo { get; set; } = Engine.HacerVideoAsync;
+
+    private static async Task<AgentResult> RunAgentDefault(string url, AgentOptions options,
+        string? backendName, string? model, JsonObject ajustes, string authPath)
+    {
+        Environment.SetEnvironmentVariable("PWDEBUG", "console");
+        var (width, height) = Vocabulario.Tamanos.GetValueOrDefault(Pasos.Str(ajustes, "tamano"), Vocabulario.Viewport);
+        using var pw = await Playwright.CreateAsync().ConfigureAwait(false);
+        var context = await pw.Chromium.LaunchPersistentContextAsync(Paths.PerfilWeb, new()
+        {
+            Headless = false,
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            IgnoreHTTPSErrors = true,
+            Locale = "es-ES",
+            Args = Engine.ArgumentosNavegador(url,
+                (ajustes["dominios"] as JsonArray)?.Select(n => n?.ToString() ?? "")),
+        }).ConfigureAwait(false);
+        try
+        {
+            context.SetDefaultNavigationTimeout(60000);
+            var page = context.Pages.Count > 0 ? context.Pages[0] : await context.NewPageAsync().ConfigureAwait(false);
+            try { await page.GotoAsync(url).ConfigureAwait(false); }
+            catch (Exception) { /* A slow sign-in is not a failure. */ }
+            var backend = Backends.Pick(backendName, model);
+            var result = await Tramoya.Agent.Agent.RunAsync(page, options, backend,
+                new StderrProgress(), CancellationToken.None).ConfigureAwait(false);
+            await context.StorageStateAsync(new() { Path = authPath }).ConfigureAwait(false);
+            return result;
+        }
+        finally { await context.CloseAsync().ConfigureAwait(false); }
+    }
+
+    private static int CmdAgent(ParsedArgs args)
+    {
+        var goal = args.GetRequired("goal");
+        var url = args.GetRequired("url");
+        var maxPasos = args.Int("max_pasos")!.Value;
+        if (maxPasos < 1)
+        {
+            Console.Error.WriteLine("--max-pasos debe ser mayor que cero.");
+            return 2;
+        }
+        if (args.Flag("dry_run"))
+        {
+            var backend = args.Get("backend") ?? Environment.GetEnvironmentVariable("TRAMOYA_LLM");
+            if (string.IsNullOrEmpty(backend))
+                backend = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")) ? "ollama" : "claude";
+            var model = args.Get("model") ?? Environment.GetEnvironmentVariable("TRAMOYA_LLM_MODEL");
+            if (string.IsNullOrEmpty(model)) model = backend == "ollama" ? "qwen3-coder:30b" : Assistant.DefaultClaudeModel;
+            Console.WriteLine($"backend: {backend}\nmodelo: {model}\nurl: {url}\nobjetivo: {goal}\nmáximo de pasos: {maxPasos}");
+            return 0;
+        }
+        if (EnsureBrowser() is { } missing) return missing;
+        var opts = EasyHost.Options();
+        var temporary = TempDir("tramoya-agent-");
+        AgentResult result;
+        string id;
+        try
+        {
+            var auth = Path.Combine(temporary, "auth.json");
+            result = RunAgent(url, new AgentOptions(goal, "es", maxPasos, args.Flag("capturas")),
+                args.Get("backend"), args.Get("model"), Proyectos.LeerAjustes(opts), auth).GetAwaiter().GetResult();
+            id = Proyectos.Crear(opts, args.Get("nombre") ?? goal[..Math.Min(60, goal.Length)], url);
+            File.Move(auth, Path.Combine(Proyectos.Carpeta(opts, id), "auth.json"), overwrite: true);
+        }
+        finally { RemoveDir(temporary); }
+        var carpeta = Proyectos.Carpeta(opts, id);
+        var p = Proyectos.Leer(opts, id);
+        var pasos = Pasos.Limpiar(result.Pasos);
+        p["pasos"] = new JsonArray(pasos.Select(paso => (JsonNode)paso.DeepClone()).ToArray());
+        p["avisos"] = new JsonArray(result.Avisos.Select(aviso => (JsonNode?)JsonValue.Create(aviso)).ToArray());
+        p["inicio"] = result.Inicio ?? url;
+        p["fase"] = "explicar";
+        p["titulo_web"] = result.Titulo;
+        p["resumen"] = result.Resumen;
+        Proyectos.Guardar(opts, id, p);
+        Console.WriteLine($"proyecto {id} en {carpeta}: {pasos.Count} pasos");
+        if (!result.Ok) Console.Error.WriteLine("Aviso: el agente no ha alcanzado el objetivo; el proyecto se ha guardado para revisarlo.");
+        if (!args.Flag("video")) return result.Ok ? 0 : 1;
+        var voz = args.Flag("voz");
+        p["voz"] = voz;
+        p["mis_videos"] = opts.MisVideos;
+        p["ajustes"] = Proyectos.LeerAjustes(opts);
+        Proyectos.Guardar(opts, id, p);
+        // The in-process engine emits its final paths, just as the worker does.
+        var stdout = Console.Out;
+        using var progress = new VideoProgressWriter(stdout);
+        int rc;
+        try
+        {
+            Console.SetOut(progress);
+            rc = MakeAgentVideo(carpeta, voz).GetAwaiter().GetResult();
+        }
+        finally { Console.SetOut(stdout); }
+        p = Proyectos.Leer(opts, id);
+        if (progress.Final is { } final)
+        {
+            p["video"] = final["video"]?.DeepClone();
+            p["srt"] = final["srt"]?.DeepClone();
+            Proyectos.Guardar(opts, id, p);
+        }
+        if (p["video"] is { } video) Console.WriteLine($"vídeo: {video}");
+        if (p["srt"] is { } srt) Console.WriteLine($"subtítulos: {srt}");
+        return rc;
+    }
+
+    private sealed class VideoProgressWriter(TextWriter output) : TextWriter
+    {
+        public override System.Text.Encoding Encoding => output.Encoding;
+        public JsonObject? Final { get; private set; }
+        private readonly System.Text.StringBuilder _line = new();
+        public override void Flush() => output.Flush();
+        public override void Write(string? value)
+        {
+            if (value is not null)
+                foreach (var c in value) Write(c);
+        }
+        public override void Write(char value)
+        {
+            output.Write(value);
+            if (value != '\n') { _line.Append(value); return; }
+            try
+            {
+                if (Json.Parse(_line.ToString()) is JsonObject line && line.ContainsKey("video")) Final = line;
+            }
+            catch (System.Text.Json.JsonException) { }
+            finally { _line.Clear(); }
+        }
+    }
 
     private sealed class StderrProgress : IProgress<string>
     {
@@ -784,6 +921,19 @@ internal static class Cli
             }
             p.Handler = fn;
         }
+
+        p = ap.AddSubparser("command", "agent", help: "describe el proceso y el modelo lo graba");
+        p.Add("goal", help: "objetivo del proceso");
+        p.Add("--url", required: true);
+        p.Add("--backend", choices: new[] { "ollama", "claude" });
+        p.Add("--model");
+        p.Add("--max-pasos", kind: ArgKind.Int, @default: "25");
+        p.Add("--nombre");
+        p.AddSwitch("--video");
+        p.AddSwitch("--voz");
+        p.AddSwitch("--capturas");
+        p.AddSwitch("--dry-run", help: "muestra el plan sin abrir el navegador");
+        p.Handler = CmdAgent;
 
         p = ap.AddSubparser("command", "direct", help: "run a director script or an app profile: it drives " +
                                                        "the app on stage and records the take");

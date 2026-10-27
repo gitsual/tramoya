@@ -85,8 +85,165 @@ public class CliTests
     {
         using var cap = new Capture();
         Assert.Equal(0, Run("--help"));
-        foreach (var name in new[] { "marks", "assemble", "deck", "captions", "music", "tts", "record", "cues" })
+        foreach (var name in new[] { "marks", "assemble", "deck", "captions", "music", "tts", "record", "cues", "agent" })
             Assert.Contains(name, cap.Out);
+    }
+
+    [Fact]
+    public void AgentDryRunPrintsThePlanWithoutCheckingTheBrowser()
+    {
+        using var cap = new Capture();
+        var browser = Cli.EnsureBrowser;
+        Cli.EnsureBrowser = () => throw new Exception("Unexpected browser check");
+        try
+        {
+            Assert.Equal(0, Run("agent", "Crear una nota", "--url", "https://example.test/",
+                "--backend", "ollama", "--model", "modelo-local", "--max-pasos", "12", "--dry-run"));
+        }
+        finally { Cli.EnsureBrowser = browser; }
+        Assert.Contains("backend: ollama", cap.Out);
+        Assert.Contains("modelo: modelo-local", cap.Out);
+        Assert.Contains("url: https://example.test/", cap.Out);
+        Assert.Contains("objetivo: Crear una nota", cap.Out);
+        Assert.Contains("máximo de pasos: 12", cap.Out);
+    }
+
+    [Fact]
+    public void AgentWithoutUrlIsAUsageError()
+    {
+        using var cap = new Capture();
+        Assert.Equal(2, Run("agent", "Crear una nota"));
+        Assert.Contains("--url", cap.Err);
+    }
+
+    [Theory]
+    [InlineData(true, 0)]
+    [InlineData(false, 1)]
+    public void AgentSavesTheProjectAndNarrationEvenWhenTheGoalIsNotReached(bool ok, int expected)
+    {
+        using var tmp = new TempDir();
+        using var cap = new Capture();
+        var previousKit = Environment.GetEnvironmentVariable(Paths.KitVariable);
+        var browser = Cli.EnsureBrowser;
+        var run = Cli.RunAgent;
+        Environment.SetEnvironmentVariable(Paths.KitVariable, tmp.Path);
+        var checkedBrowser = false;
+        Cli.EnsureBrowser = () => { checkedBrowser = true; return null; };
+        Cli.RunAgent = (url, options, backend, model, ajustes, auth) =>
+        {
+            Assert.True(checkedBrowser);
+            Assert.Equal("https://example.test/", url);
+            Assert.Equal("Crear una nota", options.Goal);
+            Assert.Equal("es", options.Lang);
+            Assert.Equal(7, options.MaxPasos);
+            Assert.True(options.Capturas);
+            Assert.Equal("claude", backend);
+            Assert.Equal("modelo", model);
+            Assert.Equal("800p", ajustes["tamano"]!.GetValue<string>());
+            File.WriteAllText(auth, "{\"cookies\":[],\"origins\":[]}");
+            return Task.FromResult(new Tramoya.Agent.AgentResult
+            {
+                Ok = ok, Resumen = "Nota creada", Inicio = null, Titulo = "Notas",
+                Avisos = ["Revisar la nota"],
+                Pasos =
+                [
+                    new JsonObject { ["id"] = 42, ["tipo"] = "escribir", ["selector"] = "#nota",
+                        ["valor"] = "Hola", ["texto"] = "Escribimos la nota." },
+                    new JsonObject { ["id"] = 99, ["tipo"] = "clic", ["selector"] = "#guardar",
+                        ["guarda"] = true, ["texto"] = "Guardamos la nota." },
+                ],
+            });
+        };
+        try
+        {
+            Assert.Equal(expected, Run("agent", "Crear una nota", "--url", "https://example.test/",
+                "--nombre", "Mi nota", "--backend", "claude", "--model", "modelo",
+                "--max-pasos", "7", "--capturas"));
+            var opts = EasyHost.Options();
+            var p = Tramoya.Easy.Proyectos.Leer(opts, "mi-nota");
+            Assert.Equal("explicar", p["fase"]!.GetValue<string>());
+            Assert.Equal("Mi nota", p["nombre"]!.GetValue<string>());
+            Assert.Equal("https://example.test/", p["inicio"]!.GetValue<string>());
+            Assert.Equal("Notas", p["titulo_web"]!.GetValue<string>());
+            Assert.Equal("Nota creada", p["resumen"]!.GetValue<string>());
+            Assert.Equal("Revisar la nota", p["avisos"]![0]!.GetValue<string>());
+            var pasos = p["pasos"]!.AsArray();
+            Assert.Equal(2, pasos.Count);
+            Assert.Equal(1, pasos[0]!["id"]!.GetValue<int>());
+            Assert.Equal(2, pasos[1]!["id"]!.GetValue<int>());
+            Assert.Equal("Escribimos la nota.", pasos[0]!["texto"]!.GetValue<string>());
+            Assert.Equal("Guardamos la nota.", pasos[1]!["texto"]!.GetValue<string>());
+            Assert.True(pasos[1]!["seguro"]!.GetValue<bool>());
+            Assert.True(File.Exists(Path.Combine(Tramoya.Easy.Proyectos.Carpeta(opts, "mi-nota"), "auth.json")));
+            Assert.Contains("proyecto mi-nota en ", cap.Out);
+            Assert.Contains(": 2 pasos", cap.Out);
+            if (!ok) Assert.Contains("no ha alcanzado el objetivo", cap.Err);
+        }
+        finally
+        {
+            Cli.RunAgent = run;
+            Cli.EnsureBrowser = browser;
+            Environment.SetEnvironmentVariable(Paths.KitVariable, previousKit);
+        }
+    }
+
+    [Fact]
+    public void AgentVideoSavesPreferencesAndPrintsTheEnginePathsAndExitCode()
+    {
+        using var tmp = new TempDir();
+        using var cap = new Capture();
+        var previousKit = Environment.GetEnvironmentVariable(Paths.KitVariable);
+        var browser = Cli.EnsureBrowser;
+        var run = Cli.RunAgent;
+        var makeVideo = Cli.MakeAgentVideo;
+        Environment.SetEnvironmentVariable(Paths.KitVariable, tmp.Path);
+        Cli.EnsureBrowser = () => null;
+        Cli.RunAgent = (_, _, _, _, _, auth) =>
+        {
+            File.WriteAllText(auth, "{}");
+            return Task.FromResult(new Tramoya.Agent.AgentResult { Ok = true });
+        };
+        var video = tmp.File("nota.mp4");
+        var srt = tmp.File("nota.srt");
+        Cli.MakeAgentVideo = (carpeta, voz) =>
+        {
+            Assert.True(voz);
+            var p = Json.LoadNode(Path.Combine(carpeta, "proyecto.json"))!.AsObject();
+            Assert.True(p["voz"]!.GetValue<bool>());
+            Assert.Equal(Paths.MisVideos, p["mis_videos"]!.GetValue<string>());
+            Assert.Equal("800p", p["ajustes"]!["tamano"]!.GetValue<string>());
+            Tramoya.Easy.Engine.Emitir(("ok", true), ("video", video), ("srt", srt));
+            return Task.FromResult(3);
+        };
+        try
+        {
+            Assert.Equal(3, Run("agent", "Nota", "--url", "https://example.test/", "--video", "--voz"));
+            Assert.Contains($"v\u00eddeo: {video}", cap.Out);
+            Assert.Contains($"subt\u00edtulos: {srt}", cap.Out);
+            Assert.Contains("\"ok\":true", cap.Out);
+            var p = Tramoya.Easy.Proyectos.Leer(EasyHost.Options(), "nota");
+            Assert.Equal(video, p["video"]!.GetValue<string>());
+            Assert.Equal(srt, p["srt"]!.GetValue<string>());
+        }
+        finally
+        {
+            Cli.MakeAgentVideo = makeVideo;
+            Cli.RunAgent = run;
+            Cli.EnsureBrowser = browser;
+            Environment.SetEnvironmentVariable(Paths.KitVariable, previousKit);
+        }
+    }
+
+    [Fact]
+    public void AgentStopsWhenChromiumIsUnavailable()
+    {
+        using var cap = new Capture();
+        var browser = Cli.EnsureBrowser;
+        var run = Cli.RunAgent;
+        Cli.EnsureBrowser = () => 2;
+        Cli.RunAgent = (_, _, _, _, _, _) => throw new Exception("Unexpected run");
+        try { Assert.Equal(2, Run("agent", "Crear nota", "--url", "https://example.test/")); }
+        finally { Cli.EnsureBrowser = browser; Cli.RunAgent = run; }
     }
 
     [Fact]
