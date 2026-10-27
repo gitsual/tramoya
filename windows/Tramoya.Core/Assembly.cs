@@ -2,8 +2,7 @@ namespace Tramoya.Core;
 
 /// <summary>One piece of a deck's final timeline: a still slide or the clip.</summary>
 /// <param name="Kind"><c>"slide"</c> or <c>"clip"</c>.</param>
-// TODO(integration): implement ISegment once Captions.cs lands.
-public sealed record Segment(string Kind, string Name, string Source, double Duration, string? Voice = null);
+public sealed record Segment(string Kind, string Name, string Source, double Duration, string? Voice = null) : ISegment;
 
 /// <summary>
 /// Scene and deck assembly (port of <c>tramoya/assembly.py</c>): turn marks or a deck plan
