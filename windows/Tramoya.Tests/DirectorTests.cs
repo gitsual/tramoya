@@ -228,9 +228,28 @@ public sealed class DirectorTests
 
     // --- snapshots ------------------------------------------------------------
 
-    [Fact(Skip = "Snapshots.WriteSnapshot/DiffSnapshots are Tramoya.Core/Snapshots.cs, ported separately; see SnapshotsTests")]
+    /// <summary>
+    /// The Python test lives in <c>test_director.py</c> because <c>tramoya snapshots diff</c>
+    /// compares two director runs; the exact wording is pinned down in SnapshotsTests.
+    /// </summary>
+    [Fact]
     public void SnapshotDiffReportsChangedMissingAndNewScenes()
     {
+        var tmp = TempDir();
+        var a = Path.Combine(tmp, "a");
+        var b = Path.Combine(tmp, "b");
+        Snapshots.WriteSnapshot(a, "welcome", "- heading \"Notes\"\n- button \"New note\"\n");
+        Snapshots.WriteSnapshot(a, "search", "- textbox\n");
+        Snapshots.WriteSnapshot(a, "gone", "- x\n");
+        Snapshots.WriteSnapshot(b, "welcome", "- heading \"Notes\"\n- button \"New\"\n");
+        Snapshots.WriteSnapshot(b, "search", "- textbox\n");
+        Snapshots.WriteSnapshot(b, "extra", "- y\n");
+        var problems = Snapshots.DiffSnapshots(a, b);
+        Assert.Contains(problems, p => p.Contains("welcome") && p.Contains("New note"));
+        Assert.Contains(problems, p => p.Contains("gone") && p.Contains("missing"));
+        Assert.Contains(problems, p => p.Contains("extra") && p.Contains("new"));
+        Assert.DoesNotContain(problems, p => p.Contains("search"));
+        Assert.Empty(Snapshots.DiffSnapshots(a, a));
     }
 
     /// <summary>

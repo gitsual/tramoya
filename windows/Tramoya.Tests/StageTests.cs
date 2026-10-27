@@ -10,7 +10,8 @@ namespace Tramoya.Tests;
 
 /// <summary>
 /// Port of <c>tests/test_stage.py</c>: the overlay script, the Stage hand, the scene
-/// registry, the readiness probe and the app-under-test process, all without a browser.
+/// registry, the readiness probe, the session teardown and the app-under-test process,
+/// all without a browser except the one <see cref="BrowserFactAttribute"/> test.
 /// The Python fake page records every call; here the page is an NSubstitute double and
 /// the recording lists live on <see cref="FakeBoundPage"/>.
 /// </summary>
@@ -301,6 +302,41 @@ public sealed class StageTests
         Assert.False(await Browser.HttpReadyAsync("http://127.0.0.1:9/", timeout: 0.01, client: client));
     }
 
+    /// <summary>
+    /// <c>urlopen</c> raises <c>HTTPError</c> for anything outside 2xx, and the Python
+    /// probe treats that like a refused connection; an error page is not a ready app.
+    /// </summary>
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    public async Task HttpReadyFalseWhenTheServerOnlyAnswersWithErrors(HttpStatusCode status)
+    {
+        var hits = 0;
+        using var client = new HttpClient(new StubHandler(_ => { hits++; return new HttpResponseMessage(status); }));
+        Assert.False(await Browser.HttpReadyAsync("http://127.0.0.1:9/", timeout: 0.05, poll: 0.01, client: client));
+        Assert.True(hits > 1); // it kept polling instead of taking the error for an answer
+    }
+
+    [Fact]
+    public async Task HttpReadyTrueOnceAnErrorPageTurnsIntoASuccess()
+    {
+        var hits = 0;
+        using var client = new HttpClient(new StubHandler(_ =>
+            new HttpResponseMessage(++hits < 3 ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK)));
+        Assert.True(await Browser.HttpReadyAsync("http://127.0.0.1:9/", timeout: 1.0, poll: 0.01, client: client));
+        Assert.Equal(3, hits);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Created)]
+    [InlineData(HttpStatusCode.NoContent)]
+    public async Task HttpReadyTrueForAnySuccessStatus(HttpStatusCode status)
+    {
+        using var client = new HttpClient(new StubHandler(_ => new HttpResponseMessage(status)));
+        Assert.True(await Browser.HttpReadyAsync("http://127.0.0.1:9/", timeout: 1.0, client: client));
+    }
+
     // ------------------------------------------------------------------ AppProcess
 
     private sealed class FakeChild(IReadOnlyList<string> argv, string cwd) : IChildProcess
@@ -400,9 +436,96 @@ public sealed class StageTests
     {
     }
 
-    [Fact(Skip = "launches Chromium; the same checks run in StageSmokeTests by hand")]
-    public void OverlayInstallsWhenPageHasABody()
+    /// <summary>
+    /// Init scripts run before <c>document.documentElement</c> exists; a real browser once
+    /// threw <c>appendChild of null</c> and the caption hook was never defined. The overlay
+    /// must defer until the document is there. Like the Python test, this uses Playwright
+    /// directly rather than <see cref="Browser.OpenStageAsync"/>: it is the script under
+    /// test, not the session.
+    /// </summary>
+    [BrowserFact]
+    public async Task OverlayInstallsWhenPageHasABody()
     {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync();
+        var context = await browser.NewContextAsync();
+        await context.AddInitScriptAsync(Stage.Stage.OverlayJs);
+        var page = await context.NewPageAsync();
+        var errors = new List<string>();
+        page.PageError += (_, message) => errors.Add(message);
+        await page.GotoAsync("data:text/html,<h1>hello</h1>");
+        Assert.Equal("function", await page.EvaluateAsync<string>("typeof window.__tramoyaCaption"));
+        await page.EvaluateAsync("window.__tramoyaCaption('scene one')");
+        Assert.Equal("scene one", await page.EvaluateAsync<string>("document.getElementById('tramoya-caption').textContent"));
+        Assert.Equal(1, await page.Locator("#tramoya-cursor").CountAsync());
+        Assert.Equal(1, await page.Locator("#tramoya-caption").CountAsync());
+        Assert.Empty(errors);
+    }
+
+    // ---------------------------------------------------------------- StageSession
+
+    private static (StageSession Session, IPlaywright Playwright, IBrowser Browser, IBrowserContext Context) MakeSession()
+    {
+        var playwright = Substitute.For<IPlaywright>();
+        var browser = Substitute.For<IBrowser>();
+        var context = Substitute.For<IBrowserContext>();
+        var page = Substitute.For<IPage>();
+        var stage = new Stage.Stage(page, new Pacing(pace: 1.0, sleep: _ => Task.CompletedTask), new Marks(t0: 0.0, clock: () => 0.0));
+        return (new StageSession(playwright, browser, context, page, stage), playwright, browser, context);
+    }
+
+    [Fact]
+    public async Task DisposeClosesContextThenBrowserThenDriver()
+    {
+        var (session, playwright, browser, context) = MakeSession();
+        var order = new List<string>();
+        context.CloseAsync(Arg.Any<BrowserContextCloseOptions>()).Returns(_ => { order.Add("context"); return Task.CompletedTask; });
+        browser.CloseAsync(Arg.Any<BrowserCloseOptions>()).Returns(_ => { order.Add("browser"); return Task.CompletedTask; });
+        playwright.When(p => p.Dispose()).Do(_ => order.Add("driver"));
+
+        await session.DisposeAsync();
+        await session.DisposeAsync(); // idempotent, as a context manager's exit is
+
+        Assert.Equal(new[] { "context", "browser", "driver" }, order);
+    }
+
+    /// <summary>
+    /// The Python <c>with sync_playwright()</c> block stops the driver whatever the inner
+    /// <c>finally</c> raised; a context that cannot close (page crashed, target gone) must
+    /// not leave a Chromium and a node process behind, and the failure still surfaces.
+    /// </summary>
+    [Fact]
+    public async Task DisposeStillClosesBrowserAndDriverWhenTheContextFailsToClose()
+    {
+        var (session, playwright, browser, context) = MakeSession();
+        context.CloseAsync(Arg.Any<BrowserContextCloseOptions>()).ThrowsAsync(new InvalidOperationException("Target closed"));
+
+        var exc = await Assert.ThrowsAsync<InvalidOperationException>(() => session.DisposeAsync().AsTask());
+
+        Assert.Equal("Target closed", exc.Message);
+        await browser.Received(1).CloseAsync(Arg.Any<BrowserCloseOptions>());
+        playwright.Received(1).Dispose();
+    }
+
+    [Fact]
+    public async Task DisposeStillDisposesTheDriverWhenTheBrowserFailsToClose()
+    {
+        var (session, playwright, browser, context) = MakeSession();
+        browser.CloseAsync(Arg.Any<BrowserCloseOptions>()).ThrowsAsync(new InvalidOperationException("Browser gone"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => session.DisposeAsync().AsTask());
+
+        await context.Received(1).CloseAsync(Arg.Any<BrowserContextCloseOptions>());
+        playwright.Received(1).Dispose();
+    }
+
+    /// <summary>The launch failure path has no context or browser yet; only the driver needs disposing.</summary>
+    [Fact]
+    public async Task TearDownWithoutBrowserOrContextOnlyDisposesTheDriver()
+    {
+        var playwright = Substitute.For<IPlaywright>();
+        await StageSession.TearDownAsync(playwright, browser: null, context: null);
+        playwright.Received(1).Dispose();
     }
 
     [Fact]

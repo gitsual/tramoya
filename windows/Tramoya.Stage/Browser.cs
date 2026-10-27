@@ -16,8 +16,13 @@ public static class Browser
 
     /// <summary>
     /// Poll <paramref name="url"/> until it answers or <paramref name="timeout"/> seconds
-    /// pass. Any HTTP answer counts, even an error page: it proves the server is up, which
-    /// is all a launch needs to know. Exceptions (refused, reset, timed out) mean "not yet".
+    /// pass. "Answers" means what it means to Python's <c>urllib.request.urlopen</c>: a
+    /// 2xx status once redirects have been followed (the client follows them itself, as
+    /// <c>urlopen</c> does). A 404 or a 503 raises <c>HTTPError</c> there, so here it
+    /// counts as "not yet" too; a dev server that serves an error page while it boots
+    /// would otherwise start the recording early, or make the director think a stale
+    /// server already holds the port. Connection errors (refused, reset, timed out) are
+    /// "not yet" as well.
     /// </summary>
     public static async Task<bool> HttpReadyAsync(string url, double timeout = 20.0, double poll = 0.25, HttpClient? client = null)
     {
@@ -25,19 +30,22 @@ public static class Browser
         var deadline = DateTime.UtcNow.AddSeconds(timeout);
         while (DateTime.UtcNow < deadline)
         {
+            bool answers;
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                 using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token)
                     .ConfigureAwait(false);
-                return true;
+                answers = response.IsSuccessStatusCode;
             }
             catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or IOException or SocketException)
             {
-                var remaining = (deadline - DateTime.UtcNow).TotalSeconds;
-                if (remaining <= 0) break;
-                await Task.Delay(TimeSpan.FromSeconds(Math.Min(poll, remaining))).ConfigureAwait(false);
+                answers = false;
             }
+            if (answers) return true;
+            var remaining = (deadline - DateTime.UtcNow).TotalSeconds;
+            if (remaining <= 0) break;
+            await Task.Delay(TimeSpan.FromSeconds(Math.Min(poll, remaining))).ConfigureAwait(false);
         }
         return false;
     }
@@ -93,9 +101,16 @@ public static class Browser
         }
         catch
         {
-            if (context is not null) await context.CloseAsync().ConfigureAwait(false);
-            if (browser is not null) await browser.CloseAsync().ConfigureAwait(false);
-            playwright.Dispose();
+            // The launch failure is the error worth reporting; whatever the half-open
+            // browser does while being torn down must not replace it. Disposing the
+            // driver kills the browser process anyway, so nothing leaks either way.
+            try
+            {
+                await StageSession.TearDownAsync(playwright, browser, context).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+            }
             throw;
         }
     }
@@ -146,9 +161,34 @@ public sealed class StageSession : IStageSession
     {
         if (_closed) return;
         _closed = true;
-        await Context.CloseAsync().ConfigureAwait(false);
-        await Browser.CloseAsync().ConfigureAwait(false);
-        _playwright.Dispose();
+        await TearDownAsync(_playwright, Browser, Context).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Close in the order that finishes the video (context, then browser) and always end
+    /// by disposing the driver, as the Python <c>with sync_playwright()</c> block does on
+    /// exit whatever the inner <c>finally</c> raised. Each step runs even when the one
+    /// before it throws: a context that fails to close (the page crashed, the target is
+    /// gone) must not leave a Chromium and a node driver running until the process ends.
+    /// The first failure is what the caller sees, unless a later step fails too.
+    /// </summary>
+    internal static async Task TearDownAsync(IPlaywright playwright, IBrowser? browser, IBrowserContext? context)
+    {
+        try
+        {
+            try
+            {
+                if (context is not null) await context.CloseAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                if (browser is not null) await browser.CloseAsync().ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            playwright.Dispose();
+        }
     }
 }
 
