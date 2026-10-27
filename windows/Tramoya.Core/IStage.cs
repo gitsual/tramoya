@@ -1,0 +1,21 @@
+namespace Tramoya.Core;
+
+/// <summary>
+/// What the step language needs from a stage (port of the duck-typed <c>stage</c> that
+/// <c>tramoya.profile.run_steps</c> drives). <c>Tramoya.Stage.Stage</c> implements it over
+/// a Playwright page; tests use a fake.
+/// </summary>
+public interface IStage
+{
+    Task ClickAsync(string selector);
+    Task ClickTextAsync(string text);
+    Task TypeIntoAsync(string selector, string text);
+    Task SelectAsync(string selector, string value);
+    /// <summary><c>page.fill(selector, "")</c> followed by an <c>input</c> event.</summary>
+    Task ClearAsync(string selector);
+    Task PointAtAsync(string selector);
+    Task ScrollAsync(int dy);
+    Task PressAsync(string key);
+    Task GotoAsync(string url);
+    Task BeatAsync(double seconds);
+}
