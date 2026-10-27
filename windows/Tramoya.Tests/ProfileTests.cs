@@ -67,6 +67,37 @@ public class ProfileTests
     }
 
     [Fact]
+    public void LoadProfileAcceptsAnInlineArrayOfSceneTables()
+    {
+        // tomllib hands `scene = [{...}]` and `[[scene]]` over as the same list of dicts;
+        // Tomlyn gives them different types and the port must read both.
+        // An inline array is a top-level key, so it goes before the first [table] header.
+        const string inline = """
+            scene = [
+                { name = "intro", steps = ["say 2", "beat 1"], narration = { en = "Hi there." } },
+                { name = "outro", label = "The end", steps = ["beat 1"] },
+            ]
+
+            [app]
+            name = "Notes"
+            url = "http://127.0.0.1:8765/index.html"
+
+            [demo]
+            languages = ["en"]
+            """;
+        using var tmp = new TempDir();
+        var path = tmp.File("tramoya.toml");
+        File.WriteAllText(path, inline);
+        var profile = ProfileFile.Load(path);
+        Assert.Equal(new[] { "intro", "outro" }, profile.Scenes.Select(s => s.Name));
+        Assert.Equal("intro", profile.Scenes[0].Label);
+        Assert.Equal("The end", profile.Scenes[1].Label);
+        Assert.Equal(new[] { "say 2", "beat 1" }, profile.Scenes[0].Steps);
+        Assert.Equal(new Dictionary<string, string> { ["en"] = "Hi there." }, profile.Scenes[0].Narration);
+        Assert.Empty(profile.Scenes[1].Narration);
+    }
+
+    [Fact]
     public void LoadProfileNeedsAUrlOrALaunch()
     {
         using var tmp = new TempDir();
@@ -134,6 +165,25 @@ public class ProfileTests
         Assert.Equal(new[] { "scene-a", "scene-b" }, script.Keys);
         Assert.Equal(new Dictionary<string, string> { ["en"] = "one" }, script["scene-a"]);
         Assert.Equal(new Dictionary<string, string> { ["en"] = "two", ["es"] = "dos" }, script["scene-b"]);
+    }
+
+    [Fact]
+    public void ScriptKeepsTheLastSceneWhenNamesRepeat()
+    {
+        // A dict comprehension in Python: the later scene overwrites the earlier one and
+        // the key stays where it first appeared.
+        var profile = new Profile("N", url: "http://x/")
+        {
+            Scenes = new List<Scene>
+            {
+                new("a", "A", new Dictionary<string, string> { ["en"] = "first" }, new List<string>()),
+                new("b", "B", new Dictionary<string, string> { ["en"] = "middle" }, new List<string>()),
+                new("a", "A again", new Dictionary<string, string> { ["en"] = "last" }, new List<string>()),
+            },
+        };
+        var script = profile.Script();
+        Assert.Equal(new[] { "scene-a", "scene-b" }, script.Keys);
+        Assert.Equal("last", script["scene-a"]["en"]);
     }
 
     [Theory]

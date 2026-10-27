@@ -144,7 +144,9 @@ public sealed class Marks
 
     public Mark Add(string key, string label = "")
     {
-        var mark = new Mark(Math.Round(_clock() - T0, 2), key, label);
+        // Python's round(), not Math.Round: the marks file must carry the same hundredths
+        // whichever version wrote it (Math.Round(2.675, 2) is 2.68; Python says 2.67).
+        var mark = new Mark(Fmt.PyRound(_clock() - T0, 2), key, label);
         _rows.Add(mark);
         if (Path is not null) Flush();
         return mark;

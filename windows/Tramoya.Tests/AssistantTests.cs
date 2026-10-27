@@ -230,16 +230,8 @@ public class AssistantTests
         Assert.Equal("--dry-run", seen[1][^1]);
     }
 
-    // --- cli --------------------------------------------------------------
-
-    [Fact(Skip = "the CLI lives in Tramoya.App; exercised in CliTests.cs")]
-    public void CliAskPrintsThePlan() { }
-
-    [Fact(Skip = "the CLI lives in Tramoya.App; exercised in CliTests.cs")]
-    public void CliDoRunsThePlanWithYes() { }
-
-    [Fact(Skip = "the CLI lives in Tramoya.App; exercised in CliTests.cs")]
-    public void CliDoWithoutYesAsksAndANoRunsNothing() { }
+    // The Python file's CLI cases (ask, do --yes, do without --yes, do refusing a plan
+    // that fails preflight) are in CliTests.cs, where the CLI lives.
 
     // --- preflight --------------------------------------------------------
 
@@ -269,9 +261,6 @@ public class AssistantTests
         var problems = Assistant.Preflight(plan, exists: _ => false);
         Assert.Equal(new[] { "step 1 needs MARKS.json, which does not exist" }, problems);
     }
-
-    [Fact(Skip = "the CLI lives in Tramoya.App; exercised in CliTests.cs")]
-    public void CliDoRefusesAPlanThatFailsPreflight() { }
 
     [Fact]
     public void PreflightFlagsALanguageWithoutAVoice()
