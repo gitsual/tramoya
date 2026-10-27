@@ -77,9 +77,9 @@ public static class Director
         if (target is null) throw new ArgumentException($"{profile.Name}: no url or ready address to open");
 
         var pacing = new Pacing(pace: pace ?? profile.Pace, rehearse: rehearse, lang: lang ?? profile.Languages[0]);
-        var runSteps = hooks.RunSteps ?? throw NotWired(nameof(DirectorHooks.RunSteps));
-        var writeSnapshot = hooks.WriteSnapshot ?? throw NotWired(nameof(DirectorHooks.WriteSnapshot));
-        var narrate = (hooks.Narrate ?? throw NotWired(nameof(DirectorHooks.Narrate)))(Path.Combine(@out, "voices"), pacing);
+        var runSteps = hooks.RunSteps ?? Steps.RunAsync;
+        var writeSnapshot = hooks.WriteSnapshot ?? ((dir, scene, text) => Snapshots.WriteSnapshot(dir, scene, text));
+        var narrate = (hooks.Narrate ?? DefaultNarrate)(Path.Combine(@out, "voices"), pacing);
         var marks = new Marks(path: Path.Combine(@out, "marks.json"));
         Json.Write(Path.Combine(@out, "script.json"), profile.Script());
 
@@ -140,8 +140,12 @@ public static class Director
         string url, Pacing pacing, Marks marks, string? videoDir, (int Width, int Height) viewport, bool headless, string? storageState) =>
         await Browser.OpenStageAsync(url, pacing, marks, videoDir, viewport, headless, storageState).ConfigureAwait(false);
 
-    private static InvalidOperationException NotWired(string hook) =>
-        new($"DirectorHooks.{hook} is not set and has no default yet");
+    /// <summary>One silent narrator per run: a scene lasts as long as its clip would, and <c>assemble</c> adds the voice later.</summary>
+    private static Func<string, double, Task<double>> DefaultNarrate(string voiceDir, Pacing pacing)
+    {
+        var narrator = new Narrator(voiceDir, pacing, player: clip => new SilentClip(Narration.WavSeconds(clip), pacing));
+        return (key, fallback) => narrator.SayAsync(key, fallback);
+    }
 
     /// <summary>Python's <c>a or b or c</c> over strings: empty counts as missing.</summary>
     private static string? FirstNonEmpty(params string?[] values) => values.FirstOrDefault(v => !string.IsNullOrEmpty(v));
@@ -164,7 +168,7 @@ public sealed class Result
 /// <c>assemble</c> adds the voice afterwards. Shaped like Core's <c>IClipPlayback</c>
 /// (a <c>WaitAsync</c>) so the integrator can hand it to the <c>Narrator</c> as its player.
 /// </summary>
-public sealed class SilentClip
+public sealed class SilentClip : IClipPlayback
 {
     public double Seconds { get; }
     public Pacing Pacing { get; }
@@ -197,20 +201,17 @@ public sealed class DirectorHooks
     /// <summary>(command, cwd) -> the running app. Default: <see cref="Director.LaunchApp"/>.</summary>
     public Func<string, string, IChildProcess>? LaunchApp { get; set; }
 
-    /// <summary>(stage, steps, say, baseUrl): drive the stage through a scene's steps.</summary>
-    // TODO(integration): default to Steps.RunAsync (Tramoya.Core/Steps.cs).
+    /// <summary>(stage, steps, say, baseUrl): drive the stage through a scene's steps. Default: <see cref="Steps.RunAsync"/>.</summary>
     public Func<IStage, IList<string>, Func<double, Task>, string, Task>? RunSteps { get; set; }
 
     /// <summary>
     /// (voiceDir, pacing) -> say(key, fallback seconds) -> seconds spoken. One narrator per
     /// run, as Python builds <c>Narrator(out / "voices", pacing, player=...)</c> once.
     /// </summary>
-    // TODO(integration): default to a Narrator over voiceDir and pacing whose player is
-    // clip => new SilentClip(Narration.WavSeconds(clip), pacing), returning narrator.SayAsync(key, fallback).
+    /// <remarks>Default: a <see cref="Narrator"/> whose player is a <see cref="SilentClip"/>.</remarks>
     public Func<string, Pacing, Func<string, double, Task<double>>>? Narrate { get; set; }
 
-    /// <summary>(directory, scene, text): write the scene's accessibility snapshot.</summary>
-    // TODO(integration): default to Snapshots.WriteSnapshot (Tramoya.Core/Snapshots.cs).
+    /// <summary>(directory, scene, text): write the scene's accessibility snapshot. Default: <see cref="Snapshots.WriteSnapshot"/>.</summary>
     public Action<string, string, string>? WriteSnapshot { get; set; }
 
     /// <summary>Unix seconds for the take's zero. Default: <see cref="Marks.Now"/>.</summary>
