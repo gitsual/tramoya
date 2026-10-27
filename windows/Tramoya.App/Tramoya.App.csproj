@@ -13,6 +13,7 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>embedded</DebugType>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3240.44" />
@@ -23,4 +24,12 @@
     <ProjectReference Include="..\Tramoya.Voice\Tramoya.Voice.csproj" />
     <ProjectReference Include="..\Tramoya.Easy\Tramoya.Easy.csproj" />
   </ItemGroup>
+  <!-- Playwright's node.exe must stay a loose file: bundled into the single exe it cannot be launched. -->
+  <Target Name="KeepPlaywrightNodeLoose" AfterTargets="CopyPlaywrightFilesToOutput">
+    <ItemGroup>
+      <Content Condition="'%(Content.NuGetPackageId)' == 'Microsoft.Playwright'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </Content>
+    </ItemGroup>
+  </Target>
 </Project>

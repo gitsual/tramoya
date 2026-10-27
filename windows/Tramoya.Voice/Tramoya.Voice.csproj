@@ -4,9 +4,6 @@
     <RootNamespace>Tramoya.Voice</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="System.Speech" Version="9.0.0" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Tramoya.Core\Tramoya.Core.csproj" />
   </ItemGroup>
   <ItemGroup>

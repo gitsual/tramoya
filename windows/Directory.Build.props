@@ -10,5 +10,6 @@
     <Product>tramoya</Product>
     <InvariantGlobalization>true</InvariantGlobalization>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 </Project>
