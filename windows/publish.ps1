@@ -20,8 +20,7 @@ Do not download Chromium (fast builds while developing).
 
 .PARAMETER Navegador
 A folder that already holds the Playwright browsers this build needs (for example
-%LOCALAPPDATA%\Tramoya
-avegador after a first run): the newest chromium-*,
+%LOCALAPPDATA%\Tramoya\navegador after a first run): the newest chromium-*,
 chromium_headless_shell-*, winldd-* and ffmpeg-* are copied instead of downloaded.
 #>
 [CmdletBinding()]
