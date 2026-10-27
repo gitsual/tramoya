@@ -161,7 +161,8 @@ public static class Fmt
 /// <summary>Python's <c>shlex</c>, for dry-run output that people diff against the Python CLI.</summary>
 public static class Shell
 {
-    private static readonly Regex Safe = new(@"^[\w@%+=:,./-]+$", RegexOptions.Compiled);
+    // ECMAScript keeps \w ASCII-only, as shlex.quote's re.ASCII does: "año" must come out quoted.
+    private static readonly Regex Safe = new(@"^[\w@%+=:,./-]+$", RegexOptions.Compiled | RegexOptions.ECMAScript);
 
     public static string Quote(string s)
     {
@@ -185,7 +186,8 @@ public static class Shell
             if (inDouble)
             {
                 if (c == '"') inDouble = false;
-                else if (c == '\\' && i + 1 < command.Length && "\"\\$`\n".Contains(command[i + 1])) cur.Append(command[++i]);
+                // shlex only unescapes \" and \\ inside double quotes; \$ keeps its backslash.
+                else if (c == '\\' && i + 1 < command.Length && "\"\\".Contains(command[i + 1])) cur.Append(command[++i]);
                 else cur.Append(c);
                 continue;
             }
