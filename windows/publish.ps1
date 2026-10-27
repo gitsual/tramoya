@@ -115,13 +115,22 @@ if ($SkipBrowser) {
     Write-Host '== Chromium: omitido (-SkipBrowser) =='
 } elseif ($CacheNavegador) {
     Write-Host "== Chromium: copiado de $CacheNavegador =="
+    # The driver only accepts the exact revisions its own manifest names: a cache
+    # with a newer Chromium would give a zip that downloads again on the laptop.
+    $manifest = Join-Path $driverDist 'package\browsers.json'
+    $browsers = (Get-Content $manifest -Raw -Encoding UTF8 | ConvertFrom-Json).browsers
     New-Item -ItemType Directory -Force $navegador | Out-Null
-    foreach ($prefijo in @('chromium-', 'chromium_headless_shell-', 'winldd-', 'ffmpeg-')) {
-        $ultimo = Get-ChildItem $CacheNavegador -Directory | Where-Object { $_.Name -like "$prefijo*" -and (Test-Path (Join-Path $_.FullName 'INSTALLATION_COMPLETE')) } |
-            Sort-Object { [int]($_.Name.Substring($prefijo.Length)) } | Select-Object -Last 1
-        if (-not $ultimo) { throw "No hay ninguna carpeta $prefijo* completa en $CacheNavegador." }
-        Copy-Item $ultimo.FullName (Join-Path $navegador $ultimo.Name) -Recurse -Force
-        Write-Host "   $($ultimo.Name)"
+    foreach ($nombre in @('chromium', 'chromium-headless-shell', 'winldd', 'ffmpeg')) {
+        $entrada = $browsers | Where-Object { $_.name -eq $nombre } | Select-Object -First 1
+        if (-not $entrada) { throw "El manifiesto del driver ($manifest) no tiene '$nombre'." }
+        # Playwright swaps the dashes of the manifest name for underscores on disk.
+        $carpeta = ($nombre -replace '-', '_') + '-' + $entrada.revision
+        $origen = Join-Path $CacheNavegador $carpeta
+        if (-not (Test-Path (Join-Path $origen 'INSTALLATION_COMPLETE'))) {
+            throw "Falta $carpeta (completa) en $CacheNavegador; instala con la misma version de Playwright o quita -CacheNavegador."
+        }
+        Copy-Item $origen (Join-Path $navegador $carpeta) -Recurse -Force
+        Write-Host "   $carpeta"
     }
 } else {
     Write-Host '== Chromium (Playwright install) =='
