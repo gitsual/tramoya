@@ -211,7 +211,7 @@ public class ProfileTests
     {
         var unknown = Assert.Throws<StepError>(() => Steps.Parse("dance #floor"));
         Assert.Contains("unknown", unknown.Message);
-        Assert.Equal("unknown step 'dance' in 'dance #floor'; known: beat, clear, click, click_text, goto, point, press, say, scroll, select, type", unknown.Message);
+        Assert.Equal("unknown step 'dance' in 'dance #floor'; known: beat, clear, click, click_text, goto, point, press, say, scroll, select, type, wait", unknown.Message);
         var arity = Assert.Throws<StepError>(() => Steps.Parse("type #title"));
         Assert.Contains("type", arity.Message);
         Assert.Equal("type takes type <selector> | <text>, got 'type #title'", arity.Message);
