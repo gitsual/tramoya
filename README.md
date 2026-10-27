@@ -105,11 +105,10 @@ python -m playwright install chromium
 tramoya easy                      # alias: tramoya facil
 ```
 
-On a locked-down Windows laptop (no admin, a proxy that cuts big downloads) use the **portable kit** instead: one
-folder with Python, Chromium and ffmpeg inside; unzip, double-click *Abrir Tramoya*, and it adds a shortcut with
-its icon. Build it on any Windows machine with `python scripts/build_easy_kit.py`
-(→ `dist/Tramoya-<version>-windows.zip`), or take it from the
-[releases](https://github.com/gitsual/tramoya/releases).
+On Windows there is no Python to install: **`Tramoya.exe`** is the same app as a native program (see
+[Windows](#-windows-tramoyaexe)). Double-click it and the window opens; unzip the kit with Chromium and ffmpeg
+inside on a locked-down laptop (no admin, a proxy that cuts big downloads). The Python portable kit of v0.5.0
+(`python scripts/build_easy_kit.py`) is superseded by it.
 
 ---
 
@@ -375,6 +374,44 @@ fits each voice clip and writes <code>final-demo.mp4</code>. With <code>--yes</c
   writes is ever passed to a shell.
 - `tramoya do --dry-run` appends `--dry-run` to every step that would encode, so the whole plan can be inspected
   as ffmpeg argv first.
+
+---
+
+## 🪟 Windows: `Tramoya.exe`
+
+The Windows version is the whole tool rewritten in C#/.NET 9 (`windows/`), one signed executable instead of a
+300 MB Python kit, built for corporate laptops where nothing can be installed. Linux and macOS keep the Python
+package. Both read and write the same files (`tramoya.toml`, `marks.json`, `script.json`, the step language, the
+projects of `easy`), so a profile written on one runs on the other, and the Python test suite is the spec the
+port is checked against.
+
+```
+Tramoya.exe                     the window (tramoya easy): WebView2 over a local server, no browser profile games
+Tramoya.exe direct tramoya.toml --out out      every CLI command works too; the console is attached when there are args
+Tramoya.exe tts --script out/script.json --lang es --out-dir out/voices/es    Windows voices (SAPI), offline
+Tramoya.exe assemble --video out/take.webm --marks out/marks.json --voice-dir out/voices/es --out demo.mp4
+```
+
+| | Python (Linux, macOS) | `Tramoya.exe` (Windows) |
+|---|---|---|
+| stage, recorder, replay | Playwright for Python | Playwright for .NET, same Chromium |
+| narration | Kokoro (`[tts]`) | SAPI voices of Windows (`tts` and `easy`) |
+| `record` | wf-recorder (Wayland) | not available: `direct` records the browser itself |
+| `capture` | `playwright codegen` | not available: `tramoya easy` is the recorder |
+| window of `easy` | Chromium `--app` | WebView2 (Edge engine), so a corporate proxy policy on Chromium does not blank it |
+| `ask` / `do` | Ollama or Claude | the same |
+
+Build and package (needs the .NET 9 SDK; the zip carries `ffmpeg\` and `navegador\` with Chromium so the laptop
+downloads nothing):
+
+```powershell
+dotnet test windows/Tramoya.Tests -c Release
+powershell -File windows/publish.ps1          # -> windows/dist/Tramoya-<version>-windows.zip
+```
+
+Data lives in `%LOCALAPPDATA%\Tramoya` and the finished videos in `Videos\Tramoya`; next to a `navegador\`
+folder (the kit) everything stays in the kit's folder, like the Python kit did. `windows/ARQUITECTURA.md` is the
+contract of the port: one C# file per Python module, the same names, the same output.
 
 ---
 
@@ -716,6 +753,14 @@ tramoya/
 │   ├── init-cast.sh        what the init gif records (no browser needed)
 │   ├── assistant-cast.sh   what the assistant gif records (needs Ollama running)
 │   └── walkthrough-cast.sh what the walkthrough records (needs Ollama, Playwright and the tts extra)
+├── windows/                the C#/.NET 9 version for Windows (Tramoya.exe): see windows/ARQUITECTURA.md
+│   ├── Tramoya.Core/           everything pure: marks, pacing, profile, steps, cues, captions, assembly, ffmpeg argv...
+│   ├── Tramoya.Stage/          Playwright: stage, browser session, director
+│   ├── Tramoya.Voice/          Windows voices (SAPI)
+│   ├── Tramoya.Easy/           the engine and the local server of tramoya easy (same UI files as the Python)
+│   ├── Tramoya.App/            Tramoya.exe: the WebView2 window and the CLI
+│   ├── Tramoya.Tests/          one <Module>Tests.cs per test_<module>.py
+│   └── publish.ps1             single-file publish + ffmpeg + Chromium -> dist/Tramoya-<version>-windows.zip
 ├── pyproject.toml          hatchling, extras playwright / tts / dev, ruff, pytest markers
 └── .github/workflows/ci.yml
 ```
