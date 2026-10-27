@@ -9,6 +9,7 @@ namespace Tramoya.Easy;
 public static class CodegenSteps
 {
     private sealed record Parte(string Metodo, List<object?> Args, Dictionary<string, object?> Kw);
+    private static readonly object Unknown = new();
     private sealed record Token(string Tipo, string Valor);
     private static string Q(string t) => Json.Dump(t, indent: false);
     private static string? Texto(object? o) => o as string;
@@ -98,7 +99,7 @@ public static class CodegenSteps
                     sel.Add($"internal:attr=[{attr}={Q(a)}{flag}]"); nombre = $"«{a}»"; break;
                 case "get_by_test_id" when !string.IsNullOrEmpty(a): sel.Add($"internal:testid=[data-testid={Q(a)}s]"); break;
                 case "filter": if (!string.IsNullOrEmpty(ht)) sel.Add($"internal:has-text={Q(ht)}i"); break;
-                case "nth" when p.Args.Count > 0:
+                case "nth" when p.Args.Count > 0 && !ReferenceEquals(p.Args[0], Unknown):
                     var v = p.Args[0];
                     sel.Add("nth=" + (v is bool b ? b ? "True" : "False" : v is null ? "None" : Convert.ToString(v, CultureInfo.InvariantCulture))); break;
                 case "first": sel.Add("nth=0"); break;
@@ -192,17 +193,34 @@ public static class CodegenSteps
                     string? key = null;
                     if (i + 1 < ts.Count && ts[i].Tipo == "word" && ts[i + 1].Tipo == "=") { key = ts[i].Valor; i += 2; }
                     if (i >= ts.Count) return false;
-                    var t = ts[i++]; object? valor;
-                    if (t.Tipo == "str")
+                    // An AST argument can be any expression. Only constants contribute
+                    // values; nested calls and collections must not swallow the chain.
+                    var inicio = i;
+                    var cierres = new Stack<string>();
+                    while (i < ts.Count)
                     {
-                        var s = t.Valor;
-                        while (i < ts.Count && ts[i].Tipo == "str") s += ts[i++].Valor;
-                        valor = s;
+                        var tipo = ts[i].Tipo;
+                        if (cierres.Count == 0 && tipo is "," or ")") break;
+                        if (tipo is "(" or "[" or "{")
+                            cierres.Push(tipo == "(" ? ")" : tipo == "[" ? "]" : "}");
+                        else if (tipo is ")" or "]" or "}")
+                        {
+                            if (cierres.Count == 0 || cierres.Pop() != tipo) return false;
+                        }
+                        i++;
                     }
-                    else if (t.Tipo == "word" && t.Valor is "True" or "False" or "None")
-                        valor = t.Valor == "None" ? null : t.Valor == "True";
-                    else if (t.Tipo == "word" && long.TryParse(t.Valor, NumberStyles.None, CultureInfo.InvariantCulture, out var n)) valor = n;
-                    else return false;
+                    if (i == inicio || cierres.Count > 0) return false;
+                    object? valor = Unknown;
+                    var t = ts[inicio];
+                    if (t.Tipo == "str" && ts.GetRange(inicio, i - inicio).All(t => t.Tipo == "str"))
+                        valor = string.Concat(ts.GetRange(inicio, i - inicio).Select(t => t.Valor));
+                    else if (i == inicio + 1)
+                    {
+                        if (t.Tipo == "word" && t.Valor is "True" or "False" or "None")
+                            valor = t.Valor == "None" ? null : t.Valor == "True";
+                        else if (t.Tipo == "word" && long.TryParse(t.Valor, NumberStyles.None, CultureInfo.InvariantCulture, out var n))
+                            valor = n;
+                    }
                     if (key is null) args.Add(valor); else kw[key] = valor;
                     if (i < ts.Count && ts[i].Tipo == ",") i++;
                     else if (i >= ts.Count || ts[i].Tipo != ")") return false;

@@ -85,8 +85,7 @@ public static class Snapshots
     /// <c>difflib.unified_diff(a, b, fromfile, tofile, lineterm="", n=context)</c>, line
     /// for line: same matching blocks, same hunk grouping, same <c>@@</c> headers. Python's
     /// CI output and this one must be interchangeable, so the whole algorithm is ported
-    /// rather than approximated; only the "popular element" heuristic that difflib
-    /// applies to inputs of 200+ lines is left out.
+    /// rather than approximated, including the popular-element heuristic for large inputs.
     /// </summary>
     public static List<string> UnifiedDiff(IReadOnlyList<string> a, IReadOnlyList<string> b,
         string fromFile, string toFile, int context = 3)
@@ -180,6 +179,14 @@ public static class Snapshots
         {
             if (!b2j.TryGetValue(b[j], out var list)) b2j[b[j]] = list = new List<int>();
             list.Add(j);
+        }
+        // __chain_b has no explicit junk when isjunk is None. Popular lines
+        // cannot seed matches, but remain eligible for extension on either side.
+        if (b.Count >= 200)
+        {
+            var threshold = b.Count / 100 + 1;
+            var popular = b2j.Where(pair => pair.Value.Count > threshold).Select(pair => pair.Key).ToList();
+            foreach (var line in popular) b2j.Remove(line);
         }
         var queue = new Stack<(int, int, int, int)>();
         queue.Push((0, a.Count, 0, b.Count));

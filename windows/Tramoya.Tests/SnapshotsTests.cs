@@ -17,6 +17,38 @@ public sealed class SnapshotsTests
     }
 
     [Fact]
+    public void UnifiedDiffUsesPopularLinesOnlyToExtendMatches()
+    {
+        var a = Enumerable.Range(0, 244).Select(i => $"line {i}")
+            .Concat(new[] { "old" }).Concat(Enumerable.Repeat("repeat", 5)).ToArray();
+        var b = a.ToArray();
+        b[244] = "new";
+        // Captured from Python 3.12 difflib.unified_diff with n=2 and
+        // lineterm="": popular trailing lines cannot anchor a separate match.
+        const string expected = """
+            --- expected/s
+            +++ actual/s
+            @@ -243,8 +243,8 @@
+             line 242
+             line 243
+            -old
+            -repeat
+            -repeat
+            -repeat
+            -repeat
+            -repeat
+            +new
+            +repeat
+            +repeat
+            +repeat
+            +repeat
+            +repeat
+            """;
+        Assert.Equal(expected.Replace("\r\n", "\n"),
+            string.Join("\n", Snapshots.UnifiedDiff(a, b, "expected/s", "actual/s", 2)));
+    }
+
+    [Fact]
     public void WriteSnapshotCreatesTheDirectoryAndEndsWithNewline()
     {
         var dir = Path.Combine(TempDir(), "snapshots");

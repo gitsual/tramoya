@@ -37,6 +37,37 @@ public class EasyPasosTests
             page1.get_by_role("button", name="X").click()
         """;
     [Fact]
+    public void NonliteralArgumentsPreserveChainsAndPythonWarnings()
+    {
+        var (pasos, avisos) = CodegenSteps.PasosDeGrabacion("""
+            page.get_by_role("button", name=re.compile("Save")).click(timeout=5000)
+            page.get_by_role("button", name=re.compile("A,(B)")).nth(1).click()
+            page.get_by_label("Name").fill(values[choose("a,b", [1, 2])])
+            page.locator(selectors[0]).click()
+            page.get_by_text("Choice").select_option({"label": "A,B"})
+            with page.expect_popup() as popup_info:
+                page.get_by_text("Help").click()
+            page1.get_by_role("button", name=re.compile("Close")).click()
+            """);
+        // Captured from pasos_de_grabacion under Python 3.12: the with header
+        // is not an expression statement, but its body still contributes steps.
+        var expected = Lista("""
+            [{"tipo":"clic","selector":"internal:role=button","desc":"Pulsa el botón","guarda":false,"id":1,"texto":"","seguro":false},
+             {"tipo":"clic","selector":"internal:role=button >> nth=1","desc":"Pulsa el botón","guarda":false,"id":2,"texto":"","seguro":false},
+             {"tipo":"clic","selector":"internal:text=\"Help\"i","desc":"Pulsa «Help»","guarda":false,"id":3,"texto":"","seguro":false}]
+            """);
+        Assert.Equal(expected.Count, pasos.Count);
+        for (var i = 0; i < expected.Count; i++)
+            Assert.True(JsonNode.DeepEquals(expected[i], pasos[i]));
+        Assert.Equal(new[] {
+            "Se abrió otra ventana durante la grabación; lo que hiciste en ella no se puede repetir.",
+            "Un paso no se ha podido entender y se ha quitado (click).",
+            "Un paso no se ha podido entender y se ha quitado (fill).",
+            "Un paso no se ha podido entender y se ha quitado (select_option)."
+        }, avisos);
+    }
+
+    [Fact]
     public void CodegenBecomesReadableStepsInSourceOrder()
     {
         var (pasos, avisos) = CodegenSteps.PasosDeGrabacion(Codegen);
