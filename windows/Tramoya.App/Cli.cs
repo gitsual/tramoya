@@ -63,35 +63,12 @@ internal static class Cli
 
     internal static Func<string, bool, Task<int>> MakeAgentVideo { get; set; } = Engine.HacerVideoAsync;
 
-    private static async Task<AgentResult> RunAgentDefault(string url, AgentOptions options,
-        string? backendName, string? model, JsonObject ajustes, string authPath)
-    {
-        Environment.SetEnvironmentVariable("PWDEBUG", "console");
-        var (width, height) = Vocabulario.Tamanos.GetValueOrDefault(Pasos.Str(ajustes, "tamano"), Vocabulario.Viewport);
-        using var pw = await Playwright.CreateAsync().ConfigureAwait(false);
-        var context = await pw.Chromium.LaunchPersistentContextAsync(Paths.PerfilWeb, new()
-        {
-            Headless = false,
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            IgnoreHTTPSErrors = true,
-            Locale = "es-ES",
-            Args = Engine.ArgumentosNavegador(url,
-                (ajustes["dominios"] as JsonArray)?.Select(n => n?.ToString() ?? "")),
-        }).ConfigureAwait(false);
-        try
-        {
-            context.SetDefaultNavigationTimeout(60000);
-            var page = context.Pages.Count > 0 ? context.Pages[0] : await context.NewPageAsync().ConfigureAwait(false);
-            try { await page.GotoAsync(url).ConfigureAwait(false); }
-            catch (Exception) { /* A slow sign-in is not a failure. */ }
-            var backend = Backends.Pick(backendName, model);
-            var result = await Tramoya.Agent.Agent.RunAsync(page, options, backend,
-                new StderrProgress(), CancellationToken.None).ConfigureAwait(false);
-            await context.StorageStateAsync(new() { Path = authPath }).ConfigureAwait(false);
-            return result;
-        }
-        finally { await context.CloseAsync().ConfigureAwait(false); }
-    }
+    // The same run the window does from its «pídeselo a la IA» card (Engine.CorrerAgenteAsync):
+    // one implementation, the CLI only chooses the model and prints the log on stderr.
+    private static Task<AgentResult> RunAgentDefault(string url, AgentOptions options,
+        string? backendName, string? model, JsonObject ajustes, string authPath) =>
+        Engine.CorrerAgenteAsync(url, Paths.PerfilWeb, options, ajustes, authPath,
+            Backends.Pick(backendName, model), new StderrProgress(), CancellationToken.None);
 
     private static int CmdAgent(ParsedArgs args)
     {
@@ -124,7 +101,8 @@ internal static class Cli
             result = RunAgent(url, new AgentOptions(goal, "es", maxPasos, args.Flag("capturas")),
                 args.Get("backend"), args.Get("model"), Proyectos.LeerAjustes(opts), auth).GetAwaiter().GetResult();
             id = Proyectos.Crear(opts, args.Get("nombre") ?? goal[..Math.Min(60, goal.Length)], url);
-            File.Move(auth, Path.Combine(Proyectos.Carpeta(opts, id), "auth.json"), overwrite: true);
+            // No storage state (the browser closed before it could be saved) is not a failure.
+            if (File.Exists(auth)) File.Move(auth, Path.Combine(Proyectos.Carpeta(opts, id), "auth.json"), overwrite: true);
         }
         finally { RemoveDir(temporary); }
         var carpeta = Proyectos.Carpeta(opts, id);
@@ -1014,7 +992,7 @@ internal static class Cli
         {
             // `grabar` and `video` open Chromium; the server reads the progress lines on
             // stderr as the trail of a failure, so they never break its JSON protocol.
-            if (args.Length > 1 && args[1] is "grabar" or "video" && EnsureBrowser() is { } missing)
+            if (args.Length > 1 && args[1] is "grabar" or "video" or "agente" && EnsureBrowser() is { } missing)
                 return missing;
             return EasyEngineMain(args.Skip(1).ToArray());
         }

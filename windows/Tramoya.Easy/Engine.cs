@@ -5,9 +5,11 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
+using Tramoya.Agent;
 using Tramoya.Core;
 using Tramoya.Stage;
 using Tramoya.Voice;
+using AgentRunner = Tramoya.Agent.Agent;
 
 namespace Tramoya.Easy;
 
@@ -40,6 +42,7 @@ public static class Engine
         El motor de «tramoya easy»: clics dentro, pasos fuera; pasos dentro, vídeo fuera.
 
             Tramoya.exe easy-engine grabar <carpeta> <url> <perfil> [ajustes-json]
+            Tramoya.exe easy-engine agente <carpeta> <url> <perfil> <ajustes-json> <objetivo>
             Tramoya.exe easy-engine video <carpeta> [--voz]
             Tramoya.exe easy-engine pasos <codegen.py>     pasos de un fichero de codegen (JSON)
             Tramoya.exe easy-engine voces                  voces SAPI instaladas (español primero)
@@ -291,6 +294,149 @@ public static class Engine
 
     private static string Recortar(string s, int n) => s.Length <= n ? s : s[..n];
 
+    // --- la IA hace el proceso --------------------------------------------------------------
+    //
+    // La misma ventana del grabador (el perfil que conserva las sesiones, los selectores que
+    // genera Playwright), pero quien hace los clics es un modelo de lenguaje a partir de lo que
+    // la persona describe. Sale el mismo grabacion.json que al grabar a mano, con la frase de
+    // cada paso ya escrita, y el servidor lo pasa al proyecto igual que una grabación.
+
+    /// <summary>
+    /// Abre la web en el perfil de <c>easy</c>, deja que el agente la recorra y guarda la sesión
+    /// en <paramref name="auth"/>. Es la única implementación: la usan la ventana (por el
+    /// subcomando <c>agente</c>) y el CLI (<c>tramoya agent</c>).
+    /// </summary>
+    public static async Task<AgentResult> CorrerAgenteAsync(string url, string perfil, AgentOptions opciones, JsonObject ajustes,
+        string auth, IChatBackend backend, IProgress<string>? log, CancellationToken ct)
+    {
+        // Da window.playwright.selector() en cada página (los selectores duraderos del agente);
+        // tiene que estar puesto antes de que arranque el proceso de Playwright, que lo hereda.
+        Environment.SetEnvironmentVariable("PWDEBUG", "console");
+        var (ancho, alto) = Vocabulario.Tamanos.GetValueOrDefault(Pasos.Str(ajustes, "tamano"), Vocabulario.Viewport);
+        using var pw = await Playwright.CreateAsync().ConfigureAwait(false);
+        var ctx = await pw.Chromium.LaunchPersistentContextAsync(perfil, new()
+        {
+            Headless = false,
+            ViewportSize = new ViewportSize { Width = ancho, Height = alto },
+            IgnoreHTTPSErrors = true,
+            Locale = "es-ES",
+            Args = ArgumentosNavegador(url, Dominios(ajustes)),
+        }).ConfigureAwait(false);
+        try
+        {
+            ctx.SetDefaultNavigationTimeout(60000);
+            var page = ctx.Pages.Count > 0 ? ctx.Pages[0] : await ctx.NewPageAsync().ConfigureAwait(false);
+            try { await page.GotoAsync(url).ConfigureAwait(false); }
+            catch (Exception) { /* un inicio de sesión lento no es un fallo */ }
+            var resultado = await AgentRunner.RunAsync(page, opciones, backend, log, ct).ConfigureAwait(false);
+            try { await ctx.StorageStateAsync(new() { Path = auth }).ConfigureAwait(false); }
+            catch (Exception) { /* sin sesión que guardar */ }
+            return resultado;
+        }
+        finally
+        {
+            try { await ctx.CloseAsync().ConfigureAwait(false); }
+            catch (Exception) { /* ya estaba cerrado */ }
+        }
+    }
+
+    /// <summary>Tope de pasos cuando se le pide desde la ventana; el CLI tiene su <c>--max-pasos</c>.</summary>
+    public const int MaxPasosAgente = 25;
+
+    /// <summary>
+    /// <c>agente &lt;carpeta&gt; &lt;url&gt; &lt;perfil&gt; &lt;ajustes-json&gt; &lt;objetivo&gt;</c>: la IA hace el
+    /// proceso y deja <c>auth.json</c> y <c>grabacion.json</c> en la carpeta, como el grabador.
+    /// Habla por líneas: <c>{"fase":"agente","msg","p"}</c> con cada avance, <c>{"paso","n"}</c> con
+    /// cada paso apuntado y al final <c>{"fin":true,"n","inicio"}</c> o <c>{"error"}</c>. El modelo
+    /// sale de los ajustes (<c>ia_backend</c>, <c>ia_modelo</c>, opcionales) o del entorno, como en
+    /// <see cref="Backends.Pick"/>.
+    /// </summary>
+    public static async Task<int> AgenteAsync(string carpeta, string url, string perfil, JsonObject? ajustes, string objetivo)
+    {
+        ajustes ??= [];
+        try
+        {
+            // Lo que puede fallar sin abrir nada se comprueba antes: sin carpeta no hay dónde dejar
+            // el resultado y sin modelo no hay a quién preguntar.
+            if (!Directory.Exists(carpeta)) throw new DirectoryNotFoundException($"no existe la carpeta {carpeta}");
+            if (objetivo.Trim().Length == 0) throw new ArgumentException("no me has dicho qué tiene que hacer");
+            var backend = Backends.Pick(Vacio(Pasos.Str(ajustes, "ia_backend")), Vacio(Pasos.Str(ajustes, "ia_modelo")));
+            var opciones = new AgentOptions(objetivo.Trim(), "es", MaxPasosAgente);
+            var r = await CorrerAgenteAsync(url, perfil, opciones, ajustes, Path.Combine(carpeta, "auth.json"),
+                backend, new ProgresoAgente(MaxPasosAgente), CancellationToken.None).ConfigureAwait(false);
+            var limpios = Pasos.Limpiar(r.Pasos);
+            if (limpios.Count == 0)
+            {
+                // Sin pasos no hay nada que revisar: el motivo es lo que el modelo (o el agente) ha dicho.
+                var motivo = r.Resumen.Length != 0 ? r.Resumen : r.Avisos.LastOrDefault() ?? "no ha hecho ningún paso";
+                throw new InvalidOperationException(motivo);
+            }
+            var inicio = r.Inicio.Length != 0 ? r.Inicio : url;
+            var grabacion = new JsonObject
+            {
+                ["inicio"] = inicio,
+                ["titulo"] = r.Titulo,
+                ["pasos"] = new JsonArray(limpios.Select(p => (JsonNode)p.DeepClone()).ToArray()),
+                ["avisos"] = new JsonArray(r.Avisos.Select(a => (JsonNode)a).ToArray()),
+                ["resumen"] = r.Resumen,
+                ["ok"] = r.Ok,
+            };
+            Json.Write(Path.Combine(carpeta, "grabacion.json"), grabacion, trailingNewline: false);
+            Emitir(("fin", true), ("n", limpios.Count), ("inicio", inicio));
+            return 0;
+        }
+        catch (Exception e)
+        {
+            var motivo = Recortar((e.Message ?? e.GetType().Name).Split('\n', 2)[0].TrimEnd('\r').Trim().TrimEnd('.'), 200);
+            Emitir(("error", $"La IA no ha podido hacerlo: {motivo}."));
+            return 1;
+        }
+    }
+
+    private static string? Vacio(string s) => s.Length == 0 ? null : s;
+
+    /// <summary>
+    /// El registro del agente convertido en las líneas que lee el servidor. El agente solo da
+    /// texto, así que se reconoce por su forma: «Paso N: …» es un paso apuntado (y va también
+    /// como <c>{"paso","n"}</c>, para el contador de la ventana), la frase que escribe justo después
+    /// se pega a ese mensaje para que se vea qué se va a decir, y de «Turno N: acción — porqué» se
+    /// enseña solo el porqué, que es lo que una persona entiende. El avance es pasos / tope.
+    /// </summary>
+    private sealed class ProgresoAgente(int maxPasos) : IProgress<string>
+    {
+        private static readonly Regex Paso = new(@"^Paso (\d+): (.*?) — porque ", RegexOptions.CultureInvariant);
+        private static readonly Regex Turno = new(@"^Turno \d+: .*? — (.+)$", RegexOptions.CultureInvariant);
+        private static readonly Regex Frase = new(@"^\s+«(.*)»$", RegexOptions.CultureInvariant);
+        private int _n;
+        private string _ultimo = "";
+
+        public void Report(string linea)
+        {
+            if (Paso.Match(linea) is { Success: true } m)
+            {
+                _n = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+                _ultimo = $"Paso {_n}: {m.Groups[2].Value}";
+                Avance(_ultimo);
+                Emitir(("paso", m.Groups[2].Value), ("n", _n));
+                return;
+            }
+            if (_ultimo.Length != 0 && Frase.Match(linea) is { Success: true } f)
+            {
+                Avance($"{_ultimo} — {f.Groups[1].Value}");
+                return;
+            }
+            if (Turno.Match(linea) is { Success: true } t)
+            {
+                Avance(t.Groups[1].Value.Trim());
+                return;
+            }
+            Avance(linea.Trim());
+        }
+
+        private void Avance(string msg) =>
+            Emitir(("fase", "agente"), ("msg", msg), ("p", Math.Min(1.0, (double)_n / maxPasos)));
+    }
+
     // --- grabar y montar ----------------------------------------------------------------
 
     /// <summary>La web ha redirigido a otro sitio al abrirse: hay que volver a entrar.</summary>
@@ -464,6 +610,18 @@ public static class Engine
         {
             var ajustes = args.Length > 4 ? Json.Parse(args[4]) as JsonObject : null;
             return GrabarAsync(args[1], args[2], args[3], ajustes).GetAwaiter().GetResult();
+        }
+        if (args[0] == "agente")
+        {
+            if (args.Length < 6)
+            {
+                Emitir(("error", "La IA no ha podido hacerlo: faltan datos (carpeta, web, perfil, ajustes y objetivo)."));
+                return 1;
+            }
+            JsonObject? ajustes;
+            try { ajustes = Json.Parse(args[4]) as JsonObject; }
+            catch (JsonException) { ajustes = null; } // unos ajustes ilegibles son los de fábrica
+            return AgenteAsync(args[1], args[2], args[3], ajustes, args[5]).GetAwaiter().GetResult();
         }
         if (args[0] == "voces")
         {

@@ -285,6 +285,8 @@ public sealed class Server : IDisposable
                 ["windows"] = _o.Windows,
                 ["carpeta"] = _o.MisVideos,
                 ["acceso"] = esc is not null && File.Exists(Path.Combine(esc, "Tramoya.lnk")),
+                // Solo con un modelo a mano se ofrece «pídeselo a la IA»; el Python manda false.
+                ["agente"] = Tareas.HayModelo(_o),
             });
             return;
         }
@@ -436,6 +438,18 @@ public sealed class Server : IDisposable
                     Tareas.Cancelar(pid);
                     Tareas.AbrirWeb(_o, pid);
                     break;
+                case "agente":
+                {
+                    var objetivo = Pasos.Str(cuerpo, "objetivo").Trim();
+                    if (objetivo.Length == 0)
+                    {
+                        Responder(ctx, new JsonObject { ["error"] = "Escribe qué quieres que haga la IA." }, 400);
+                        return;
+                    }
+                    Tareas.Cancelar(pid);
+                    Tareas.Agente(_o, pid, objetivo);
+                    break;
+                }
                 case "empezar" or "terminar":
                     Tareas.Orden(pid, accion);
                     break;

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Tramoya.Agent;
 using Tramoya.Core;
 
 namespace Tramoya.Easy;
@@ -19,8 +20,9 @@ namespace Tramoya.Easy;
 /// El motor habla por su salida estándar con una línea JSON por evento; aquí se lee línea a
 /// línea en un hilo de fondo y se va actualizando el estado que la interfaz consulta por
 /// <c>/api/p/&lt;id&gt;</c>: <c>quieto</c>, <c>abriendo</c>, <c>preparado</c>, <c>grabando</c>,
-/// <c>convirtiendo</c>, <c>haciendo</c> (con <c>msg</c> y <c>p</c>), <c>listo</c> y
-/// <c>error</c> (con <c>msg</c> y a veces <c>paso</c>).
+/// <c>convirtiendo</c>, <c>pensando</c> (la IA hace el proceso: <c>msg</c>, <c>p</c>, <c>ultimo</c> y
+/// <c>n</c>), <c>haciendo</c> (con <c>msg</c> y <c>p</c>), <c>listo</c> y <c>error</c> (con
+/// <c>msg</c> y a veces <c>paso</c>).
 /// </para>
 /// <para>
 /// Un trabajo a la vez por vídeo. El Python se apoya en el GIL para tocar el diccionario
@@ -315,7 +317,8 @@ public static class Tareas
 
     /// <summary>
     /// Pasa <c>grabacion.json</c> al proyecto: los pasos, los avisos, el instante de inicio y
-    /// el título de la web. Al regrabar, se conservan los textos de los pasos iguales.
+    /// el título de la web. Al regrabar, se conservan los textos de los pasos iguales; si la
+    /// grabación ya trae un <c>texto</c> (la IA escribe la frase de cada paso), ese manda.
     /// </summary>
     public static void Convertir(ServerOptions o, string pid)
     {
@@ -348,10 +351,15 @@ public static class Tareas
             foreach (var x in (p["pasos"] as JsonArray ?? []).OfType<JsonObject>())
                 viejos[Pasos.Str(x, "desc")] = x["texto"]?.DeepClone() ?? "";
             foreach (var x in pasos.OfType<JsonObject>())
+            {
+                if (Pasos.Str(x, "texto").Trim().Length != 0) continue;
                 x["texto"] = viejos.TryGetValue(Pasos.Str(x, "desc"), out var texto) ? texto?.DeepClone() ?? "" : "";
+            }
             p["pasos"] = pasos.DeepClone();
             p["avisos"] = res["avisos"]?.DeepClone();
             p["inicio"] = res["inicio"]?.DeepClone();
+            // Lo que la IA ha dicho al terminar, por si quien revisa quiere saber cómo acabó.
+            if (res.ContainsKey("resumen")) p["resumen"] = res["resumen"]?.DeepClone();
             p["fase"] = "explicar";
             p["video"] = null;
             var titulo = res["titulo"];
@@ -372,6 +380,123 @@ public static class Tareas
         if (clave is not null) datos[clave] = valor;
         lock (Cerrojo)
             Mapa[pid] = new Entrada { Datos = datos };
+    }
+
+    // --- pedírselo a la IA ---------------------------------------------------------
+
+    /// <summary>
+    /// La IA hace el proceso en la ventana de la web a partir de lo que la persona describe.
+    /// El motor va diciendo qué piensa y qué paso apunta (<c>pensando</c>, con <c>msg</c>,
+    /// <c>p</c>, <c>ultimo</c> y <c>n</c>) y al final deja <c>grabacion.json</c>, que se pasa al
+    /// proyecto exactamente como una grabación a mano.
+    /// </summary>
+    public static void Agente(ServerOptions o, string pid, string objetivo)
+    {
+        var p = Proyectos.Leer(o, pid);
+        // El objetivo se queda en el proyecto: así la ventana lo vuelve a enseñar si hay que
+        // retocarlo y repetir, y queda constancia de qué se le pidió.
+        p["objetivo"] = objetivo;
+        Proyectos.Guardar(o, pid, p);
+        string[] argv = ["agente", Proyectos.Carpeta(o, pid), Pasos.Str(p, "url"), PerfilWeb(o),
+            Json.Dump(Proyectos.LeerAjustes(o), indent: false), objetivo];
+        var proc = Lanzar(o, pid, argv);
+        lock (Cerrojo)
+            Mapa[pid] = new Entrada
+            {
+                Datos = new JsonObject { ["estado"] = "pensando", ["msg"] = "Pensando…", ["p"] = 0.0 },
+                Proc = proc,
+            };
+
+        JsonObject fin = new();
+        List<string> cola = []; // las últimas líneas que no son JSON: el rastro del fallo
+        Escuchar(proc, linea =>
+        {
+            linea = linea.Trim();
+            if (Linea(linea) is not { } d)
+            {
+                cola.Add(linea);
+                if (cola.Count > 20) cola.RemoveAt(0);
+                return;
+            }
+            lock (Cerrojo)
+            {
+                if (!EsMio(pid, proc)) return;
+                var t = Mapa[pid].Datos;
+                if (d.ContainsKey("msg"))
+                {
+                    t["msg"] = d["msg"]?.DeepClone();
+                    t["p"] = d["p"]?.DeepClone() ?? 0;
+                }
+                if (d.ContainsKey("paso"))
+                {
+                    t["ultimo"] = d["paso"]?.DeepClone();
+                    t["n"] = d["n"]?.DeepClone();
+                }
+                if (Pasos.Bool(d, "fin") || d.ContainsKey("error"))
+                    fin = d;
+            }
+        }, () =>
+        {
+            lock (Cerrojo)
+            {
+                if (!EsMio(pid, proc)) return;
+                if (Pasos.Bool(fin, "fin"))
+                {
+                    Convertir(o, pid);
+                    return;
+                }
+                Rastro(o, pid, cola);
+                var error = Pasos.Str(fin, "error");
+                Mapa[pid] = new Entrada
+                {
+                    Datos = new JsonObject
+                    {
+                        ["estado"] = "error",
+                        ["msg"] = error.Length != 0 ? error : "La IA se ha cerrado sin terminar.",
+                    },
+                };
+            }
+        }, e => Fallo(o, pid, proc, "No he podido guardar lo que ha hecho la IA en el proyecto", e, cola));
+    }
+
+    private static readonly HttpClient Sonda = new() { Timeout = TimeSpan.FromSeconds(1) };
+    private static (DateTime Hasta, bool Valor)? _modelo;
+
+    /// <summary>
+    /// Si hay un modelo al que pedírselo, dicho sin lanzar el agente: lo que
+    /// <see cref="Backends.Pick"/> elegiría tiene que responder. Se cambia en los tests.
+    /// </summary>
+    internal static Func<bool> ModeloDisponible { get; set; } = ModeloDisponibleDefecto;
+
+    private static bool ModeloDisponibleDefecto()
+    {
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY"))) return true;
+        try
+        {
+            var url = Backends.UrlOllama(Environment.GetEnvironmentVariable("OLLAMA_HOST"));
+            using var r = Sonda.GetAsync($"{url}/api/tags").GetAwaiter().GetResult();
+            return r.IsSuccessStatusCode;
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException or UriFormatException)
+        {
+            return false; // nadie escucha: la ventana no enseña la tarjeta
+        }
+    }
+
+    /// <summary>
+    /// Si la ventana debe ofrecer «pídeselo a la IA». La respuesta se guarda un minuto: la
+    /// portada se pide a cada rato y una sonda a Ollama cada vez sería un segundo de espera.
+    /// </summary>
+    public static bool HayModelo(ServerOptions o)
+    {
+        lock (Oyendo)
+        {
+            if (_modelo is { } m && m.Hasta > DateTime.UtcNow) return m.Valor;
+        }
+        var valor = ModeloDisponible();
+        lock (Oyendo)
+            _modelo = (DateTime.UtcNow.AddSeconds(60), valor);
+        return valor;
     }
 
     // --- hacer el vídeo -----------------------------------------------------------
@@ -548,6 +673,10 @@ public static class Tareas
     internal static void Reiniciar()
     {
         CancelarTodas();
-        lock (Oyendo) Voces_ = null;
+        lock (Oyendo)
+        {
+            Voces_ = null;
+            _modelo = null;
+        }
     }
 }
