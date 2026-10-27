@@ -400,6 +400,26 @@ Tramoya.exe assemble --video out/take.webm --marks out/marks.json --voice-dir ou
 | `capture` | `playwright codegen` | not available: `tramoya easy` is the recorder |
 | window of `easy` | Chromium `--app` | WebView2 (Edge engine), so a corporate proxy policy on Chromium does not blank it |
 | `ask` / `do` | Ollama or Claude | the same |
+| `agent` | not yet | describe the process; a model clicks through the page and writes the sentence of each step |
+
+**Describe it and the model does it.** `tramoya easy` records what *you* click. `Tramoya.exe agent` records what the
+*model* clicks: it reads the page (a numbered list of what can be pressed, typed or chosen), decides one action per
+turn, writes the sentence the narrator will say, and leaves a normal `easy` project (durable selectors, sentences)
+you can review in the window and turn into a video, or make the video in one go. A local model is enough: the demo
+below ran on Ollama with `qwen3-coder:30b`, one or two seconds per turn.
+
+```
+Tramoya.exe agent "Haz un recorrido por el sistema de diseño: abre Foundations y entra en Colour; luego atoms, Button, Primary; después organisms, TrackingTable, Renderers; y termina en compositions, Navbar, Open" --url http://127.0.0.1:6106/ --video --voz
+```
+
+That request, on a Storybook, became 11 steps with their sentences and a 62-second narrated video in under three
+minutes. The window has the same thing as a card («Pídeselo a la IA») on the recording screen when a model is
+reachable. `ask` / `do` stay what they were: they plan the *commands* (assemble, captions, music) from a sentence;
+`agent` drives the *page*.
+
+Slow things on the page (a model thinking, a build) go in a wait window: `wait <selector> | <max seconds>` in the
+step language opens `wait:start` / `wait:end` marks, and `assemble` speeds a window longer than 20 s up to a few
+seconds with a "2 minutes later" caption. Both implementations understand the verb.
 
 Build and package (needs the .NET 9 SDK; the zip carries `ffmpeg\` and `navegador\` with Chromium so the laptop
 downloads nothing):
