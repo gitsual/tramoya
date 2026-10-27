@@ -142,15 +142,38 @@ public class PathsTests
         // follow the driver's convention (dashes to underscores, then the revision).
         Assert.True(File.Exists(Browsers.BrowsersJson), Browsers.BrowsersJson);
         var folders = Browsers.Folders();
-        Assert.Equal(3, folders.Count);
+        Assert.Equal(4, folders.Count);
         Assert.Matches(@"^chromium-\d+$", folders[0]);
         Assert.Matches(@"^chromium_headless_shell-\d+$", folders[1]);
         Assert.Matches(@"^winldd-\d+$", folders[2]);
+        Assert.Matches(@"^ffmpeg-\d+$", folders[3]); // the driver's own encoder for the recorded video
         Assert.Equal(folders[0].Split('-')[1], folders[1].Split('-')[1]); // same Chromium build
     }
 
     [Fact]
-    public void InstalledNeedsTheThreeMarkers()
+    public void DriverLivesNextToTheBrowsersJson()
+    {
+        // The installer runs the driver as a child process: node and cli.js must be where
+        // the package put them, in the same `.playwright` folder as browsers.json.
+        Assert.Equal(Path.Combine(Browsers.DriverDir, "package", "browsers.json"), Browsers.BrowsersJson);
+        Assert.True(File.Exists(Path.Combine(Browsers.DriverDir, "node", "win32_x64", "node.exe")));
+        Assert.True(File.Exists(Path.Combine(Browsers.DriverDir, "package", "cli.js")));
+    }
+
+    /// <summary>A complete install under <paramref name="navegador"/>: every folder with its marker and its executable (empty files are enough).</summary>
+    private static void FakeInstall(string navegador)
+    {
+        foreach (var (folder, executables) in Browsers.Layout())
+        {
+            var exe = Path.Combine(navegador, folder, executables[0]);
+            Directory.CreateDirectory(Path.GetDirectoryName(exe)!);
+            File.WriteAllText(Path.Combine(navegador, folder, Browsers.Marker), "");
+            File.WriteAllText(exe, "");
+        }
+    }
+
+    [Fact]
+    public void InstalledNeedsEveryMarkerAndExecutable()
     {
         var kit = TempKit();
         try
@@ -158,15 +181,27 @@ public class PathsTests
             using var _ = new EnvScope(Paths.KitVariable, kit);
             Assert.False(Browsers.Installed()); // no navegador\ at all
             var navegador = Path.Combine(kit, "navegador");
-            var folders = Browsers.Folders();
-            foreach (var folder in folders)
+            var layout = Browsers.Layout();
+            foreach (var (folder, _) in layout)
                 Directory.CreateDirectory(Path.Combine(navegador, folder));
             Assert.False(Browsers.Installed()); // folders without the marker: a download that died
-            foreach (var folder in folders.Take(2))
+            foreach (var (folder, _) in layout)
                 File.WriteAllText(Path.Combine(navegador, folder, Browsers.Marker), "");
-            Assert.False(Browsers.Installed()); // winldd missing: Playwright would refuse to launch
-            File.WriteAllText(Path.Combine(navegador, folders[2], Browsers.Marker), "");
+            Assert.False(Browsers.Installed()); // markers without executables: a folder an antivirus emptied
+            FakeInstall(navegador);
             Assert.True(Browsers.Installed());
+            // Any of the known layouts of the browser folder will do, but not none of them.
+            var (chromium, chromiumExes) = layout[0];
+            File.Delete(Path.Combine(navegador, chromium, chromiumExes[0]));
+            Assert.False(Browsers.Installed());
+            var other = Path.Combine(navegador, chromium, chromiumExes[1]);
+            Directory.CreateDirectory(Path.GetDirectoryName(other)!);
+            File.WriteAllText(other, "");
+            Assert.True(Browsers.Installed());
+            // Playwright's ffmpeg is what encodes the recording: without it the install is not usable.
+            var (ffmpeg, ffmpegExes) = layout[3];
+            File.Delete(Path.Combine(navegador, ffmpeg, ffmpegExes[0]));
+            Assert.False(Browsers.Installed());
         }
         finally
         {
@@ -181,12 +216,7 @@ public class PathsTests
         try
         {
             using var _ = new EnvScope(Paths.KitVariable, kit);
-            var navegador = Path.Combine(kit, "navegador");
-            foreach (var folder in Browsers.Folders())
-            {
-                Directory.CreateDirectory(Path.Combine(navegador, folder));
-                File.WriteAllText(Path.Combine(navegador, folder, Browsers.Marker), "");
-            }
+            FakeInstall(Path.Combine(kit, "navegador"));
             var lines = new List<string>();
             var progress = new SyncProgress(lines.Add);
             Assert.Null(await Browsers.EnsureAsync(progress, CancellationToken.None));

@@ -175,10 +175,14 @@ internal static class Program
     /// </summary>
     private sealed class InstallDialog : Form
     {
+        /// <summary>How long the dialog waits for a cancelled download to be killed and reaped before giving up on it.</summary>
+        private static readonly TimeSpan EsperaAlCancelar = TimeSpan.FromSeconds(15);
+
         private readonly Label _estado;
         private readonly CancellationTokenSource _cancelar = new();
         private string? _resultado;
-        private bool _terminado;
+        private volatile bool _terminado;
+        private bool _cerrando;
 
         private InstallDialog()
         {
@@ -217,11 +221,32 @@ internal static class Program
             };
             Controls.AddRange(new Control[] { titulo, barra, _estado });
             Shown += (_, _) => Empezar();
-            FormClosing += (_, _) =>
+            FormClosing += (_, e) =>
             {
-                // Closing while it downloads: stop the driver and leave quietly.
-                if (!_terminado)
-                    _cancelar.Cancel();
+                if (_terminado || _cerrando)
+                    return;
+                // Closing while it downloads: the window stays until the driver has been
+                // killed and reaped, so RunWindow never returns with a node.exe still
+                // downloading behind it. The download task ends (cancelled, or with the
+                // message of a driver that would not die) and closes the dialog itself;
+                // the timer is the bound, for a task that does not come back in time.
+                _cerrando = true;
+                e.Cancel = true;
+                _estado.Text = "Parando la descarga…";
+                UseWaitCursor = true;
+                _cancelar.Cancel();
+                var limite = new System.Windows.Forms.Timer { Interval = (int)EsperaAlCancelar.TotalMilliseconds };
+                limite.Tick += (_, _) =>
+                {
+                    limite.Stop();
+                    if (_terminado)
+                        return;
+                    _resultado = "No he podido parar la descarga del navegador a tiempo; " +
+                                 "si sigue un proceso node.exe, ciérralo desde el Administrador de tareas.";
+                    _terminado = true;
+                    Close();
+                };
+                limite.Start();
             };
         }
 
@@ -253,6 +278,8 @@ internal static class Program
                 }
             }).ContinueWith(t =>
             {
+                // Not the thread of the window: the fields are set here and Close is posted
+                // to the message loop, where FormClosing sees _terminado and lets it go.
                 _resultado = t.Status == TaskStatus.RanToCompletion ? t.Result : "No he podido preparar el navegador.";
                 _terminado = true;
                 if (IsHandleCreated && !IsDisposed)

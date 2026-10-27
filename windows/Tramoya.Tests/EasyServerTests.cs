@@ -695,6 +695,58 @@ public class EasyServerTests : IDisposable
         Assert.Equal("error", Tareas.Tarea(id)["estado"]!.GetValue<string>());
     }
 
+    /// <summary>Si un proceso con ese id ya no existe o ha terminado.</summary>
+    private static bool Terminado(int id)
+    {
+        try
+        {
+            using var p = System.Diagnostics.Process.GetProcessById(id);
+            return p.HasExited;
+        }
+        catch (ArgumentException) { return true; }
+        catch (InvalidOperationException) { return true; }
+    }
+
+    private static HashSet<int> Pings()
+    {
+        var ids = new HashSet<int>();
+        foreach (var p in System.Diagnostics.Process.GetProcessesByName("PING"))
+        {
+            ids.Add(p.Id);
+            p.Dispose();
+        }
+        return ids;
+    }
+
+    [Fact]
+    public void UnFalloDelLectorNoSueltaElMotorYCancelarLoMata()
+    {
+        // Un motor que dice una línea que el lector no digiere (una clave repetida: el
+        // JsonObject revienta al tocarla) y luego se queda medio minuto vivo, como un
+        // grabador con la ventana abierta. La tarea acaba en «error», pero tiene que seguir
+        // siendo dueña del proceso: cancelar lo mata, con el ping que lo mantiene vivo.
+        var ruta = Path.Combine(Path.GetDirectoryName(_datos)!, "lento.cmd");
+        File.WriteAllText(ruta,
+            "@echo off\r\necho {\"estado\": \"grabando\", \"estado\": 1}\r\nping 127.0.0.1 -n 30 >nul\r\n",
+            new UTF8Encoding(false));
+        var o = Opciones(["cmd.exe", "/c", ruta]);
+        var id = Proyectos.Crear(o, "Lento", "https://a.b/");
+        var pingsAntes = Pings();
+        Tareas.AbrirWeb(o, id);
+        var motor = Tareas.ProcesoDe(id);
+        Assert.NotNull(motor);
+        Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() == "error");
+        Assert.StartsWith("No he podido guardar la grabación en el proyecto (", Tareas.Tarea(id)["msg"]!.GetValue<string>());
+        // El motor sigue vivo y sigue siendo de la tarea.
+        Assert.False(Terminado(motor.Value));
+        Assert.Equal(motor, Tareas.ProcesoDe(id));
+        Espera(() => Pings().Except(pingsAntes).Any());
+        var pings = Pings().Except(pingsAntes).ToList();
+        Tareas.Cancelar(id);
+        Espera(() => Terminado(motor.Value) && pings.All(Terminado));
+        Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
+    }
+
     [Fact]
     public async Task StopCierraElPuerto()
     {
