@@ -43,6 +43,27 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         Paths.EnsureFolders();
 
+        // The recorder needs Playwright's Chromium. The kit brings it in `navegador\`;
+        // an installed copy has to download it the first time, and the user sees why
+        // the window is taking its time.
+        if (!Browsers.Installed())
+        {
+            var fallo = InstallDialog.Run();
+            if (fallo is null)
+                return 1; // closed by the user: no window, no message
+            if (fallo.Length > 0)
+            {
+                MessageBox.Show(fallo + "\n\n" +
+                                "Tramoya graba con su propio Chromium y no puede seguir sin él.\n\n" +
+                                "Si estás en una red de empresa con proxy, puede que la descarga esté cortada: " +
+                                "usa el kit de Tramoya (Tramoya-<versión>-windows.zip), que ya trae la carpeta " +
+                                "«navegador» dentro, o pide que dejen pasar la descarga.\n\n" +
+                                "Carpeta del navegador: " + Paths.Navegador,
+                                "Tramoya", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return 1;
+            }
+        }
+
         string url;
         try
         {
@@ -80,17 +101,31 @@ internal static class Program
 
     private static int RunCli(string[] args)
     {
-        // Handles inherited from the parent (pipes, files) survive AttachConsole;
-        // keep them so `Tramoya.exe ... > out.txt` and the `easy-engine` workers,
-        // which the server talks to through pipes, keep working.
-        var salida = StreamHeredado(STD_OUTPUT_HANDLE);
-        var errores = StreamHeredado(STD_ERROR_HANDLE);
+        var utf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
-        if (!AttachConsole(ATTACH_PARENT_PROCESS) && (salida is null || errores is null)
-            && !string.Equals(args[0], "easy-engine", StringComparison.Ordinal))
+        if (string.Equals(args[0], "easy-engine", StringComparison.Ordinal))
+        {
+            // The engine worker talks to the server through its three pipes: orders in
+            // through stdin, JSON lines out through stdout. It never touches a console
+            // (attaching to one can swap the inherited handles for the console's and
+            // the orders stop arriving); the pipes are UTF-8 on both ends.
+            Console.SetIn(new StreamReader(Console.OpenStandardInput(), utf8));
+            Console.SetOut(new StreamWriter(Console.OpenStandardOutput(), utf8) { AutoFlush = true });
+            Console.SetError(new StreamWriter(Console.OpenStandardError(), utf8) { AutoFlush = true });
+            return Cli.Run(args);
+        }
+
+        // Handles inherited from the parent (pipes, files) are captured before attaching
+        // and put back afterwards, so `Tramoya.exe ... > out.txt` and `type x | Tramoya.exe ...`
+        // keep working whatever AttachConsole does to the std handles.
+        var entrada = StreamHeredado(STD_INPUT_HANDLE, FileAccess.Read);
+        var salida = StreamHeredado(STD_OUTPUT_HANDLE, FileAccess.Write);
+        var errores = StreamHeredado(STD_ERROR_HANDLE, FileAccess.Write);
+
+        if (!AttachConsole(ATTACH_PARENT_PROCESS) && (salida is null || errores is null))
         {
             // Launched without a console (Run dialog, a shortcut): give it one so
-            // the user sees the output. The engine workers never need it.
+            // the user sees the output.
             AllocConsole();
         }
 
@@ -103,14 +138,16 @@ internal static class Program
         {
             // No console at all: the writers below are UTF-8 anyway.
         }
-        Console.SetOut(new StreamWriter(salida ?? Console.OpenStandardOutput()) { AutoFlush = true });
-        Console.SetError(new StreamWriter(errores ?? Console.OpenStandardError()) { AutoFlush = true });
+        if (entrada is not null)
+            Console.SetIn(new StreamReader(entrada, utf8));
+        Console.SetOut(new StreamWriter(salida ?? Console.OpenStandardOutput(), utf8) { AutoFlush = true });
+        Console.SetError(new StreamWriter(errores ?? Console.OpenStandardError(), utf8) { AutoFlush = true });
 
         return Cli.Run(args);
     }
 
     /// <summary>A stream over the inherited std handle when it is a pipe or a file; null when it is a console or nothing.</summary>
-    private static Stream? StreamHeredado(int which)
+    private static Stream? StreamHeredado(int which, FileAccess access)
     {
         var handle = GetStdHandle(which);
         if (handle == IntPtr.Zero || handle == INVALID_HANDLE_VALUE)
@@ -120,7 +157,7 @@ internal static class Program
             return null;
         try
         {
-            return new FileStream(new SafeFileHandle(handle, ownsHandle: false), FileAccess.Write, 1);
+            return new FileStream(new SafeFileHandle(handle, ownsHandle: false), access, 1);
         }
         catch (Exception)
         {
@@ -128,9 +165,106 @@ internal static class Program
         }
     }
 
+    // --- first-run dialog ----------------------------------------------------------
+
+    /// <summary>
+    /// «Preparando el navegador (solo la primera vez)…»: a small window with a marquee bar
+    /// and the last progress line while <see cref="Browsers.EnsureAsync"/> downloads Chromium.
+    /// <see cref="Run"/> returns "" when the browser is ready, the error text when it is not,
+    /// and null when the user closed the dialog.
+    /// </summary>
+    private sealed class InstallDialog : Form
+    {
+        private readonly Label _estado;
+        private readonly CancellationTokenSource _cancelar = new();
+        private string? _resultado;
+        private bool _terminado;
+
+        private InstallDialog()
+        {
+            Text = "Tramoya";
+            Icon = Paths.Icono();
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            StartPosition = FormStartPosition.CenterScreen;
+            ShowInTaskbar = true;
+            AutoScaleMode = AutoScaleMode.Dpi;
+            ClientSize = new Size(460, 118);
+
+            var titulo = new Label
+            {
+                Text = "Preparando el navegador (solo la primera vez)…",
+                AutoSize = false,
+                Location = new Point(16, 14),
+                Size = new Size(428, 22),
+                Font = new Font(Font.FontFamily, Font.Size + 1, FontStyle.Bold),
+            };
+            var barra = new ProgressBar
+            {
+                Style = ProgressBarStyle.Marquee,
+                MarqueeAnimationSpeed = 30,
+                Location = new Point(16, 44),
+                Size = new Size(428, 20),
+            };
+            _estado = new Label
+            {
+                Text = "Comprobando…",
+                AutoSize = false,
+                AutoEllipsis = true,
+                Location = new Point(16, 76),
+                Size = new Size(428, 30),
+            };
+            Controls.AddRange(new Control[] { titulo, barra, _estado });
+            Shown += (_, _) => Empezar();
+            FormClosing += (_, _) =>
+            {
+                // Closing while it downloads: stop the driver and leave quietly.
+                if (!_terminado)
+                    _cancelar.Cancel();
+            };
+        }
+
+        public static string? Run()
+        {
+            using var dialogo = new InstallDialog();
+            Application.Run(dialogo);
+            return dialogo._resultado;
+        }
+
+        private void Empezar()
+        {
+            // Progress<T> posts to the message loop that is running now, so the label
+            // is updated on the UI thread.
+            var progreso = new Progress<string>(linea => _estado.Text = linea);
+            Task.Run(async () =>
+            {
+                try
+                {
+                    return await Browsers.EnsureAsync(progreso, _cancelar.Token).ConfigureAwait(false) ?? "";
+                }
+                catch (OperationCanceledException)
+                {
+                    return null;
+                }
+                catch (Exception e)
+                {
+                    return "No he podido preparar el navegador: " + e.Message;
+                }
+            }).ContinueWith(t =>
+            {
+                _resultado = t.Status == TaskStatus.RanToCompletion ? t.Result : "No he podido preparar el navegador.";
+                _terminado = true;
+                if (IsHandleCreated && !IsDisposed)
+                    BeginInvoke(Close);
+            }, TaskScheduler.Default);
+        }
+    }
+
     // --- Win32 ---------------------------------------------------------------------
 
     private const int ATTACH_PARENT_PROCESS = -1;
+    private const int STD_INPUT_HANDLE = -10;
     private const int STD_OUTPUT_HANDLE = -11;
     private const int STD_ERROR_HANDLE = -12;
     private const uint FILE_TYPE_DISK = 0x0001;
