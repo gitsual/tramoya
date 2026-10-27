@@ -11,11 +11,8 @@ namespace Tramoya.App;
 
 internal static class Program
 {
-    // TODO(integration): Tramoya.Easy.Server.Start() -> URL of the HttpListener on 127.0.0.1
-    private static readonly Func<string> StartServer = () => "about:blank";
-
-    // TODO(integration): Tramoya.Easy.Server.Stop() (cancel the tasks, close the listener)
-    private static readonly Action StopServer = () => { };
+    private static readonly Func<string> StartServer = EasyHost.Start;
+    private static readonly Action StopServer = EasyHost.Stop;
 
     [STAThread]
     private static int Main(string[] args)
