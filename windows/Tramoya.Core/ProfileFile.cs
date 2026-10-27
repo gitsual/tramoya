@@ -42,8 +42,16 @@ public static class ProfileFile
             : new TomlArray { (long)Profile.DefaultViewport.Width, (long)Profile.DefaultViewport.Height };
 
         var scenes = new List<Scene>();
-        if (raw.TryGetValue("scene", out var sceneList) && sceneList is TomlTableArray tables)
+        if (raw.TryGetValue("scene", out var sceneList))
         {
+            // tomllib hands both spellings over as a list of dicts; Tomlyn distinguishes
+            // `[[scene]]` (TomlTableArray) from `scene = [{...}, {...}]` (TomlArray of tables).
+            var tables = sceneList switch
+            {
+                TomlTableArray tableArray => tableArray.AsEnumerable(),
+                TomlArray array => array.OfType<TomlTable>(),
+                _ => Enumerable.Empty<TomlTable>(),
+            };
             foreach (var s in tables)
             {
                 if (!s.TryGetValue("name", out var nameValue))

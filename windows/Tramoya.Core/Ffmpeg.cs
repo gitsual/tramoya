@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using System.Text.RegularExpressions;
 
 namespace Tramoya.Core;
@@ -144,14 +145,93 @@ public static class Ffmpeg
 /// <summary>Number formatting that matches Python where the argv or a file must be identical.</summary>
 public static class Fmt
 {
-    /// <summary>Python <c>str(x)</c> for a float: <c>1.0</c>, <c>2.5</c>, <c>0.05</c>, <c>12.333333333333334</c>.</summary>
+    /// <summary>
+    /// Python <c>repr(x)</c> / <c>str(x)</c> for a float: <c>1.0</c>, <c>2.5</c>, <c>0.05</c>,
+    /// <c>12.333333333333334</c>, <c>1e-05</c>, <c>1e+16</c>, <c>inf</c>, <c>nan</c>.
+    ///
+    /// Both runtimes find the shortest digit string that round-trips; they differ only in
+    /// how they spell it. Python switches to exponent notation below 1e-4 and from 1e16 up
+    /// (the decimal point would otherwise sit before the first digit by more than three
+    /// zeros, or past the 16th digit), writes the exponent with a sign and two digits at
+    /// least, and always keeps a <c>.0</c> on a whole number written in fixed notation.
+    /// </summary>
     public static string Py(double x)
     {
-        if (double.IsInteger(x) && Math.Abs(x) < 1e16) return x.ToString("F1", CultureInfo.InvariantCulture);
-        var r = x.ToString("R", CultureInfo.InvariantCulture);
-        if (r.Contains('E'))
-            r = x.ToString("0.################", CultureInfo.InvariantCulture);
-        return r;
+        if (double.IsNaN(x)) return "nan";
+        if (double.IsPositiveInfinity(x)) return "inf";
+        if (double.IsNegativeInfinity(x)) return "-inf";
+        if (x == 0) return double.IsNegative(x) ? "-0.0" : "0.0";
+
+        var (digits, decpt) = ShortestDigits(Math.Abs(x));
+        var sign = x < 0 ? "-" : "";
+        if (decpt <= -4 || decpt > 16)
+        {
+            var mantissa = digits.Length > 1 ? digits[0] + "." + digits[1..] : digits;
+            var exp = decpt - 1;
+            return sign + mantissa + "e" + (exp < 0 ? "-" : "+") + Math.Abs(exp).ToString("00", CultureInfo.InvariantCulture);
+        }
+        if (decpt <= 0) return sign + "0." + new string('0', -decpt) + digits;
+        if (decpt >= digits.Length) return sign + digits + new string('0', decpt - digits.Length) + ".0";
+        return sign + digits[..decpt] + "." + digits[decpt..];
+    }
+
+    /// <summary>
+    /// The shortest round-trip digits of a positive double, without leading or trailing
+    /// zeros, and the position of the decimal point relative to them (<c>0.0001</c> is
+    /// <c>("1", -3)</c>; <c>123.45</c> is <c>("12345", 3)</c>). The "R" format already
+    /// produces those digits on .NET Core 3+; this only reads them back out of its text.
+    /// </summary>
+    private static (string Digits, int DecimalPoint) ShortestDigits(double positive)
+    {
+        var text = positive.ToString("R", CultureInfo.InvariantCulture);
+        var exponent = 0;
+        var e = text.IndexOf('E');
+        if (e >= 0)
+        {
+            exponent = int.Parse(text[(e + 1)..], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+            text = text[..e];
+        }
+        var point = text.IndexOf('.');
+        if (point < 0) point = text.Length;
+        var digits = text.Remove(point, point < text.Length ? 1 : 0);
+        var decpt = point + exponent;
+        var leading = digits.Length - digits.TrimStart('0').Length;
+        digits = digits[leading..].TrimEnd('0');
+        return (digits, decpt - leading);
+    }
+
+    /// <summary>
+    /// Python <c>round(x, ndigits)</c> for a float. Python rounds the exact binary value of
+    /// the double, half to even, which is not what <c>Math.Round(x, ndigits)</c> does:
+    /// <c>2.675</c> is really 2.67499999..., so Python gives <c>2.67</c> where .NET gives
+    /// <c>2.68</c>. The double is expanded exactly as <c>mantissa * 2^exponent</c>, scaled
+    /// by <c>10^ndigits</c>, rounded as an integer, and the decimal result is parsed back,
+    /// which is the correctly rounded conversion Python's <c>strtod</c> performs too.
+    /// </summary>
+    public static double PyRound(double x, int ndigits)
+    {
+        if (double.IsNaN(x) || double.IsInfinity(x) || x == 0) return x;
+        // Python's own short-cuts: beyond these the result is x itself or a signed zero.
+        if (ndigits > 323) return x;
+        if (ndigits < -308) return Math.CopySign(0.0, x);
+
+        var bits = BitConverter.DoubleToInt64Bits(x);
+        var exponent = (int)((bits >> 52) & 0x7FF);
+        var mantissa = bits & 0xFFFFFFFFFFFFFL;
+        if (exponent == 0) exponent = 1; else mantissa |= 1L << 52;
+        exponent -= 1075;  // |x| = mantissa * 2^exponent, exactly
+
+        var numerator = new BigInteger(mantissa);
+        var denominator = BigInteger.One;
+        if (exponent >= 0) numerator <<= exponent; else denominator <<= -exponent;
+        if (ndigits >= 0) numerator *= BigInteger.Pow(10, ndigits); else denominator *= BigInteger.Pow(10, -ndigits);
+
+        var quotient = BigInteger.DivRem(numerator, denominator, out var remainder);
+        var twice = remainder * 2;
+        if (twice > denominator || (twice == denominator && !quotient.IsEven)) quotient += 1;
+
+        var scaled = quotient.ToString(CultureInfo.InvariantCulture) + "E" + (-ndigits).ToString(CultureInfo.InvariantCulture);
+        return Math.CopySign(double.Parse(scaled, NumberStyles.Float, CultureInfo.InvariantCulture), x);
     }
 
     /// <summary>Python <c>f"{x:.3f}"</c> and friends (invariant culture, fixed decimals).</summary>
@@ -173,7 +253,11 @@ public static class Shell
 
     public static string Join(IEnumerable<string> argv) => string.Join(" ", argv.Select(Quote));
 
-    /// <summary>Python's <c>shlex.split</c> (POSIX mode), enough for a <c>launch</c> command line.</summary>
+    /// <summary>
+    /// Python's <c>shlex.split</c> (POSIX mode), enough for a <c>launch</c> command line.
+    /// An unfinished quote or a trailing backslash is a <c>ValueError</c> there, with these
+    /// exact messages; a half-parsed command must not run as if it were whole.
+    /// </summary>
     public static List<string> Split(string command)
     {
         var result = new List<string>();
@@ -186,8 +270,13 @@ public static class Shell
             if (inDouble)
             {
                 if (c == '"') inDouble = false;
-                // shlex only unescapes \" and \\ inside double quotes; \$ keeps its backslash.
-                else if (c == '\\' && i + 1 < command.Length && "\"\\".Contains(command[i + 1])) cur.Append(command[++i]);
+                else if (c == '\\')
+                {
+                    if (i + 1 >= command.Length) throw new ArgumentException("No escaped character");
+                    // shlex only unescapes \" and \\ inside double quotes; \$ keeps its backslash.
+                    if ("\"\\".Contains(command[i + 1])) cur.Append(command[++i]);
+                    else cur.Append(c);
+                }
                 else cur.Append(c);
                 continue;
             }
@@ -195,9 +284,14 @@ public static class Shell
             inWord = true;
             if (c == '\'') inSingle = true;
             else if (c == '"') inDouble = true;
-            else if (c == '\\' && i + 1 < command.Length) cur.Append(command[++i]);
+            else if (c == '\\')
+            {
+                if (i + 1 >= command.Length) throw new ArgumentException("No escaped character");
+                cur.Append(command[++i]);
+            }
             else cur.Append(c);
         }
+        if (inSingle || inDouble) throw new ArgumentException("No closing quotation");
         if (inWord) result.Add(cur.ToString());
         return result;
     }

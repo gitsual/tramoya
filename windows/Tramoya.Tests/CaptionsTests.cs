@@ -64,6 +64,34 @@ public class CaptionsTests
     }
     [Fact] public void RenderAssDialogueFadesAndTrimsTheTail() => Assert.Equal("Dialogue: 0,0:00:01.00,0:00:02.85,Narration,,0,0,0,,{\\fad(300,300)}hi", Captions.RenderAss([new(1, 3, "hi")], 1920, 1080).Split('\n').Single(l => l.StartsWith("Dialogue:")));
     [Fact] public void BurnArgvMatchesTheRecordedDryRun() => Assert.Equal(new[] { "ffmpeg", "-y", "-i", "out/tour-silent.mp4", "-vf", "subtitles=out/tour.srt", "-c:a", "copy", "out/tour-captions.mp4" }, Captions.BurnArgv("out/tour-silent.mp4", "out/tour.srt", "out/tour-captions.mp4"));
+    [Fact] public void BurnArgvEscapesAWindowsPathForTheFilter()
+    {
+        // Drive colon and backslashes would otherwise be read as filter syntax; the quotes
+        // keep the space, and the two-level escaping keeps an apostrophe.
+        Assert.Equal("subtitles='C\\:/Videos/mis captions.srt'", Captions.BurnArgv("in.mp4", @"C:\Videos\mis captions.srt", "out.mp4")[5]);
+        Assert.Equal("subtitles='C\\:/v/it\\'\\''s.srt'", Captions.BurnArgv("in.mp4", @"C:\v\it's.srt", "out.mp4")[5]);
+        Assert.Equal("subtitles='a,b;[c].srt'", Captions.BurnArgv("in.mp4", "a,b;[c].srt", "out.mp4")[5]);
+    }
+    [Fact] public void BurnArgvRunsThroughTheRealFfmpegWithASpacedWindowsPath()
+    {
+        // The escaping above is only right if ffmpeg agrees: burn a one-second black clip
+        // with a subtitle file whose path has the drive colon and a space. Without ffmpeg
+        // on PATH there is nothing to check, so the test simply ends.
+        if (!Runner.Available("ffmpeg")) return;
+        string dir = Path.Combine(Path.GetTempPath(), "tramoya captions " + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            string video = Path.Combine(dir, "base.mp4"), srt = Path.Combine(dir, "mis captions.srt"), outPath = Path.Combine(dir, "burned.mp4");
+            Assert.Contains(':', srt);  // the temp dir is an absolute Windows path
+            File.WriteAllText(srt, "1\n00:00:00,000 --> 00:00:01,000\nhola\n");
+            var runner = new Runner();
+            runner.Run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=black:s=64x64:d=1", "-pix_fmt", "yuv420p", video]);
+            runner.Run(Captions.BurnArgv(video, srt, outPath));
+            Assert.True(new FileInfo(outPath).Length > 0);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
     [Fact] public void TrimPlanCutsEachRangeThenConcats()
     {
         string dir = Temp(); try { var args = Captions.TrimPlan([(0, 120), (600, 780)], "in.mp4", dir, "out.mp4"); Assert.Equal(3, args.Count); Assert.Equal("ffmpeg", args[0][0]); Assert.Contains("-ss 0 -to 120", string.Join(" ", args[0])); Assert.Contains("-ss 600 -to 780", string.Join(" ", args[1])); Assert.Contains("-f", args[2]); Assert.Contains("concat", args[2]); } finally { Directory.Delete(dir, true); }

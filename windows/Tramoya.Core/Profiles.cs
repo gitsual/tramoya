@@ -45,7 +45,16 @@ public sealed class Profile
         if (root is not null) Root = root;
     }
 
-    /// <summary>The narration script <c>tramoya tts</c> reads: <c>scene-&lt;name&gt;</c> -> {lang: text}.</summary>
-    public Dictionary<string, Dictionary<string, string>> Script() =>
-        Scenes.ToDictionary(s => $"scene-{s.Name}", s => new Dictionary<string, string>(s.Narration));
+    /// <summary>
+    /// The narration script <c>tramoya tts</c> reads: <c>scene-&lt;name&gt;</c> -> {lang: text}.
+    /// Two scenes with the same name are a dict comprehension in Python: the last one wins
+    /// and the key keeps its first position. A profile Python runs must not fail here.
+    /// </summary>
+    public Dictionary<string, Dictionary<string, string>> Script()
+    {
+        var script = new Dictionary<string, Dictionary<string, string>>();
+        foreach (var scene in Scenes)
+            script[$"scene-{scene.Name}"] = new Dictionary<string, string>(scene.Narration);
+        return script;
+    }
 }

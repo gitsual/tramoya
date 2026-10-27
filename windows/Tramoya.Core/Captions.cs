@@ -98,7 +98,23 @@ public static class Captions
         var header = FormattableString.Invariant($"[Script Info]\nScriptType: v4.00+\nPlayResX: {width}\nPlayResY: {height}\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Narration,{font},{size},{Colour(fg)},{Colour(fg)},{Colour(bg)},{Colour(bg)},0,0,0,0,100,100,0,0,3,6,0,2,{margin},{margin},{margin},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n");
         return header + string.Join("\n", cues.Select(c => $"Dialogue: 0,{AssStamp(c.Start)},{AssStamp(Math.Max(c.Start, c.End - .15))},Narration,,0,0,0,,{{\\fad(300,300)}}{c.Text.Replace("\n", "\\N")}")) + "\n";
     }
-    public static string[] BurnArgv(string video, string subtitlesPath, string outPath) => ["ffmpeg", "-y", "-i", video, "-vf", $"subtitles={subtitlesPath}", "-c:a", "copy", outPath];
+    public static string[] BurnArgv(string video, string subtitlesPath, string outPath) => ["ffmpeg", "-y", "-i", video, "-vf", $"subtitles={FilterFilename(subtitlesPath)}", "-c:a", "copy", outPath];
+    /// <summary>
+    /// The subtitle path as the <c>subtitles=</c> filter wants it. Python interpolates the
+    /// path as is, which works for the plain POSIX paths it meets, and the dry-run tests
+    /// compare that text literally, so such paths stay untouched. A Windows path breaks the
+    /// filter twice over: the drive colon reads as the next option and backslashes as
+    /// escapes. Backslashes become slashes, which ffmpeg accepts, and the rest follows the
+    /// two levels of filtergraph escaping: the option parser unescapes <c>\:</c> and
+    /// <c>\'</c>, and the graph parser takes everything inside single quotes verbatim
+    /// (a quote itself is written <c>'\''</c>: close, escaped quote, reopen).
+    /// </summary>
+    internal static string FilterFilename(string path)
+    {
+        if (path.IndexOfAny([':', '\\', '\'', ',', ';', '[', ']', ' ']) < 0) return path;
+        var option = path.Replace('\\', '/').Replace("'", "\\'").Replace(":", "\\:");
+        return "'" + option.Replace("'", "'\\''") + "'";
+    }
     public static List<string[]> TrimPlan(IEnumerable<(double Start, double End)> ranges, string video, string workDir, string outPath)
     {
         var argvs = new List<string[]>(); var parts = new List<string>();
