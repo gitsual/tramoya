@@ -10,7 +10,8 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- The kit is a folder anyway (.playwright, ffmpeg, navegador): native libraries stay loose, so Playwright finds its node.exe. -->
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>embedded</DebugType>
     <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
@@ -24,12 +25,4 @@
     <ProjectReference Include="..\Tramoya.Voice\Tramoya.Voice.csproj" />
     <ProjectReference Include="..\Tramoya.Easy\Tramoya.Easy.csproj" />
   </ItemGroup>
-  <!-- Playwright's node.exe must stay a loose file: bundled into the single exe it cannot be launched. -->
-  <Target Name="KeepPlaywrightNodeLoose" AfterTargets="CopyPlaywrightFilesToOutput">
-    <ItemGroup>
-      <Content Condition="'%(Content.NuGetPackageId)' == 'Microsoft.Playwright'">
-        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-      </Content>
-    </ItemGroup>
-  </Target>
 </Project>

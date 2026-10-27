@@ -90,40 +90,24 @@ Write-Host "   ffmpeg copiado desde $ffmpegDir"
 
 # --- Playwright driver (.playwright) ----------------------------------------------
 # Microsoft.Playwright needs its `.playwright` folder (node + driver) loose next to
-# the exe. The single-file publish leaves `package\` there but the bundler takes
-# `node\win32_x64\node.exe` for a native library and folds it into Tramoya.exe
-# (IncludeNativeLibrariesForSelfExtract), where Playwright cannot see it. The
-# build outputs made by this same publish still have the complete folder.
-$stageBin = Join-Path $windows 'Tramoya.Stage\bin\Release\net9.0'
+# the exe. The single-file bundler folds part of it into Tramoya.exe (node.exe, the
+# big .js bundles, fonts), where the driver cannot see it, so the folder is always
+# taken whole from the build output this same publish just made: that one is complete.
 $appBin = Join-Path $windows 'Tramoya.App\bin\Release\net9.0-windows\win-x64'
 $driverDist = Join-Path $dist '.playwright'
 $nodeRel = '.playwright\node\win32_x64\node.exe'
-if (-not (Test-Path $driverDist)) {
-    $fuente = @($appBin, $stageBin) | Where-Object { Test-Path (Join-Path $_ '.playwright') } | Select-Object -First 1
-    if (-not $fuente) {
-        throw "El publish no ha dejado .playwright en $dist y tampoco esta en $appBin ni en $stageBin."
-    }
-    Write-Warning ".playwright NO ha salido del publish; se copia entera desde $fuente."
-    Copy-Item (Join-Path $fuente '.playwright') $driverDist -Recurse
-} elseif (Test-Path (Join-Path $dist $nodeRel)) {
-    Write-Host '   .playwright: ha salido del publish completa, con node.exe.'
-} else {
-    $fuente = @($appBin, $stageBin) | Where-Object { Test-Path (Join-Path $_ $nodeRel) } | Select-Object -First 1
-    if (-not $fuente) {
-        throw "Falta $nodeRel en el publish y no lo encuentro en $appBin ni en $stageBin."
-    }
-    Write-Host "   .playwright: ha salido del publish sin node.exe; se copia node\ desde $fuente."
-    # Contents, not the folder: Copy-Item nests a folder inside one that already exists.
-    Copy-Item (Join-Path $fuente '.playwright\node\*') (Join-Path $driverDist 'node') -Recurse -Force
+if (-not (Test-Path (Join-Path $appBin '.playwright\package\cli.js'))) {
+    throw "No encuentro la carpeta .playwright completa en $appBin."
 }
+if (Test-Path $driverDist) {
+    Remove-Item $driverDist -Recurse -Force
+}
+Copy-Item (Join-Path $appBin '.playwright') $driverDist -Recurse
+$nDriver = (Get-ChildItem $driverDist -Recurse -File | Measure-Object).Count
+Write-Host "   .playwright copiada entera desde $appBin ($nDriver ficheros)."
 if (-not (Test-Path (Join-Path $dist $nodeRel))) {
-    throw "Sigue faltando $nodeRel en $dist."
+    throw "Falta $nodeRel en $dist."
 }
-
-# What single-file publish leaves behind that the kit does not need: the pdb of
-# the referenced projects, the WebView2 doc files and a playwright.ps1 that cannot
-# work without a loose Microsoft.Playwright.dll.
-Get-ChildItem $dist -File | Where-Object { $_.Extension -in '.pdb', '.xml' -or $_.Name -eq 'playwright.ps1' } | Remove-Item -Force
 
 # --- Chromium -------------------------------------------------------------------
 $navegador = Join-Path $dist 'navegador'
