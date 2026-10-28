@@ -152,7 +152,7 @@ public static class Agent
                     var ultimoPaso = resultado.Pasos[^1];
                     var texto = ultimoPaso["texto"]?.ToString() ?? "";
                     if (!texto.Contains(decision.Resumen, StringComparison.Ordinal))
-                        ultimoPaso["texto"] = (texto.Length != 0 ? texto.TrimEnd() + " " : "") + decision.Resumen;
+                        ultimoPaso["texto"] = (texto.Length != 0 ? Cerrada(texto) + " " : "") + decision.Resumen;
                 }
                 break;
             }
@@ -210,6 +210,13 @@ public static class Agent
             if (decision.Frase.Length != 0) log?.Report($"   «{decision.Frase}»");
         }
         return resultado;
+    }
+
+    /// <summary>La frase con su punto, para que el narrador respire antes de la respuesta.</summary>
+    private static string Cerrada(string frase)
+    {
+        var f = frase.TrimEnd();
+        return f.Length != 0 && ".!?…:;".Contains(f[^1]) ? f : f + ".";
     }
 
     /// <summary>La conversación para el modelo: los últimos turnos (los antiguos, resumidos) y el de ahora.</summary>

@@ -394,7 +394,7 @@ public sealed class AgentTests(ITestOutputHelper salida)
         Assert.Equal(new[] { "[data-tramoya-ref=\"1\"]" }, pagina.Clics);
         Assert.Equal(new[] { "[data-tramoya-ref=\"3\"]" }, pagina.Senalados);
         // La respuesta cierra la narración del último paso.
-        Assert.Equal("Aquí está el botón de guardar, abajo a la derecha Se guarda con el botón Guardar, al final del formulario.", r.Pasos[1]["texto"]!.GetValue<string>());
+        Assert.Equal("Aquí está el botón de guardar, abajo a la derecha. Se guarda con el botón Guardar, al final del formulario.", r.Pasos[1]["texto"]!.GetValue<string>());
         Assert.Equal("Se guarda con el botón Guardar, al final del formulario.", r.Resumen);
         // Un encargo normal no lleva el modo pregunta.
         var encargo = new ScriptedBackend("""{"accion":"terminar","resumen":"nada"}""");
