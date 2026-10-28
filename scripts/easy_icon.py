@@ -12,10 +12,9 @@ import sys
 from pathlib import Path
 
 SVG = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="{n}" height="{n}">'
-       '<rect width="32" height="32" rx="7" fill="#7A2635"/>'
-       '<path d="M7 7h18v2.6c-2.4.3-3.6 2.8-3.6 6.4 0 3.4 1.2 7.2 3.6 9H7c2.4-1.8 3.6-5.6 '
-       '3.6-9 0-3.6-1.2-6.1-3.6-6.4z" fill="#F3E3C3"/>'
-       '<path d="M16 9.5v15" stroke="#7A2635" stroke-width="1.4"/></svg>')
+       '<rect width="32" height="32" fill="#1F1E1C"/>'
+       '<rect x="15" y="3" width="2" height="14" fill="#A5A4A0"/>'
+       '<rect x="9" y="15" width="14" height="14" fill="#E9A80E"/></svg>')
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 
 

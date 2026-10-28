@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
-      - run: uv venv && uv pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v1.0.0"
+      - run: uv venv && uv pip install "tramoya[playwright,tts] @ git+https://github.com/gitsual/tramoya@v1.1.0"
       - run: uv run playwright install --with-deps chromium
       - run: sudo apt-get install -y ffmpeg
       - working-directory: examples/release-notes

@@ -189,6 +189,11 @@ en Linux y Mac (Tramoya.exe --help).
 $leeme = $leeme.Replace('VERSION', $version)
 Set-Content -Path (Join-Path $dist 'LEEME.txt') -Value $leeme -Encoding UTF8
 
+# --- licencias de las fuentes de la ventana (SIL OFL 1.1, van incrustadas en la interfaz) ---
+$licencias = Join-Path $dist 'licencias'
+New-Item -ItemType Directory -Force -Path $licencias | Out-Null
+Copy-Item (Join-Path $windows '..\src\tramoya\easy\ui\fonts\OFL-*.txt') $licencias
+
 # --- zip ------------------------------------------------------------------------
 $zip = Join-Path $distRoot "Tramoya-$version-windows.zip"
 Write-Host "== zip: $zip =="

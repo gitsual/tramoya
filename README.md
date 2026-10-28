@@ -11,7 +11,7 @@
 </p>
 
 <p>
-  <img alt="version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-3D0115?style=for-the-badge&labelColor=3D0115&color=E1777D">
+  <img alt="version 1.1.0" src="https://img.shields.io/badge/version-1.1.0-3D0115?style=for-the-badge&labelColor=3D0115&color=E1777D">
   <img alt="Windows, Linux, macOS" src="https://img.shields.io/badge/windows%20%C2%B7%20linux%20%C2%B7%20macos-3D0115?style=for-the-badge&labelColor=3D0115&color=AAA875">
   <img alt="852 tests" src="https://img.shields.io/badge/tests-852-3D0115?style=for-the-badge&labelColor=3D0115&color=979367">
   <img alt="MIT" src="https://img.shields.io/badge/license-MIT-3D0115?style=for-the-badge&labelColor=3D0115&color=731F51">
@@ -69,7 +69,7 @@ machine.
 
 ## Tutorial
 
-Three minutes, in Spanish, of the Windows application. It was produced by tramoya itself: a profile drives the
+Three minutes, in Spanish, of the Windows application and its stage: curtains, a spotlight on the act in progress, cues and a script. It was produced by tramoya itself: a profile drives the
 application's own window on a clean install, the Windows voice reads the narration, `assemble` cuts it. Inside the
 tutorial the AI records a second video of its own, which is linked below. Nothing in either video was edited by
 hand.
@@ -83,13 +83,22 @@ hand.
 <a href="assets/video/tutorial-the-ai-made-this.mp4"><b>The video the AI made inside it</b></a> ·
 <a href="assets/video/ask-where.mp4"><b>A question answered by the AI</b></a> (0:19)</sub></p>
 
+<p align="center">
+  <img src="assets/easy/telon-arriba.png" alt="Home screen: a stage with curtains, a spotlight and the headline «Haz un vídeo de cualquier proceso»" width="49%">
+  <img src="assets/easy/la-ia-en-escena.png" alt="The AI doing the process: the acts strip lit on Grabar, a stage panel with the step counter and the last step" width="49%">
+  <img src="assets/easy/el-guion.png" alt="The script: each step as a scene with its stage direction in brackets and the sentence the voice will say" width="49%">
+  <img src="assets/easy/estreno.png" alt="The finished video framed by a valance on the stage" width="49%">
+</p>
+
+<p align="center"><sub>The window: curtain up, the AI on stage, the script, the premiere. Solnítido's palette and type, staged as a theatre.</sub></p>
+
 | In the tutorial | What it shows |
 |---|---|
 | Settings | The voice is one of Windows' own, with its speed, a preview, optional subtitles, and the domains allowed to use Windows sign-in. |
 | A new video | A name and the address of any web page: an intranet, a SaaS tool, an application on `localhost`. |
 | «O pídeselo a la IA» | One paragraph typed into the window. The model opened the page, made seven correct steps and wrote the sentence for each one. |
 | The steps it wrote | The same review screen as a recorded process: every sentence can be changed, every step removed or set to *point without pressing*. |
-| The video | Replayed, voiced and cut, with an `.srt` next to it. The seven minutes the model worked and the minute of rendering are compressed to a few seconds with a caption that says how long they took. |
+| The video | Replayed, voiced and cut, with an `.srt` next to it. The minute and a half the model worked and the minute of rendering are compressed to a few seconds with a caption that says how long they took. |
 
 [`examples/tramoya-sobre-tramoya/`](examples/tramoya-sobre-tramoya) holds that tutorial as a profile and a script;
 `bash grabar.sh` makes it again.
@@ -104,8 +113,8 @@ For a person who knows the process (how to file an expense, approve a request, s
 opened a terminal. Windows, no administrator rights, nothing to install. The window is in Spanish; button names are
 quoted as they appear.
 
-**1. Download.** From the [v1.0.0 release](https://github.com/gitsual/tramoya/releases/tag/v1.0.0), take
-`Tramoya-1.0.0-windows.zip` (about 545 MB: the program, its own Chromium and ffmpeg, so nothing is downloaded
+**1. Download.** From the [v1.1.0 release](https://github.com/gitsual/tramoya/releases/tag/v1.1.0), take
+`Tramoya-1.1.0-windows.zip` (about 545 MB: the program, its own Chromium and ffmpeg, so nothing is downloaded
 later). On a network that cuts large downloads, take the six parts `….zip.part0` to `part5` and `unir.bat`, put them
 in one folder and double-click `unir.bat`; it joins the parts and unzips them.
 
@@ -159,8 +168,8 @@ goes to the place, points at the element, says what it is for, and the answer cl
 Para quien sabe hacer el proceso y nunca ha abierto una terminal. Windows, sin permisos de administrador, sin
 instalar nada.
 
-1. **Descarga.** De la [versión 1.0.0](https://github.com/gitsual/tramoya/releases/tag/v1.0.0), baja
-   `Tramoya-1.0.0-windows.zip` (unos 545 MB, lo lleva todo dentro). Si tu red corta las descargas grandes, baja las
+1. **Descarga.** De la [versión 1.1.0](https://github.com/gitsual/tramoya/releases/tag/v1.1.0), baja
+   `Tramoya-1.1.0-windows.zip` (unos 545 MB, lo lleva todo dentro). Si tu red corta las descargas grandes, baja las
    seis partes `….zip.part0` … `part5` y `unir.bat` a la misma carpeta y haz doble clic en `unir.bat`.
 2. **Abre.** Descomprime donde quieras y haz doble clic en `Tramoya.exe`. La primera vez Windows avisa de que no está
    firmado: *Más información* → *Ejecutar de todas formas*.
@@ -501,8 +510,8 @@ optional dependency or an injectable function, so tests never open a socket or e
 
 ## Install
 
-**Windows.** Download `Tramoya-1.0.0-windows.zip` from the
-[release](https://github.com/gitsual/tramoya/releases/tag/v1.0.0), unzip, run `Tramoya.exe`. Everything the program
+**Windows.** Download `Tramoya-1.1.0-windows.zip` from the
+[release](https://github.com/gitsual/tramoya/releases/tag/v1.1.0), unzip, run `Tramoya.exe`. Everything the program
 needs is in the folder: `Tramoya.exe` (47 MB), the Playwright driver, Chromium and ffmpeg. Data and videos stay in the folder. The command line is the same executable:
 
 ```
@@ -515,8 +524,8 @@ Tramoya.exe agent "<objective or question>" --url <page> --video --voz
 **Linux and macOS.** Pin the tag: the package is installed from git and the tag is the contract.
 
 ```bash
-pip install "tramoya @ git+https://github.com/gitsual/tramoya@v1.0.0"                       # core, no dependencies
-pip install "tramoya[playwright,tts,easy] @ git+https://github.com/gitsual/tramoya@v1.0.0"  # stage, voice, window
+pip install "tramoya @ git+https://github.com/gitsual/tramoya@v1.1.0"                       # core, no dependencies
+pip install "tramoya[playwright,tts,easy] @ git+https://github.com/gitsual/tramoya@v1.1.0"  # stage, voice, window
 python -m playwright install chromium
 ```
 
@@ -539,7 +548,7 @@ brew install ffmpeg                                              # macOS: use di
 
 ```powershell
 dotnet test windows/Tramoya.Tests -c Release
-powershell -File windows/publish.ps1 -Ffmpeg <folder with ffmpeg.exe and ffprobe.exe>   # -> windows/dist/Tramoya-1.0.0-windows.zip
+powershell -File windows/publish.ps1 -Ffmpeg <folder with ffmpeg.exe and ffprobe.exe>   # -> windows/dist/Tramoya-1.1.0-windows.zip
 ```
 
 ---
@@ -548,7 +557,7 @@ powershell -File windows/publish.ps1 -Ffmpeg <folder with ffmpeg.exe and ffprobe
 
 ## Verification
 
-| Suite | Command | Result for 1.0.0 |
+| Suite | Command | Result for 1.1.0 |
 |---|---|---|
 | Python, fast | `python -m pytest -q` | 306 passed, on Linux and on Windows; nothing encoded, no network |
 | Python, slow | `python -m pytest -q -m slow` | 1 passed: three real seconds through the whole pipeline |
@@ -565,8 +574,8 @@ Every image on this page is output of the program, except the logo and the pipel
 
 ## Status and limits
 
-Version 1.0.0. The file formats (`tramoya.toml`, `marks.json`, `script.json`, the step language, `easy` projects) are
-stable from this version on.
+Version 1.1.0. The file formats (`tramoya.toml`, `marks.json`, `script.json`, the step language, `easy` projects) are
+stable since 1.0.
 
 - **The Windows executable is not code-signed.** SmartScreen warns the first time; environments that only allow
   signed software will block it until it is.
