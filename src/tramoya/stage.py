@@ -31,8 +31,10 @@ OVERLAY_JS = """
   const cursor = document.createElement("div");
   cursor.id = "tramoya-cursor";
   cursor.style.cssText = [
-    "position: fixed", "z-index: 2147483647", "width: 18px", "height: 18px",
-    "border: 2px solid #ff5f5f", "border-radius: 50%", "pointer-events: none",
+    "position: fixed", "z-index: 2147483647", "width: 20px", "height: 20px",
+    "border: 3px solid #E9A80E", "border-radius: 50%", "pointer-events: none",
+    "box-shadow: 0 0 0 1px rgba(31,30,28,0.55), inset 0 0 0 1px rgba(31,30,28,0.35)",
+    "box-sizing: border-box",
     "transform: translate(-50%, -50%)", "left: -100px", "top: -100px",
     "transition: left 0.05s linear, top 0.05s linear",
   ].join(";");
@@ -42,9 +44,9 @@ OVERLAY_JS = """
   caption.id = "tramoya-caption";
   caption.style.cssText = [
     "position: fixed", "z-index: 2147483647", "left: 0", "right: 0", "bottom: 0",
-    "pointer-events: none", "text-align: center", "padding: 18px",
-    "font: 20px sans-serif", "color: #fff",
-    "background: linear-gradient(transparent, rgba(0,0,0,0.6))",
+    "pointer-events: none", "text-align: center", "padding: 14px 24px 16px",
+    "font: 600 21px/1.35 Archivo, 'Segoe UI', system-ui, sans-serif", "color: #fff",
+    "background: rgba(31,30,28,0.92)", "border-top: 4px solid #E9A80E",
     "opacity: 0", "transition: opacity 0.2s ease",
   ].join(";");
   document.documentElement.appendChild(caption);
@@ -59,7 +61,7 @@ OVERLAY_JS = """
     ring.id = "tramoya-ripple";
     ring.style.cssText = [
       "position: fixed", "z-index: 2147483647", "width: 10px", "height: 10px",
-      "border: 2px solid #ff5f5f", "border-radius: 50%", "pointer-events: none",
+      "border: 3px solid #E9A80E", "border-radius: 50%", "pointer-events: none",
       `left: ${x}px`, `top: ${y}px`, "transform: translate(-50%, -50%) scale(1)",
       "opacity: 1", "transition: transform 0.4s ease, opacity 0.4s ease",
     ].join(";");

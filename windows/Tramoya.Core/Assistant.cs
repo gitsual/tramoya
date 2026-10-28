@@ -112,7 +112,7 @@ public sealed class ClaudeBackend : IBackend
 
 public static class Assistant
 {
-    public const string DefaultOllamaModel = "qwen3-coder";
+    public const string DefaultOllamaModel = "qwen3-coder:30b";
     public const string DefaultOllamaUrl = "http://localhost:11434";
     public const string DefaultClaudeModel = "claude-sonnet-5-5";
     public const string ClaudeUrl = "https://api.anthropic.com/v1/messages";

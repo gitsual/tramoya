@@ -680,7 +680,7 @@ public class CliTests
     {
         using var cap = new Capture();
         Assert.Equal(0, Run("--version"));
-        Assert.Equal("tramoya 1.1.0", cap.Out.Trim());
+        Assert.Equal("tramoya 1.2.0", cap.Out.Trim());
     }
 
     [Fact]

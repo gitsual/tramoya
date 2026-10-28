@@ -18,7 +18,7 @@ from pathlib import Path
 # aresample the AAC goes out at 96 kHz, which the Windows decoder plays as silence.
 LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000"
 
-_DRAWTEXT_FONTCOLOR = "white"
+_DRAWTEXT_FONTCOLOR = "0xF0CB66"
 _DRAWTEXT_FONTSIZE = 42
 
 
@@ -79,7 +79,7 @@ def wait_compress(factor: float, label: str) -> str:
         f"setpts=PTS/{factor},"
         f"drawtext=text='{escaped}':fontcolor={_DRAWTEXT_FONTCOLOR}:"
         f"fontsize={_DRAWTEXT_FONTSIZE}:x=(w-text_w)/2:y=h-th-40:"
-        "box=1:boxcolor=black@0.5:boxborderw=12"
+        "box=1:boxcolor=0x1F1E1C@0.92:boxborderw=16"
     )
 
 

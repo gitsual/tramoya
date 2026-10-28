@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
-      - run: uv venv && uv pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v1.1.0"
+      - run: uv venv && uv pip install "tramoya[playwright] @ git+https://github.com/gitsual/tramoya@v1.2.0"
       - run: uv run playwright install --with-deps chromium
       - working-directory: examples/validation-evidence
         run: |
