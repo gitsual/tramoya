@@ -39,8 +39,8 @@ public static class Observer
 {
     /// <summary>Tope de elementos que se le enseñan al modelo: más no caben en su contexto ni le ayudan.</summary>
     public const int MaxElementos = 150;
-    /// <summary>Cuánto texto visible se le enseña.</summary>
-    public const int MaxTexto = 1500;
+    /// <summary>Cuánto texto visible se le enseña: primero el que está en pantalla, luego el resto de la página.</summary>
+    public const int MaxTexto = 2000;
 
     /// <summary>
     /// Se ejecuta en cada marco con <c>{offset, max}</c>: quita los números del turno anterior,
@@ -120,6 +120,26 @@ public static class Observer
             const r = el.getBoundingClientRect();
             return r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
           };
+          // El texto que la persona tiene delante va primero: la respuesta a «¿dónde está…?» suele
+          // estar escrita al lado de lo que se pregunta. El resto de la página, después, hasta el tope.
+          const textoEnPantalla = () => {
+            const trozos = [];
+            const w = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT);
+            let n;
+            while ((n = w.nextNode())) {
+              const t = (n.nodeValue || "").replace(/\s+/g, " ").trim();
+              if (!t) continue;
+              const p = n.parentElement;
+              if (!p || ["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE"].includes(p.tagName)) continue;
+              const r = p.getBoundingClientRect();
+              if (r.width < 1 || r.height < 1 || r.bottom <= 0 || r.top >= innerHeight || r.right <= 0 || r.left >= innerWidth) continue;
+              const cs = getComputedStyle(p);
+              if (cs.visibility === "hidden" || cs.display === "none") continue;
+              trozos.push(t);
+              if (trozos.join(" ").length > 2000) break;
+            }
+            return trozos.join(" ");
+          };
           const todos = Array.from(document.querySelectorAll(SEL)).filter(visible);
           const dentro = todos.filter(enVentana), fuera = todos.filter(e => !enVentana(e));
           const orden = dentro.concat(fuera);
@@ -128,7 +148,10 @@ public static class Observer
             el.setAttribute("data-tramoya-ref", String(offset + i));
             elementos.push({ref: offset + i, tipo: tipoDe(el), nombre: nombre(el), valor: valor(el), estado: estado(el)});
           });
-          return JSON.stringify({url: location.href, title: document.title, text: limpio(document.body && document.body.innerText, 1500),
+          const pantalla = textoEnPantalla();
+          const resto = limpio(document.body && document.body.innerText, 2000);
+          const texto = pantalla.length !== 0 ? limpio(pantalla, 2000) + (resto.length > pantalla.length ? " … " + resto.slice(0, 2000 - Math.min(2000, pantalla.length)) : "") : resto;
+          return JSON.stringify({url: location.href, title: document.title, text: limpio(texto, 2000),
                                  total: todos.length, elementos: elementos});
         }
         """;
