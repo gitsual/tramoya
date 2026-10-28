@@ -396,6 +396,8 @@ def lineas_de_paso(p: dict) -> list[str]:
     t, s = p["tipo"], p.get("selector", "")
     if t == "clic":
         return [f"point {s}", "beat 0.8"] if p.get("seguro") else [f"click {s}", "beat 0.7"]
+    if t == "señalar":
+        return [f"point {s}", "beat 1"]
     if t == "escribir":
         return [f"clear {s}", f"type {s} | {p['valor']}", "beat 0.3"]
     if t == "tecla":

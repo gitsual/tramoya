@@ -7,7 +7,7 @@ namespace Tramoya.Agent;
 
 /// <summary>Lo que el modelo decide en un turno, ya leído del JSON que devuelve.</summary>
 /// <param name="Pensamiento">Por qué hace esto (va al registro, no al vídeo).</param>
-/// <param name="Accion">clic, escribir, elegir, tecla, ir, esperar, terminar o fallo.</param>
+/// <param name="Accion">clic, señalar, escribir, elegir, tecla, ir, esperar, terminar o fallo.</param>
 /// <param name="Ref">El número del elemento, cuando la acción lo necesita.</param>
 /// <param name="Valor">El texto que escribe, la opción que elige, la tecla o la url.</param>
 /// <param name="Frase">Lo que dirá el narrador en el vídeo en este paso; vacío si no hay nada que decir.</param>
@@ -21,22 +21,31 @@ public sealed record Decision(string Pensamiento, string Accion, int? Ref, strin
 public static class Protocol
 {
     public static readonly IReadOnlySet<string> Acciones =
-        new HashSet<string>(StringComparer.Ordinal) { "clic", "escribir", "elegir", "tecla", "ir", "esperar", "terminar", "fallo" };
+        new HashSet<string>(StringComparer.Ordinal) { "clic", "señalar", "escribir", "elegir", "tecla", "ir", "esperar", "terminar", "fallo" };
 
     /// <summary>Las acciones que necesitan un elemento numerado.</summary>
-    public static readonly IReadOnlySet<string> ConRef = new HashSet<string>(StringComparer.Ordinal) { "clic", "escribir", "elegir" };
+    public static readonly IReadOnlySet<string> ConRef = new HashSet<string>(StringComparer.Ordinal) { "clic", "señalar", "escribir", "elegir" };
+
+    private static readonly Regex Pregunta = new(@"^\s*(¿|d[oó]nde\b|c[oó]mo\b|qu[eé]\b|cu[aá]l(es)?\b|hay\b|existe\b)|\?\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Si el objetivo es una pregunta («¿dónde está…?», «cómo se cambia…») en vez de un encargo: entonces
+    /// el agente no hace el proceso, lo enseña, y la respuesta se dice al final del vídeo.
+    /// </summary>
+    public static bool EsPregunta(string objetivo) => Pregunta.IsMatch(objetivo ?? "");
 
     /// <summary>
     /// Las reglas del juego, en español y cortas: un modelo local las lee en cada turno. El
     /// objetivo va dentro para que no se pierda cuando el historial se recorta.
     /// </summary>
-    public static string SystemPrompt(string objetivo) => $$"""
+    public static string SystemPrompt(string objetivo, bool pregunta = false) => $$"""
         Manejas un navegador para grabar un vídeo que enseña cómo se hace algo en una web. En cada turno ves la página (título, url, texto y una lista numerada de elementos) y decides UNA sola acción. Al final el vídeo se reproduce con tus pasos y un narrador lee tus frases.
 
         OBJETIVO: {{objetivo}}
-
+        {{(pregunta ? ModoPregunta : "")}}
         Acciones (el campo "accion"):
         - "clic": pulsar el elemento "ref".
+        - "señalar": señalar el elemento "ref" con el cursor sin pulsarlo: para enseñar dónde está algo.
         - "escribir": escribir "valor" en el campo "ref" (sustituye lo que hubiera).
         - "elegir": elegir la opción "valor" (su texto visible) en el desplegable "ref".
         - "tecla": pulsar la tecla "valor": Enter, Tab, Escape, ArrowDown, ArrowUp.
@@ -59,6 +68,12 @@ public static class Protocol
         {"pensamiento":"…","accion":"clic|escribir|elegir|tecla|ir|esperar|terminar|fallo","ref":N,"valor":"…","frase":"…","resumen":"…"}
         Ejemplo: {"pensamiento":"El campo 7 es el buscador del catálogo","accion":"escribir","ref":7,"valor":"impresora láser","frase":"Vamos a localizar una impresora en el catálogo: escribimos lo que buscamos","resumen":""}
         """.ReplaceLineEndings("\n");
+
+    /// <summary>Lo que cambia cuando el objetivo es una pregunta: enseñar en vez de hacer, y contestar al final.</summary>
+    public const string ModoPregunta = """
+
+        MODO PREGUNTA: la persona no te encarga un proceso, te pregunta dónde está algo o cómo se hace. Tu trabajo es llevarla hasta allí y enseñárselo: navega lo justo (menús, enlaces, pestañas), y cuando tengas delante lo que pregunta, usa "señalar" sobre el elemento exacto y di en "frase" qué es, dónde está y para qué sirve. Si pregunta «cómo se hace», hazlo de verdad paso a paso, explicando cada paso. No escribas en campos ni cambies datos si la pregunta no lo pide. Al "terminar", escribe en "resumen" la respuesta a la pregunta en una o dos frases, como se la dirías a esa persona: el narrador la leerá al final del vídeo.
+        """;
 
     /// <summary>La página en texto compacto: <c>N | tipo | nombre | valor | estado</c> por línea (las columnas vacías del final se omiten).</summary>
     public static string Observacion(Observation obs)
@@ -144,8 +159,9 @@ public static class Protocol
         }
         var accion = Observer.Str(obj, "accion").Trim().ToLowerInvariant();
         if (accion == "click") accion = "clic";
+        if (accion is "senalar" or "señala" or "senala" or "apuntar" or "point" or "hover") accion = "señalar";
         if (!Acciones.Contains(accion))
-            throw new ArgumentException($"acción desconocida «{accion}»: usa clic, escribir, elegir, tecla, ir, esperar, terminar o fallo");
+            throw new ArgumentException($"acción desconocida «{accion}»: usa clic, señalar, escribir, elegir, tecla, ir, esperar, terminar o fallo");
         int? @ref = obj["ref"] is JsonNode n && n is not null && !(n is JsonValue v && v.TryGetValue<string>(out var s) && s.Trim().Length == 0)
             ? Observer.Entero(n)
             : null;

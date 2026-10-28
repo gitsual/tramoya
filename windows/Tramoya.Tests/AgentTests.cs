@@ -110,6 +110,38 @@ public sealed class AgentTests(ITestOutputHelper salida)
         Assert.DoesNotContain("\r", prompt);
     }
 
+    [Fact]
+    public void ParseDecisionAceptaSenalarYSusSinonimos()
+    {
+        foreach (var a in new[] { "señalar", "senalar", "point", "hover" })
+            Assert.Equal("señalar", Protocol.ParseDecision($$$"""{"accion":"{{{a}}}","ref":4,"frase":"Aquí está"}""").Accion);
+        Assert.Throws<ArgumentException>(() => Protocol.ParseDecision("""{"accion":"señalar","frase":"sin ref"}"""));
+    }
+
+    [Theory]
+    [InlineData("¿Dónde está el contraste de cada color?", true)]
+    [InlineData("dónde se cambia la voz", true)]
+    [InlineData("Cómo copio la variable de un color", true)]
+    [InlineData("Qué significa el número de la esquina", true)]
+    [InlineData("Hay una tabla de navegación?", true)]
+    [InlineData("Entra en Pedidos y abre el 1234", false)]
+    [InlineData("Haz un recorrido por el sistema de diseño", false)]
+    [InlineData("", false)]
+    public void EsPreguntaDistingueUnaPreguntaDeUnEncargo(string objetivo, bool esperado) =>
+        Assert.Equal(esperado, Protocol.EsPregunta(objetivo));
+
+    [Fact]
+    public void ElSystemPromptEnModoPreguntaPideEnsenarYContestar()
+    {
+        var normal = Protocol.SystemPrompt("Entra en Pedidos");
+        var pregunta = Protocol.SystemPrompt("¿Dónde está el contraste?", pregunta: true);
+        Assert.DoesNotContain("MODO PREGUNTA", normal);
+        Assert.Contains("MODO PREGUNTA", pregunta);
+        Assert.Contains("\"señalar\"", normal);
+        Assert.Contains("el narrador la leerá al final", pregunta);
+        Assert.DoesNotContain("\r", pregunta);
+    }
+
     // ------------------------------------------------------------------ Backends
 
     [Fact]
@@ -222,6 +254,7 @@ public sealed class AgentTests(ITestOutputHelper salida)
         public IPage Page { get; } = Substitute.For<IPage>();
         public IKeyboard Keyboard { get; } = Substitute.For<IKeyboard>();
         public List<string> Clics { get; } = [];
+        public List<string> Senalados { get; } = [];
         public List<(string Selector, string Texto)> Escritos { get; } = [];
         public List<string> Teclas { get; } = [];
         public List<string> Idas { get; } = [];
@@ -254,6 +287,8 @@ public sealed class AgentTests(ITestOutputHelper salida)
             var loc = _locators[selector] = Substitute.For<ILocator>();
             loc.ClickAsync(Arg.Any<LocatorClickOptions>()).Returns(_ => { Clics.Add(selector); return Task.CompletedTask; });
             loc.FillAsync(Arg.Any<string>(), Arg.Any<LocatorFillOptions>()).Returns(ci => { Escritos.Add((selector, ci.ArgAt<string>(0))); return Task.CompletedTask; });
+            loc.HoverAsync(Arg.Any<LocatorHoverOptions>()).Returns(_ => { Senalados.Add(selector); return Task.CompletedTask; });
+            loc.ScrollIntoViewIfNeededAsync(Arg.Any<LocatorScrollIntoViewIfNeededOptions>()).Returns(Task.CompletedTask);
             return loc;
         }
     }
@@ -337,6 +372,34 @@ public sealed class AgentTests(ITestOutputHelper salida)
         Assert.Equal(new[] { "user", "assistant", "user", "assistant", "user", "assistant", "user", "assistant", "user" }, mensajes.Select(m => m.Role));
         Assert.Contains("Página: Ejemplo de prueba", mensajes[0].Text);   // los antiguos, resumidos
         Assert.Contains("PÁGINA ACTUAL", mensajes[^3].Text);            // los recientes, enteros
+    }
+
+    [Fact]
+    public async Task RunAsyncConUnaPreguntaSenalaSinPulsarYContestaAlFinal()
+    {
+        var pagina = new PaginaFalsa(ObservacionJson, SelectorFalso);
+        var modelo = new ScriptedBackend(
+            """{"pensamiento":"abrir la sección","accion":"clic","ref":{ref:Siguiente},"frase":"Vamos a verlo: entramos en la siguiente pantalla"}""",
+            """{"pensamiento":"ahí está","accion":"señalar","ref":{ref:Guardar},"frase":"Aquí está el botón de guardar, abajo a la derecha"}""",
+            """{"pensamiento":"contestado","accion":"terminar","resumen":"Se guarda con el botón Guardar, al final del formulario."}""");
+
+        var r = await AgentRunner.RunAsync(pagina.Page, new AgentOptions("¿Dónde se guarda el formulario?"), modelo, null, CancellationToken.None);
+
+        Assert.True(r.Ok);
+        Assert.Contains("MODO PREGUNTA", modelo.Llamadas[0].System);
+        Assert.Equal(new[] { "clic", "señalar" }, r.Pasos.Select(p => p["tipo"]!.GetValue<string>()));
+        Assert.Equal("Señala el botón «Guardar»", r.Pasos[1]["desc"]!.GetValue<string>());
+        Assert.Equal("internal:role=button[name=\"Guardar\"i]", r.Pasos[1]["selector"]!.GetValue<string>());
+        // Señalar no pulsa: el botón que guarda no se ha tocado.
+        Assert.Equal(new[] { "[data-tramoya-ref=\"1\"]" }, pagina.Clics);
+        Assert.Equal(new[] { "[data-tramoya-ref=\"3\"]" }, pagina.Senalados);
+        // La respuesta cierra la narración del último paso.
+        Assert.Equal("Aquí está el botón de guardar, abajo a la derecha Se guarda con el botón Guardar, al final del formulario.", r.Pasos[1]["texto"]!.GetValue<string>());
+        Assert.Equal("Se guarda con el botón Guardar, al final del formulario.", r.Resumen);
+        // Un encargo normal no lleva el modo pregunta.
+        var encargo = new ScriptedBackend("""{"accion":"terminar","resumen":"nada"}""");
+        await AgentRunner.RunAsync(pagina.Page, new AgentOptions("Rellena el formulario"), encargo, null, CancellationToken.None);
+        Assert.DoesNotContain("MODO PREGUNTA", encargo.Llamadas[0].System);
     }
 
     /// <summary>Un <see cref="IProgress{T}"/> que apunta en el acto (el de .NET despacha por el contexto y llega tarde a las aserciones).</summary>

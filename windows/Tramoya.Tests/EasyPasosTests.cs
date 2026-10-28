@@ -7,6 +7,12 @@ namespace Tramoya.Tests;
 
 public class EasyPasosTests
 {
+    [Fact]
+    public void SenalarEsUnPointQueNoPulsa()
+    {
+        Assert.Equal(new[] { "point #guardar", "beat 1" }, LineasDePaso(new JsonObject { ["tipo"] = "señalar", ["selector"] = "#guardar" }));
+    }
+
     // Engine.cs porta _paso_de_evento, dominios_de y argumentos_navegador:
     // test_recorded_events_name_what_was_touched y
     // test_windows_sign_in_is_allowed_for_the_site_its_domain_and_the_extra_ones.

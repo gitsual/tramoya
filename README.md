@@ -417,6 +417,16 @@ minutes. The window has the same thing as a card («Pídeselo a la IA») on the 
 reachable. `ask` / `do` stay what they were: they plan the *commands* (assemble, captions, music) from a sentence;
 `agent` drives the *page*.
 
+**Ask where something is.** If what you type is a question («¿Dónde está el contraste de cada color?», «¿Cómo copio la
+variable de un color?»), the model does not run a process: it takes you there, points at the exact element without
+pressing it (the new `señalar` action, a `point` in the video), says what it is and what it is for, and the answer to
+your question closes the narration. Same card in the window, same `agent` command. Think of a complex control panel
+and the question you would otherwise take to a 15-minute tutorial.
+
+```
+Tramoya.exe agent "¿Dónde está el contraste de cada color y cómo copio su variable?" --url http://127.0.0.1:6107/gcs-hauer-handoff.html --video --voz
+```
+
 Slow things on the page (a model thinking, a build) go in a wait window: `wait <selector> | <max seconds>` in the
 step language opens `wait:start` / `wait:end` marks, and `assemble` speeds a window longer than 20 s up to a few
 seconds with a "2 minutes later" caption. Both implementations understand the verb.

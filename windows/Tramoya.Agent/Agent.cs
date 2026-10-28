@@ -9,7 +9,11 @@ namespace Tramoya.Agent;
 /// <param name="Lang">El idioma de las frases (por ahora solo español).</param>
 /// <param name="MaxPasos">Tope de pasos apuntados; las esperas y las acciones fallidas no cuentan.</param>
 /// <param name="Capturas">Mandar también una captura de pantalla en cada turno (solo la aprovechan los modelos con visión).</param>
-public sealed record AgentOptions(string Goal, string Lang = "es", int MaxPasos = 25, bool Capturas = false);
+/// <param name="Pregunta">El objetivo es una pregunta («¿dónde está…?»): enseñar en vez de hacer, y contestar al final. Sin valor, se deduce del texto.</param>
+public sealed record AgentOptions(string Goal, string Lang = "es", int MaxPasos = 25, bool Capturas = false, bool? Pregunta = null)
+{
+    public bool EsPregunta => Pregunta ?? Protocol.EsPregunta(Goal);
+}
 
 /// <summary>El resultado: los pasos en el formato de <c>easy</c> (con <c>texto</c> = la frase del narrador) y cómo acabó.</summary>
 public sealed class AgentResult
@@ -44,7 +48,7 @@ public static class Agent
         var resultado = new AgentResult { Inicio = page.Url ?? "" };
         try { resultado.Titulo = Observer.Recortar((await page.TitleAsync().ConfigureAwait(false) ?? "").Trim(), 60); }
         catch (Exception) { resultado.Titulo = ""; }
-        var system = Protocol.SystemPrompt(options.Goal);
+        var system = Protocol.SystemPrompt(options.Goal, options.EsPregunta);
         var historial = new List<(string Usuario, string Resumen, string Respuesta)>();
         var hechos = new List<string>();
         var ultimo = "acabamos de abrir la página.";
@@ -142,6 +146,14 @@ public static class Agent
                 resultado.Ok = true;
                 resultado.Resumen = decision.Resumen.Length != 0 ? decision.Resumen : decision.Pensamiento;
                 log?.Report($"Terminado: {resultado.Resumen}");
+                // A una pregunta se contesta: la respuesta cierra la narración del último paso.
+                if (options.EsPregunta && resultado.Pasos.Count != 0 && decision.Resumen.Length != 0)
+                {
+                    var ultimoPaso = resultado.Pasos[^1];
+                    var texto = ultimoPaso["texto"]?.ToString() ?? "";
+                    if (!texto.Contains(decision.Resumen, StringComparison.Ordinal))
+                        ultimoPaso["texto"] = (texto.Length != 0 ? texto.TrimEnd() + " " : "") + decision.Resumen;
+                }
                 break;
             }
             if (decision.Accion == "fallo")
@@ -244,6 +256,14 @@ public static class Agent
         var cosa = nombre.Length != 0 ? $"{el.Tipo} «{nombre}»" : el.Tipo;
         switch (d.Accion)
         {
+            case "señalar":
+            {
+                // Se lleva el cursor encima sin pulsar: en el vídeo es un «point», y en vivo sirve para
+                // comprobar que el elemento está ahí y a la vista.
+                try { await locator.ScrollIntoViewIfNeededAsync(new LocatorScrollIntoViewIfNeededOptions { Timeout = 5000 }).ConfigureAwait(false); } catch (Exception) { }
+                await locator.HoverAsync(new LocatorHoverOptions { Timeout = 10000 }).ConfigureAwait(false);
+                return new JsonObject { ["tipo"] = "señalar", ["selector"] = selector, ["desc"] = $"Señala {cosa}" };
+            }
             case "clic":
             {
                 await locator.ClickAsync(new LocatorClickOptions { Timeout = 10000 }).ConfigureAwait(false);

@@ -204,7 +204,7 @@ public static class Engine
         {
             var ctx = await pw.Chromium.LaunchPersistentContextAsync(perfil, new()
             {
-                Headless = false,
+                Headless = SinVentana,
                 ViewportSize = new ViewportSize { Width = ancho, Height = alto },
                 IgnoreHTTPSErrors = true,
                 Locale = "es-ES",
@@ -302,6 +302,10 @@ public static class Engine
     // cada paso ya escrita, y el servidor lo pasa al proyecto igual que una grabación.
 
     /// <summary>
+    /// Con <c>TRAMOYA_HEADLESS=1</c> el agente y el vídeo van sin ventana: para grabar la ventana de
+    /// Tramoya con la propia tramoya sin que el navegador asome por el escritorio.
+    internal static bool SinVentana => Environment.GetEnvironmentVariable("TRAMOYA_HEADLESS") == "1";
+
     /// Abre la web en el perfil de <c>easy</c>, deja que el agente la recorra y guarda la sesión
     /// en <paramref name="auth"/>. Es la única implementación: la usan la ventana (por el
     /// subcomando <c>agente</c>) y el CLI (<c>tramoya agent</c>).
@@ -502,7 +506,7 @@ public static class Engine
         // La reproducción, con los mismos permisos que la grabación: inicio de sesión de
         // Windows en las webs de la empresa y sus certificados internos.
         await using (var sesion = await Browser.OpenStageAsync(url, pacing, marks,
-                         videoDir: Path.Combine(salida, "raw"), viewport: viewport, headless: false,
+                         videoDir: Path.Combine(salida, "raw"), viewport: viewport, headless: SinVentana,
                          storageState: File.Exists(auth) ? auth : null,
                          launchTweak: o => o.Args = ArgumentosNavegador(url, dominios),
                          contextTweak: o => { o.IgnoreHTTPSErrors = true; o.Locale = "es-ES"; }).ConfigureAwait(false))

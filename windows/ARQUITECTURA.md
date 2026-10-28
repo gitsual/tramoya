@@ -170,11 +170,16 @@ rellena `mis_videos`/`ajustes`/`voz` como hace `Tareas.HacerVideo` y llama a
   elemento (como el grabador de `easy`); si no existe, un CSS mínimo (`#id`, `[name=]`, `text=`).
 - `Protocol.cs`: system prompt en español con el objetivo y las reglas; cada turno el usuario manda
   la observación y el resultado de la última acción; el modelo responde SOLO JSON:
-  `{"pensamiento":"…","accion":"clic|escribir|elegir|tecla|ir|esperar|terminar|fallo","ref":N,
+  `{"pensamiento":"…","accion":"clic|señalar|escribir|elegir|tecla|ir|esperar|terminar|fallo","ref":N,
   "valor":"…","frase":"lo que se dirá en el vídeo en este paso, o vacío","resumen":"al terminar"}`.
   `ParseDecision(string)` tolera vallas ```json y texto alrededor; JSON inválido → se reintenta una
   vez con el error como mensaje. Historial: últimas 6 interacciones completas + lista resumida de
   las acciones hechas. Tope `MaxPasos`; una acción que falla se le cuenta al modelo (no aborta).
+  `señalar` = llevar el cursor encima sin pulsar (paso de easy `tipo=señalar` → `point`). **Modo
+  pregunta** (`Protocol.EsPregunta`: empieza por «¿», dónde, cómo, qué, cuál, hay, o acaba en «?»;
+  `AgentOptions.Pregunta` lo fuerza): el prompt lleva un bloque más (enseñar en vez de hacer,
+  señalar el elemento exacto, no cambiar datos, y en `resumen` la respuesta), y `Agent` pega esa
+  respuesta al `texto` del último paso para que el narrador la lea al final del vídeo.
 - `Backends.cs`: `IChatBackend { Task<string> CompleteAsync(string system, IReadOnlyList<ChatMessage>
   messages, CancellationToken ct); }`, `ChatMessage(string Role, string Text, byte[]? ImagePng = null)`;
   `OllamaChatBackend` (`POST /api/chat`, `stream=false`, `format="json"`, `options.temperature=0.1`,

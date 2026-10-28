@@ -57,6 +57,7 @@ public static class Pasos
         return Str(p, "tipo") switch
         {
             "clic" => Bool(p, "seguro") ? [$"point {s}", "beat 0.8"] : [$"click {s}", "beat 0.7"],
+            "señalar" => [$"point {s}", "beat 1"],
             "escribir" => [$"clear {s}", $"type {s} | {v}", "beat 0.3"],
             "tecla" => [$"press {v}", "beat 0.5"],
             "elegir" => [$"select {s} | {v}", "beat 0.6"],
