@@ -114,7 +114,7 @@ public static class Assistant
 {
     public const string DefaultOllamaModel = "qwen3-coder";
     public const string DefaultOllamaUrl = "http://localhost:11434";
-    public const string DefaultClaudeModel = "claude-sonnet-5";
+    public const string DefaultClaudeModel = "claude-sonnet-5-5";
     public const string ClaudeUrl = "https://api.anthropic.com/v1/messages";
 
     /// <summary>Subcommands that accept <c>--dry-run</c>; <see cref="RunPlan"/> appends it there.</summary>

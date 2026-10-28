@@ -151,7 +151,7 @@ public static class Protocol
         JsonObject obj;
         try
         {
-            obj = JsonNode.Parse(cuerpo[inicio..(fin + 1)]) as JsonObject ?? throw new ArgumentException("la respuesta no es un objeto JSON");
+            obj = ObjetoSinDuplicados(cuerpo[inicio..(fin + 1)]);
         }
         catch (JsonException e)
         {
@@ -177,5 +177,21 @@ public static class Protocol
             valor,
             Observer.Str(obj, "frase").Trim(),
             Observer.Str(obj, "resumen").Trim());
+    }
+
+    /// <summary>
+    /// El objeto JSON de la respuesta, quedándose con el último valor si el modelo repite una
+    /// clave (pasa: dos «pensamiento» seguidos). <c>JsonNode.Parse</c>
+    /// rechaza las claves repetidas; <see cref="JsonDocument"/> las admite.
+    /// </summary>
+    static JsonObject ObjetoSinDuplicados(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            throw new ArgumentException("la respuesta no es un objeto JSON");
+        var obj = new JsonObject();
+        foreach (var p in doc.RootElement.EnumerateObject())
+            obj[p.Name] = JsonNode.Parse(p.Value.GetRawText());
+        return obj;
     }
 }

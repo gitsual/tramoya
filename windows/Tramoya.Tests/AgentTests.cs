@@ -32,6 +32,15 @@ public sealed class AgentTests(ITestOutputHelper salida)
     }
 
     [Fact]
+    public void ParseDecisionSeQuedaConLaUltimaClaveRepetida()
+    {
+        var d = Protocol.ParseDecision("""{"pensamiento":"primero","pensamiento":"El 7 es Done","accion":"clic","ref":7,"frase":"Abrimos Done"}""");
+        Assert.Equal("clic", d.Accion);
+        Assert.Equal(7, d.Ref);
+        Assert.Equal("El 7 es Done", d.Pensamiento);
+    }
+
+    [Fact]
     public void ParseDecisionToleraVallasYTextoAlrededor()
     {
         var d = Protocol.ParseDecision("Claro, aquí va:\n```json\n{\"accion\":\"clic\",\"ref\":\"3\",\"frase\":\"Abrimos el artículo\"}\n```\nListo.");

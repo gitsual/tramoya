@@ -1,7 +1,7 @@
 # tramoya para Windows en C# — contrato de arquitectura
 
 Versión Windows de **tramoya** reescrita entera en C#/.NET 9. La versión de Linux y macOS
-sigue siendo el paquete Python de `../src/tramoya` (v0.5.0). **El código Python es la
+sigue siendo el paquete Python de `../src/tramoya` (v1.0.0). **El código Python es la
 especificación**: cada módulo de C# es el port de un módulo de Python y los tests de
 `../tests/test_*.py` son los tests que hay que portar. Ambas versiones tienen que leer y
 escribir los mismos ficheros.
@@ -30,7 +30,7 @@ escribir los mismos ficheros.
 ```
 windows/
   Tramoya.sln
-  Directory.Build.props          net9.0, nullable, versión 0.6.0
+  Directory.Build.props          net9.0, nullable, versión 1.0.0
   Tramoya.Core/      (net9.0)    todo lo puro: sin navegador, sin COM, sin ventana
   Tramoya.Stage/     (net9.0)    Playwright: Stage, OpenStage, Director
   Tramoya.Voice/     (net9.0-windows) SAPI: voces, hablar a wav, oír

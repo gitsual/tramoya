@@ -425,6 +425,24 @@ public class CliTests
         Assert.False(Directory.Exists(outDir));
     }
 
+    [VoiceFact("es")]
+    public void TtsNamesTheScenesWithoutTextInThatLanguage()
+    {
+        using var tmp = new TempDir();
+        using var cap = new Capture();
+        var script = tmp.File("script.json");
+        WriteJson(script, new JsonObject
+        {
+            ["intro"] = new JsonObject { ["en"] = "Hello.", ["es"] = "Hola." },
+            ["end"] = new JsonObject { ["en"] = "Bye." },
+        });
+        var outDir = tmp.File("voices");
+        var rc = Run("tts", "--script", script, "--lang", "es", "--out-dir", outDir);
+        Assert.Equal(2, rc);
+        Assert.Contains("tts: the script has no 'es' text for end; languages in it: en, es", cap.Err);
+        Assert.False(Directory.Exists(outDir));
+    }
+
     [Fact]
     public void DeckDryRunPlansPagesAndClip()
     {
@@ -662,7 +680,7 @@ public class CliTests
     {
         using var cap = new Capture();
         Assert.Equal(0, Run("--version"));
-        Assert.Equal("tramoya 0.6.0", cap.Out.Trim());
+        Assert.Equal("tramoya 1.0.0", cap.Out.Trim());
     }
 
     [Fact]

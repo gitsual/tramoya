@@ -28,7 +28,7 @@ Post = Callable[[str, dict, dict], dict]
 
 DEFAULT_OLLAMA_MODEL = "qwen3-coder"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_CLAUDE_MODEL = "claude-sonnet-5"
+DEFAULT_CLAUDE_MODEL = "claude-sonnet-5-5"
 CLAUDE_URL = "https://api.anthropic.com/v1/messages"
 
 # Subcommands that accept --dry-run; `run_plan(dry_run=True)` appends it there.

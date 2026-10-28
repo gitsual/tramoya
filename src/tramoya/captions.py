@@ -223,7 +223,7 @@ def burn_argv(video: Path, subtitles_path: Path, out: Path) -> list[str]:
     """A command burning `subtitles_path` into `video`, copying the audio."""
     return [
         "ffmpeg", "-y", "-i", str(video),
-        "-vf", f"subtitles={subtitles_path}",
+        "-vf", f"subtitles={subtitles_path.as_posix()}",
         "-c:a", "copy", str(out),
     ]
 

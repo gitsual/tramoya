@@ -507,12 +507,20 @@ internal static class Cli
                                     string.Join(", ", Sapi.Voces()));
             return 2;
         }
+        var missing = script.Where(kv => kv.Value?.AsObject()[lang] is null).Select(kv => kv.Key).ToList();
+        if (missing.Count > 0)
+        {
+            var present = script.SelectMany(kv => kv.Value?.AsObject().Select(t => t.Key) ?? [])
+                                .Distinct().OrderBy(l => l, StringComparer.Ordinal).ToList();
+            Console.Error.WriteLine($"tts: the script has no '{lang}' text for {string.Join(", ", missing)}; " +
+                                    $"languages in it: {(present.Count > 0 ? string.Join(", ", present) : "none")}");
+            return 2;
+        }
         var texts = new Dictionary<string, string>(StringComparer.Ordinal);
         var paths = new List<string>();
         foreach (var (key, value) in script)
         {
-            var text = value!.AsObject()[lang]?.GetValue<string>()
-                       ?? throw new KeyNotFoundException(lang);
+            var text = value!.AsObject()[lang]!.GetValue<string>();
             var path = Path.Combine(outDir, $"{key}.wav");
             texts[path] = text;
             paths.Add(path);

@@ -5,6 +5,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>Tramoya.App</RootNamespace>
     <AssemblyName>Tramoya</AssemblyName>
+    <AssemblyTitle>Tramoya</AssemblyTitle>
     <ApplicationIcon>..\..\src\tramoya\easy\ui\tramoya.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
