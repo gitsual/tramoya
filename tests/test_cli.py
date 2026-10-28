@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 
 import pytest
@@ -177,6 +178,17 @@ def test_tts_without_the_extra_fails_with_a_clear_message(
     assert "tramoya[tts]" in capsys.readouterr().err
 
 
+def test_tts_names_the_scenes_without_text_in_that_language(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    script = tmp_path / "script.json"
+    script.write_text(json.dumps({"intro": {"en": "Hello", "es": "Hola"}, "end": {"en": "Bye"}}))
+    rc = cli.main(["tts", "--script", str(script), "--lang", "es", "--out-dir", str(tmp_path / "v")])
+    assert rc == 2
+    assert "tts: the script has no 'es' text for end; languages in it: en, es" in capsys.readouterr().err
+    assert not (tmp_path / "v").exists()
+
+
 def test_deck_dry_run_plans_pages_and_clip(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -211,8 +223,8 @@ def test_direct_dry_run_prints_the_director_argv(
     ])
     assert rc == 0
     out = capsys.readouterr().out
-    assert str(script) in out
-    assert f"--out {tmp_path / 'out'} --pace 0.8 --rehearse --lang en" in out
+    assert shlex.quote(str(script)) in out
+    assert f"--out {shlex.quote(str(tmp_path / 'out'))} --pace 0.8 --rehearse --lang en" in out
     assert "python" in out.split()[0]
 
 
@@ -346,7 +358,7 @@ def test_capture_dry_run_prints_the_codegen_command(capsys) -> None:
 def test_login_dry_run_says_where_the_session_goes(capsys) -> None:
     rc = cli.main(["login", "http://x/", "--dry-run"])
     assert rc == 0
-    assert ".tramoya/auth.json" in capsys.readouterr().out
+    assert str(Path(".tramoya/auth.json")) in capsys.readouterr().out
 
 
 def test_snapshots_diff_exits_nonzero_when_a_scene_changed(tmp_path: Path, capsys) -> None:

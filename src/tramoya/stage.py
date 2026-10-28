@@ -146,6 +146,18 @@ class Stage:
     def select(self, selector: str, value: str) -> None:
         self.page.locator(selector).first.select_option(value)
 
+    def wait_for(self, selector: str, seconds: float) -> None:
+        """Wait up to `seconds` for `selector` inside a wait window (`wait:start` /
+        `wait:end` marks), which `assemble` speeds up when it runs long: a model
+        thinking, a build finishing. Not finding it is not an error here; the next
+        step fails with a clearer message if it mattered."""
+        with self.marks.wait(selector):
+            try:
+                self.page.locator(selector).first.wait_for(
+                    state="visible", timeout=int(seconds * 1000))
+            except Exception:  # noqa: BLE001 -- the window closes either way
+                pass
+
     def scroll(self, dy: int, dx: int = 0) -> None:
         self.page.mouse.wheel(dx, dy)
 

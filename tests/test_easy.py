@@ -25,7 +25,7 @@ def run(playwright: Playwright) -> None:
     browser = playwright.chromium.launch(headless=False)
     context = browser.new_context()
     page = context.new_page()
-    page.goto("https://apps.example.net/Dedicaciones/home.xhtml")
+    page.goto("https://apps.example.net/Horas/home.xhtml")
     page.get_by_role("button", name="Añadir Código Proyecto").click()
     page.locator(".rowNotSaved > .tdCod > input").click()
     page.locator(".rowNotSaved > .tdCod > input").fill("EV4I02")
@@ -126,6 +126,7 @@ def test_every_step_line_parses() -> None:
         for line in lines:
             parse_step(line)
     assert lineas_de_paso({"tipo": "clic", "selector": "#a", "seguro": True})[0] == "point #a"
+    assert lineas_de_paso({"tipo": "señalar", "selector": "#a"}) == ["point #a", "beat 1"]
     assert parse_step(lineas_de_paso({"tipo": "escribir", "selector": "#a",
                                       "valor": "a | b"})[1]).args == ["#a", "a | b"]
 

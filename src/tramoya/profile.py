@@ -134,6 +134,7 @@ VERBS: dict[str, tuple[int, int, str]] = {
     "goto": (1, 1, "goto <path or url>"),
     "beat": (1, 1, "beat <seconds>"),
     "say": (0, 1, "say [fallback seconds]  (plays this scene's narration)"),
+    "wait": (2, 2, "wait <selector> | <max seconds>  (a wait window the montage speeds up)"),
 }
 
 
@@ -194,3 +195,5 @@ def run_steps(
             stage.beat(float(a[0]))
         elif step.verb == "say":
             say(float(a[0]) if a else 0.0)
+        elif step.verb == "wait":
+            stage.wait_for(a[0], float(a[1]))

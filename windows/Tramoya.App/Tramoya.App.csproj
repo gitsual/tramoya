@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Tramoya.App</RootNamespace>
+    <AssemblyName>Tramoya</AssemblyName>
+    <AssemblyTitle>Tramoya</AssemblyTitle>
+    <ApplicationIcon>..\..\src\tramoya\easy\ui\tramoya.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <!-- The kit is a folder anyway (.playwright, ffmpeg, navegador): native libraries stay loose, so Playwright finds its node.exe. -->
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Tramoya.Core\Tramoya.Core.csproj" />
+    <ProjectReference Include="..\Tramoya.Stage\Tramoya.Stage.csproj" />
+    <ProjectReference Include="..\Tramoya.Voice\Tramoya.Voice.csproj" />
+    <ProjectReference Include="..\Tramoya.Easy\Tramoya.Easy.csproj" />
+    <ProjectReference Include="..\Tramoya.Agent\Tramoya.Agent.csproj" />
+  </ItemGroup>
+</Project>

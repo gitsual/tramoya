@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Tramoya.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Tramoya.Core\Tramoya.Core.csproj" />
+    <ProjectReference Include="..\Tramoya.Stage\Tramoya.Stage.csproj" />
+    <ProjectReference Include="..\Tramoya.Voice\Tramoya.Voice.csproj" />
+    <ProjectReference Include="..\Tramoya.Easy\Tramoya.Easy.csproj" />
+    <ProjectReference Include="..\Tramoya.Agent\Tramoya.Agent.csproj" />
+    <ProjectReference Include="..\Tramoya.App\Tramoya.App.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The Python suite's fixtures are the specification; they are shared, not copied. -->
+    <None Include="..\..\tests\fixtures\**" Link="fixtures\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

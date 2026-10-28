@@ -233,6 +233,12 @@ def cmd_direct(args: argparse.Namespace) -> int:
 
 def cmd_tts(args: argparse.Namespace) -> int:
     script = json.loads(Path(args.script).read_text(encoding="utf-8"))
+    missing = [key for key, texts in script.items() if args.lang not in texts]
+    if missing:
+        present = sorted({lang for texts in script.values() for lang in texts})
+        print(f"tts: the script has no '{args.lang}' text for {', '.join(missing)}; "
+              f"languages in it: {', '.join(present) or 'none'}", file=sys.stderr)
+        return 2
     try:
         paths = synthesize_script(script, args.lang, args.out_dir)
     except ImportError as exc:

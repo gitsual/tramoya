@@ -1,0 +1,61 @@
+# Tramoya grabando a Tramoya: una persona abre la ventana, mira los ajustes, crea un
+# vídeo y se lo pide a la IA. La web es la propia interfaz de «tramoya easy»; la URL la
+# da `Tramoya.exe easy --no-window` y se pasa con --url (grabar.sh lo hace todo).
+# La web que la IA recorre es la app de notas de examples/notes-app, servida en local.
+
+[app]
+name = "Tramoya"
+url = "http://127.0.0.1:1/"
+viewport = [1280, 800]
+
+[demo]
+languages = ["es"]
+pace = 1.0
+
+[[scene]]
+name = "portada"
+label = "Tramoya, recién abierto"
+steps = ["beat 1", "say 7", "point #empezar", "beat 1"]
+
+[scene.narration]
+es = "Esto es Tramoya. Sirve para hacer vídeos de cómo se usa una web sin saber de vídeo: lo haces una vez, escribes qué decir y sale el vídeo. Vamos a ver la ventana entera y, al final, a pedirle el vídeo a la inteligencia artificial."
+
+[[scene]]
+name = "ajustes"
+label = "Los ajustes"
+steps = ["click #btn-ajustes", "beat 1", "say 6", "point #a-voz", "beat 1", "point #a-vel", "beat 1", "click #a-probar", "beat 3", "point #a-srt", "beat 1", "point #a-dom", "beat 1", "click #a-no", "beat 0.5"]
+
+[scene.narration]
+es = "En Ajustes se elige la voz de Windows que leerá las frases y su velocidad, se puede probar, se decide si queremos el fichero de subtítulos y, para las webs de empresa, qué dominios usan el inicio de sesión de Windows."
+
+[[scene]]
+name = "nuevo"
+label = "Empezar un vídeo"
+steps = ["click #empezar", "beat 1", "say 5", "type #nombre | Cómo se apunta una nota", "beat 0.5", "type #url | http://127.0.0.1:8770/index.html", "beat 1", "click #crear", "beat 1.5"]
+
+[scene.narration]
+es = "Empezamos un vídeo: un nombre y la dirección de la web. Aquí usamos la pequeña aplicación de notas de los ejemplos, que tenemos en local."
+
+[[scene]]
+name = "pedir"
+label = "Pedírselo a la IA"
+steps = ["say 7", "point #abrir-web", "beat 1.5", "point #objetivo-ia", "beat 0.5", "type #objetivo-ia | Enseña cómo se apunta una nota: pulsa Nueva nota, escribe el título Compra y el texto Leche y pan, guárdala, búscala escribiendo Compra en el buscador y márcala como hecha. Explica cada paso con una frase corta.", "beat 1", "click #btn-ia", "beat 2", "say 6", "wait #pasos | 900", "beat 1"]
+
+[scene.narration]
+es = "Hay dos formas de grabar. La normal: abrir la web y hacer el proceso una vez, que Tramoya lo apunta. Y la nueva: describirlo y que la inteligencia artificial lo haga. Escribimos qué queremos ver y pulsamos. La IA abre la web, lee la página, decide cada clic y escribe la frase de cada paso. Tarda un par de minutos; lo aceleramos."
+
+[[scene]]
+name = "explicar"
+label = "Lo que ha hecho la IA"
+steps = ["say 7", "point #pasos", "beat 1", "scroll 300", "beat 1", "scroll -300", "beat 0.5", "point #seguir", "beat 0.5", "click #seguir", "beat 1.5"]
+
+[scene.narration]
+es = "Aquí están los pasos que ha dado la IA, con la frase que se dirá en cada uno. Se pueden corregir, quitar, o marcar un botón para que solo se señale sin pulsarlo. Seguimos: hacer el vídeo."
+
+[[scene]]
+name = "video"
+label = "El vídeo"
+steps = ["say 5", "point #voz", "beat 1", "click #hacer", "beat 2", "say 4", "wait #ver | 900", "beat 1", "point #ver", "beat 2"]
+
+[scene.narration]
+es = "Con voz. Tramoya repite los pasos en la web, los graba con el cursor y los rótulos, y lee las frases con la voz de Windows. Un par de minutos más. Y ya está: el vídeo, con sus subtítulos, en la carpeta Mis vídeos."

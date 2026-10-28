@@ -360,6 +360,7 @@ const ICON = {
   escribir: '<rect x="1.5" y="4" width="13" height="8" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 6.5v3M7 6.5h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
   tecla: '<rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 9.5h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
   elegir: '<rect x="1.5" y="4" width="13" height="8" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m9.5 7 1.5 1.6L12.5 7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+  señalar: '<circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.8" fill="currentColor"/>',
   ir: '<path d="M2.5 8h10M9 4.5 12.5 8 9 11.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
   info: '<circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 7.2v4M8 4.8v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   bien: '<circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m5 8.2 2 2 4-4.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -410,7 +411,7 @@ function pintarLista() {
   const lista = INICIO.proyectos.filter((p) => !f || p.nombre.toLowerCase().includes(f));
   if (!lista.length) { l.innerHTML = '<div class="vacio-lista">Ninguno se llama así.</div>'; return; }
   l.innerHTML = lista.map((p) => {
-    const vivo = ["abriendo", "preparado", "grabando", "haciendo"].includes(p.tarea);
+    const vivo = ["abriendo", "preparado", "grabando", "pensando", "haciendo"].includes(p.tarea);
     const estado = vivo ? "En marcha…" : p.video ? "Vídeo listo" : p.fase === "explicar" ? "Faltan las frases" : "Sin grabar";
     return `<button class="item ${P && P.id === p.id ? "activo" : ""}" data-id="${esc(p.id)}">
       <i class="punto ${vivo ? "vivo" : p.video ? "listo" : ""}"></i>
@@ -422,7 +423,7 @@ function pintarLista() {
 async function abrir(id, vista) {
   P = await api(`/api/p/${id}`);
   VISTA = vista || (P.tarea.estado === "haciendo" || P.video ? "video" : P.pasos.length ? "explicar" : "grabar");
-  if (["abriendo", "preparado", "grabando", "convirtiendo"].includes(P.tarea.estado)) VISTA = "grabar";
+  if (["abriendo", "preparado", "grabando", "pensando", "convirtiendo"].includes(P.tarea.estado)) VISTA = "grabar";
   pintar();
   pintarLista();
 }
@@ -588,6 +589,15 @@ function grabar(v) {
       </div>
       <div class="botones"><button class="btn principal grande" id="terminar">Ya he terminado</button>
         <span class="pista">o cierra la ventana de la web</span></div></div>`;
+  } else if (t.estado === "pensando") {
+    cuerpo = `<div class="tarjeta" id="tarjeta-pensando">
+      <div class="en-vivo"><div class="anillo"></div><div><h2 style="margin:0">La IA está haciendo el proceso</h2>
+        <span class="pista">Lo hace en la ventana de la web. No la toques ni la cierres.</span></div>
+        <div class="derecha marcador"><b>${t.n || 0}</b><small>${(t.n || 0) === 1 ? "paso" : "pasos"}</small></div></div>
+      <div class="ultimo espera" id="msg">${ico("bombilla")}<span>${esc(t.msg || "Pensando…")}</span></div>
+      <div class="progreso"><i id="barra" style="width:${Math.round((t.p || 0) * 100)}%"></i></div>
+      <p class="pista" style="margin:0 0 18px">Lo que pediste: ${esc(P.objetivo || "")}</p>
+      <div class="botones"><button class="btn discreto" id="cancelar">Cancelar</button></div></div>`;
   } else if (t.estado === "convirtiendo") {
     cuerpo = `<div class="tarjeta"><div class="en-vivo"><div class="girando"></div><h2 style="margin:0">Ordenando los pasos…</h2></div></div>`;
   } else {
@@ -604,6 +614,13 @@ function grabar(v) {
       <div class="botones"><button class="btn principal grande" id="abrir-web">${ico("globo")} Abrir la web</button>
         ${P.pasos.length ? '<button class="btn discreto derecha" id="saltar">Ir a las frases sin regrabar</button>' : ""}</div>
       <p class="pista" style="margin:16px 0 0">Web: ${esc(P.url)} · <a href="#" id="cambiar-web">cambiar</a></p></div>`;
+    if (INICIO.agente) cuerpo += `<div class="tarjeta" id="tarjeta-ia">
+      <h2>O pídeselo a la IA</h2>
+      <p class="sub" style="margin-bottom:16px">Describe el proceso y la IA lo hace en la web por ti: apunta los pasos y escribe la frase de cada uno. Después lo revisas como si lo hubieras grabado tú. O hazle una pregunta, «¿dónde está…?», «¿cómo se cambia…?», y te lleva hasta allí, te lo señala y contesta al final.</p>
+      <label class="campo"><span>¿Qué quieres que se vea?</span>
+        <textarea id="objetivo-ia" rows="2" maxlength="600" placeholder="Por ejemplo: entra en Pedidos, busca el pedido 1234 y abre su detalle. O una pregunta: ¿dónde está el contraste de cada color?">${esc(P.objetivo || "")}</textarea>
+        <small>Si la web pide usuario y contraseña, entra antes una vez con «Abrir la web»: la IA usa esa misma sesión.</small></label>
+      <div class="botones"><button class="btn principal grande" id="btn-ia">${ico("bombilla", 18)} Que lo haga la IA</button></div></div>`;
   }
   v.innerHTML = cabecera(esc(P.nombre), "Paso 1 de 3: haz el proceso una vez y Tramoya apunta lo que haces.") + cuerpo;
   enlazarGuia();
@@ -615,10 +632,21 @@ function grabar(v) {
   on("cancelar", async () => { await api(`/api/p/${P.id}/cancelar`, {}); refrescar(); });
   on("saltar", () => { VISTA = "explicar"; pintar(); });
   on("cambiar-web", (e) => { e.preventDefault(); pedirWeb(); });
+  const objetivo = $("#objetivo-ia");
+  if (objetivo) { crecer(objetivo); objetivo.oninput = () => crecer(objetivo); }
+  on("btn-ia", async () => {
+    const texto = objetivo.value.trim();
+    if (!texto) { objetivo.focus(); objetivo.placeholder = "Cuéntale qué tiene que hacer, por ejemplo: entra en Pedidos y abre el pedido 1234"; return; }
+    $("#btn-ia").disabled = true;
+    const r = await api(`/api/p/${P.id}/agente`, {objetivo: texto});
+    if (r.error) { $("#btn-ia").disabled = false; avisar(r.error); return; }
+    P.objetivo = texto;
+    refrescar();
+  });
   on("borrar", () => confirmar("¿Borrar este vídeo?", "Se borran sus pasos y frases. El vídeo que ya esté en «Mis vídeos» no se toca.", "Borrar", async () => {
     await api(`/api/p/${P.id}/borrar`, {}); P = null; VISTA = "portada"; await cargarInicio(); pintar();
   }));
-  if (["abriendo", "preparado", "grabando", "convirtiendo"].includes(t.estado)) vigilar();
+  if (["abriendo", "preparado", "grabando", "pensando", "convirtiendo"].includes(t.estado)) vigilar();
 }
 
 function pedirWeb() {
@@ -670,6 +698,18 @@ function vigilar() {
         const u = $(".ultimo");
         u.classList.remove("espera", "nuevo"); void u.offsetWidth; u.classList.add("nuevo");
         u.innerHTML = `${ico("bien")}<span>${esc(q.tarea.ultimo || "")}</span>`;
+        return;
+      }
+      if (VISTA === "grabar" && q.tarea.estado === "pensando" && P.tarea.estado === "pensando" && $("#tarjeta-pensando")) {
+        const cambioPaso = (q.tarea.n || 0) !== (P.tarea.n || 0);
+        P = q;
+        $(".marcador b").textContent = q.tarea.n || 0;
+        $(".marcador small").textContent = (q.tarea.n || 0) === 1 ? "paso" : "pasos";
+        $("#barra").style.width = Math.round((q.tarea.p || 0) * 100) + "%";
+        const u = $("#msg");
+        u.classList.toggle("espera", !(q.tarea.n > 0));
+        if (cambioPaso) { u.classList.remove("nuevo"); void u.offsetWidth; u.classList.add("nuevo"); }
+        u.innerHTML = `${ico(q.tarea.n > 0 ? "bien" : "bombilla")}<span>${esc(q.tarea.msg || "Pensando…")}</span>`;
         return;
       }
       const antes = P.tarea.estado;
