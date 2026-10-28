@@ -69,7 +69,7 @@ machine.
 
 ## Tutorial
 
-Three minutes, in Spanish, of the Windows application. It was produced by tramoya itself: a profile drives the
+Three minutes, in Spanish, of the Windows application and its stage: curtains, a spotlight on the act in progress, cues and a script. It was produced by tramoya itself: a profile drives the
 application's own window on a clean install, the Windows voice reads the narration, `assemble` cuts it. Inside the
 tutorial the AI records a second video of its own, which is linked below. Nothing in either video was edited by
 hand.
@@ -83,13 +83,22 @@ hand.
 <a href="assets/video/tutorial-the-ai-made-this.mp4"><b>The video the AI made inside it</b></a> ·
 <a href="assets/video/ask-where.mp4"><b>A question answered by the AI</b></a> (0:19)</sub></p>
 
+<p align="center">
+  <img src="assets/easy/telon-arriba.png" alt="Home screen: a stage with curtains, a spotlight and the headline «Haz un vídeo de cualquier proceso»" width="49%">
+  <img src="assets/easy/la-ia-en-escena.png" alt="The AI doing the process: the acts strip lit on Grabar, a stage panel with the step counter and the last step" width="49%">
+  <img src="assets/easy/el-guion.png" alt="The script: each step as a scene with its stage direction in brackets and the sentence the voice will say" width="49%">
+  <img src="assets/easy/estreno.png" alt="The finished video framed by a valance on the stage" width="49%">
+</p>
+
+<p align="center"><sub>The window: curtain up, the AI on stage, the script, the premiere. Solnítido's palette and type, staged as a theatre.</sub></p>
+
 | In the tutorial | What it shows |
 |---|---|
 | Settings | The voice is one of Windows' own, with its speed, a preview, optional subtitles, and the domains allowed to use Windows sign-in. |
 | A new video | A name and the address of any web page: an intranet, a SaaS tool, an application on `localhost`. |
 | «O pídeselo a la IA» | One paragraph typed into the window. The model opened the page, made seven correct steps and wrote the sentence for each one. |
 | The steps it wrote | The same review screen as a recorded process: every sentence can be changed, every step removed or set to *point without pressing*. |
-| The video | Replayed, voiced and cut, with an `.srt` next to it. The seven minutes the model worked and the minute of rendering are compressed to a few seconds with a caption that says how long they took. |
+| The video | Replayed, voiced and cut, with an `.srt` next to it. The minute and a half the model worked and the minute of rendering are compressed to a few seconds with a caption that says how long they took. |
 
 [`examples/tramoya-sobre-tramoya/`](examples/tramoya-sobre-tramoya) holds that tutorial as a profile and a script;
 `bash grabar.sh` makes it again.
