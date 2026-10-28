@@ -22,8 +22,8 @@ if [ -d "$(cygpath "$LOCALAPPDATA")/Tramoya/navegador" ]; then
 fi
 
 # 0. la web que la IA recorrerá: la app de notas de los ejemplos
-( cd "$AQUI/../notes-app" && python -m http.server 8770 --bind 127.0.0.1 >/dev/null 2>&1 ) &
-WEBPID=$!
+python -m http.server 8770 --bind 127.0.0.1 -d "$AQUI/../notes-app" >/dev/null 2>&1 &
+WEBPID=$!   # el propio python, no una subshell: así el taskkill del final lo cierra
 
 # 1. las voces, antes del escenario: así cada «say» dura lo que dura la frase
 python -X utf8 - "$AQUI/tramoya.toml" "$OUT/script.json" <<'PY'
@@ -47,7 +47,8 @@ unset TRAMOYA_KIT
 #    un gestor de ventanas en mosaico la encoge cuando la IA abre su navegador.)
 "$EXE" direct "$(cygpath -w "$AQUI/tramoya.toml")" --url "$URL" --out "$(cygpath -w "$OUT")" --lang es 2>&1 | tee "$OUT/direct.log"
 rc=${PIPESTATUS[0]}
-kill $EASYPID $WEBPID 2>/dev/null; taskkill //PID $EASYPID //F >/dev/null 2>&1
+# en Git Bash, kill no llega a un programa nativo: taskkill con su PID de Windows
+for p in $EASYPID $WEBPID; do taskkill //T //PID "$(cat /proc/$p/winpid 2>/dev/null || echo $p)" //F >/dev/null 2>&1; done
 
 # 4. montaje: cada escena dura lo que su voz; las esperas largas se aceleran
 "$EXE" assemble --video "$(cygpath -w "$OUT/take.webm")" --marks "$(cygpath -w "$OUT/marks.json")" --voice-dir "$(cygpath -w "$OUT/voices/es")" --out "$(cygpath -w "$AQUI/tramoya-sobre-tramoya.mp4")" --lang es 2>&1 | tee -a "$OUT/direct.log"
