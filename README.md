@@ -8,7 +8,7 @@
 <p>
 <em>The <strong>tramoya</strong> is the machinery behind a stage: ropes, battens, trapdoors.<br>
 The audience never sees it. The show runs on time because of it.</em><br>
-<strong>This is that machinery for recorded software demos: you write scenes, it keeps the clock, the cursor, the voice and the cut.<br>Or you just say what you want, and it works out the commands.</strong>
+<strong>This is that machinery for recorded software demos: you write scenes, it keeps the clock, the cursor, the voice and the cut.<br>Or you just say what you want: it works out the commands, or it clicks through the page itself.</strong>
 </p>
 
 <p>
@@ -16,9 +16,13 @@ The audience never sees it. The show runs on time because of it.</em><br>
   <img alt="stdlib core" src="https://img.shields.io/badge/core-zero%20deps-3D0115?style=for-the-badge&labelColor=3D0115&color=E1777D">
   <img alt="294 tests" src="https://img.shields.io/badge/294%20tests-one%20real%20encode-3D0115?style=for-the-badge&labelColor=3D0115&color=979367">
   <img alt="ask and do" src="https://img.shields.io/badge/tramoya%20ask-plain%20English%20in-3D0115?style=for-the-badge&labelColor=3D0115&color=AAA875">
+  <img alt="Windows: one Tramoya.exe" src="https://img.shields.io/badge/windows-one%20Tramoya.exe-3D0115?style=for-the-badge&labelColor=3D0115&color=E1777D">
+  <img alt="agent: describe it, the AI records it" src="https://img.shields.io/badge/tramoya%20agent-describe%20it%2C%20AI%20records%20it-3D0115?style=for-the-badge&labelColor=3D0115&color=979367">
   <img alt="MIT" src="https://img.shields.io/badge/license-MIT-3D0115?style=for-the-badge&labelColor=3D0115&color=731F51">
 </p>
 
+<a href="#-tramoya-in-three-minutes"><strong>▶ Tutorial</strong></a> ·
+<a href="#-your-first-video-step-by-step"><strong>Step by step</strong></a> ·
 <a href="#-install"><strong>Install</strong></a> ·
 <a href="#-no-terminal-tramoya-easy"><strong>No terminal</strong></a> ·
 <a href="#-the-demo"><strong>The demo</strong></a> ·
@@ -26,6 +30,7 @@ The audience never sees it. The show runs on time because of it.</em><br>
 <a href="#-where-it-earns-its-keep"><strong>Enterprise uses</strong></a> ·
 <a href="#-scene-by-scene"><strong>Scene by scene</strong></a> ·
 <a href="#-just-say-it"><strong>Just say it</strong></a> ·
+<a href="#-windows-tramoyaexe"><strong>Windows</strong></a> ·
 <a href="#-why-this-exists"><strong>Why</strong></a> ·
 <a href="#-what-you-get"><strong>What you get</strong></a> ·
 <a href="#-60-second-tour"><strong>60-second tour</strong></a> ·
@@ -54,6 +59,136 @@ voiced and assembled by this package from the example under <code>examples/</cod
 out of that take at the marks it wrote. No mock-ups, nothing hand-painted. tramoya made its own README.</sub>
 
 </div>
+
+---
+
+## 🎥 Tramoya in three minutes
+
+**You do the process once. Tramoya turns it into a narrated video.** Or you just *describe* the process, and an AI
+does it for you on the real page, writes what the voice will say at every step, and hands you the video.
+Or you *ask* it where something is, and it takes you there and points.
+
+This is the tutorial of the Windows app, and it was made the only way that felt honest: **Tramoya recorded
+itself**. Its own window, a fresh install, every button pressed by a script, the voice read by Windows, the cut done
+by `assemble`. Inside the tutorial, the AI records a second video of its own, on the notes app of the examples.
+
+<p align="center">
+  <a href="assets/video/tramoya-tutorial.mp4"><img src="assets/gifs/tutorial.gif" alt="Tramoya's window recorded by Tramoya: settings, a new video, asking the AI, the steps it wrote, the finished video" width="720"></a>
+</p>
+
+<p align="center"><sub>Preview GIF (no sound). <a href="assets/video/tramoya-tutorial.mp4"><b>▶ Watch the tutorial with narration</b></a> (Spanish voice, 3:10) ·
+<a href="assets/video/tutorial-the-ai-made-this.mp4"><b>▶ The video the AI made inside it</b></a> ·
+<a href="assets/video/ask-where.mp4"><b>▶ «Where are my finished notes?»: asking instead of recording</b></a></sub></p>
+
+| What you see in the tutorial | What it means for you |
+|---|---|
+| **Settings**: a Windows voice, its speed, a *listen* button, subtitles on or off | The voice is the one already on your PC. No account, no upload, no microphone. |
+| **A new video**: a name and the address of a web page | Any web page: your intranet, a SaaS tool, an app on `localhost`. |
+| **«O pídeselo a la IA»**: a sentence typed, one button | The AI opens the page, reads it, decides every click and writes every sentence. A local model is enough. |
+| **The steps it wrote**, each with its sentence | Nothing is final: you fix a sentence, drop a step, or mark a button as *only point at it*. |
+| **The video**: replayed, voiced, cut | An `.mp4` and an `.srt` in *Vídeos\Tramoya*. Re-make it after the next UI change in two clicks. |
+| **The long waits are sped up**, with a «7 minutos después» caption | The AI worked on the page for seven minutes and the render took one; the tutorial does not make you watch either. |
+
+[`examples/tramoya-sobre-tramoya/`](examples/tramoya-sobre-tramoya) is that tutorial as a profile and a script:
+`bash grabar.sh` records it again, on your machine, in about six minutes.
+
+---
+
+## 👣 Your first video, step by step
+
+Written for the person who knows *the process* (how to file an expense, approve a request, set up a report) and has
+never opened a terminal. Windows, no admin rights, nothing to install. The window speaks Spanish; the button names
+below are the ones you will see.
+
+**1. Download it.** From the [latest release](https://github.com/gitsual/tramoya/releases/tag/v0.6.0-rc4), take
+`Tramoya-0.6.0-windows.zip` (545 MB: the program, its own Chromium and ffmpeg, so it downloads nothing later).
+Behind a network that cuts big downloads, take instead the six pieces `….zip.part0` … `part5` plus `unir.bat`,
+put them in the same folder and double-click `unir.bat`: it joins them and unzips.
+
+**2. Open it.** Unzip anywhere (your *Documents* is fine) and double-click **`Tramoya.exe`**. The program is not
+signed yet, so Windows shows a blue *SmartScreen* box the first time: *Más información* → *Ejecutar de todas formas*.
+The Tramoya window opens. Its settings and your projects live inside that folder (delete it and nothing is left behind); the finished videos go to *Vídeos\Tramoya*.
+
+**3. Grabar: do it once.**
+- Press **Empezar un vídeo**, give the video a name («Cómo se pide un día libre») and paste the address of the web page.
+- Press **Abrir la web**. A browser opens: sign in as you always do, and go to where the process starts.
+- Press **Empezar a grabar** and do the process once, calmly. Mistakes are fine, you can remove them later.
+- Close that browser when you are done.
+
+> [!TIP]
+> Nothing is recorded before *Empezar a grabar*, so **your password never ends up in a video**. The browser
+> remembers the session, so the next video starts already signed in.
+
+**4. Explicar: say what the voice says.** Every click, typed value and choice comes back as a plain sentence
+(«Pulsa el botón «Guardar»»). Under each step there is a box: write what the narrator should say there, and press
+the speaker to hear it. You can also change a typed value (put a fake name instead of a real one), delete the steps
+that were mistakes, and mark a button as **solo señalar**: the video points at it without pressing it. The last
+button that saves is marked that way already, so making the video never saves anything twice.
+
+**5. Vídeo: press the button.** Choose the voice, press **Hacer el vídeo** and wait a couple of minutes. Tramoya
+repeats your steps on the page by itself (the cursor travels, the captions change), reads your
+sentences and cuts the video. When it finishes, **Abrir el vídeo** plays it; the file is in *Vídeos\Tramoya*, with
+its subtitles next to it. If a step fails, the window tells you which one and why, and takes you there.
+
+**Or skip step 3: pídeselo a la IA.** If a model is reachable (see below), the recording screen has a card
+**«O pídeselo a la IA»**. Describe the process in one or two sentences, the way you would ask a colleague:
+*«Enseña cómo se apunta una nota: pulsa Nueva nota, escribe el título Compra, guárdala y márcala como hecha.
+Explica cada paso con una frase corta.»* The AI does it on the real page and leaves the steps and sentences in step 4,
+for you to review as if you had recorded them.
+
+**Or ask it a question.** Type a question instead («¿Dónde veo las notas que ya he terminado?») and the AI does not
+run a process: it takes you to the exact place, **points** at it without pressing, says what it is for, and the
+answer closes the video. That is the 15-minute tutorial nobody watches, turned into the 40-second answer to the one
+thing you needed.
+
+<details>
+<summary><b>What the AI needs, and what happens without it</b></summary>
+
+The AI cards need a language model. Either a local one with [Ollama](https://ollama.com) (`ollama pull
+qwen3-coder:30b`; it runs on your PC, nothing leaves it) or the Claude API (`ANTHROPIC_API_KEY` set in Windows).
+Without a model the cards simply do not appear and everything else works exactly the same: recording, sentences,
+voice and video never needed one.
+
+The model reads what the page says: the text of its buttons and their `title` / `aria-label`. Pages whose buttons
+say what they do get better videos and better answers.
+</details>
+
+<details>
+<summary><b>When something goes wrong</b></summary>
+
+| You see | Do this |
+|---|---|
+| «La sesión ha caducado» | Press *Abrir la web*, sign in again, close the browser, and make the video again. |
+| A step fails («no encuentro el botón…») | The page changed, or the step was a one-off (a pop-up that only appears sometimes). Delete or re-record that step. |
+| The window opens blank on a company laptop | The window uses Edge's engine without a proxy; if a policy still blocks it, tell your IT that Tramoya only talks to `127.0.0.1`. |
+| SmartScreen or the antivirus stops `Tramoya.exe` | It is not signed yet. *Ejecutar de todas formas*, or ask for it to be allowed. |
+| The voice sounds robotic | *Ajustes*: try another Windows voice and a slower speed. Windows has better voices under *Settings → Time & language → Speech*. |
+</details>
+
+<details>
+<summary><b>🇪🇸 La misma guía, en español</b></summary>
+
+Para quien sabe hacer el proceso y nunca ha abierto una terminal. Windows, sin permisos de administrador, sin
+instalar nada.
+
+1. **Descárgalo.** De la [última versión](https://github.com/gitsual/tramoya/releases/tag/v0.6.0-rc4), baja
+   `Tramoya-0.6.0-windows.zip` (545 MB, lo lleva todo dentro). Si tu red corta las descargas grandes, baja las seis
+   partes `….zip.part0` … `part5` y `unir.bat` a la misma carpeta y haz doble clic en `unir.bat`.
+2. **Ábrelo.** Descomprime donde quieras y doble clic en **`Tramoya.exe`**. La primera vez Windows avisará de que no
+   está firmado: *Más información* → *Ejecutar de todas formas*.
+3. **Grabar.** *Empezar un vídeo*, un nombre y la dirección de la web. *Abrir la web*, entra con tu usuario como siempre y ve
+   hasta donde empieza el proceso. Pulsa **Empezar a grabar** y hazlo una vez. Antes de ese botón no se apunta
+   nada: tu contraseña nunca sale en un vídeo.
+4. **Explicar.** Cada paso vuelve como una frase sencilla. Escribe debajo lo que dirá la voz y escúchalo; cambia un
+   valor (un nombre de ejemplo en vez del real), quita los pasos que sobran o marca un botón como **solo señalar**
+   para que el vídeo lo señale sin pulsarlo.
+5. **Vídeo.** Elige la voz y pulsa **Hacer el vídeo**. En un par de minutos está en *Vídeos\Tramoya*, con sus
+   subtítulos al lado. Cuando cambie la web, lo vuelves a hacer con dos clics.
+
+**O pídeselo a la IA:** describe el proceso como se lo pedirías a un compañero, y la IA lo hace en la web y te deja
+los pasos con sus frases para revisarlos. **O pregúntale** «¿dónde está…?», y te lleva hasta allí, lo señala y te
+lo explica.
+</details>
 
 ---
 
@@ -380,7 +515,7 @@ fits each voice clip and writes <code>final-demo.mp4</code>. With <code>--yes</c
 ## 🪟 Windows: `Tramoya.exe`
 
 The Windows version is the whole tool rewritten in C#/.NET 9 (`windows/`), one signed executable instead of a
-300 MB Python kit, built for corporate laptops where nothing can be installed. Linux and macOS keep the Python
+300 MB Python kit, built for locked-down laptops where nothing can be installed. Linux and macOS keep the Python
 package. Both read and write the same files (`tramoya.toml`, `marks.json`, `script.json`, the step language, the
 projects of `easy`), so a profile written on one runs on the other, and the Python test suite is the spec the
 port is checked against.
@@ -409,22 +544,22 @@ you can review in the window and turn into a video, or make the video in one go.
 below ran on Ollama with `qwen3-coder:30b`, one or two seconds per turn.
 
 ```
-Tramoya.exe agent "Haz un recorrido por el sistema de diseño: abre Foundations y entra en Colour; luego atoms, Button, Primary; después organisms, TrackingTable, Renderers; y termina en compositions, Navbar, Open" --url http://127.0.0.1:6106/ --video --voz
+Tramoya.exe agent "Enseña cómo se apunta una nota: pulsa Nueva nota, escribe el título Compra y el texto Leche y pan, guárdala, búscala y márcala como hecha" --url http://127.0.0.1:8770/index.html --video --voz
 ```
 
-That request, on a Storybook, became 11 steps with their sentences and a 62-second narrated video in under three
-minutes. The window has the same thing as a card («Pídeselo a la IA») on the recording screen when a model is
-reachable. `ask` / `do` stay what they were: they plan the *commands* (assemble, captions, music) from a sentence;
-`agent` drives the *page*.
+That request, on the notes app of the examples, becomes a handful of steps with their sentences and a narrated
+video in a couple of minutes ([this one](assets/video/tutorial-the-ai-made-this.mp4)). The window has the same thing
+as a card («O pídeselo a la IA») on the recording screen when a model is reachable. `ask` / `do` stay what they
+were: they plan the *commands* (assemble, captions, music) from a sentence; `agent` drives the *page*.
 
-**Ask where something is.** If what you type is a question («¿Dónde está el contraste de cada color?», «¿Cómo copio la
-variable de un color?»), the model does not run a process: it takes you there, points at the exact element without
-pressing it (the new `señalar` action, a `point` in the video), says what it is and what it is for, and the answer to
-your question closes the narration. Same card in the window, same `agent` command. Think of a complex control panel
-and the question you would otherwise take to a 15-minute tutorial.
+**Ask where something is.** If what you type is a question («¿Dónde veo las notas que ya he terminado?», «¿Cómo le
+pongo una etiqueta a una nota?»), the model does not run a process: it takes you there, points at the exact element
+without pressing it (the new `señalar` action, a `point` in the video), says what it is and what it is for, and the
+answer to your question closes the narration. Same card in the window, same `agent` command. Think of a complex
+control panel and the question you would otherwise take to a 15-minute tutorial.
 
 ```
-Tramoya.exe agent "¿Dónde está el contraste de cada color y cómo copio su variable?" --url http://127.0.0.1:6107/gcs-hauer-handoff.html --video --voz
+Tramoya.exe agent "¿Dónde veo las notas que ya he terminado?" --url http://127.0.0.1:8770/index.html --video --voz
 ```
 
 Slow things on the page (a model thinking, a build) go in a wait window: `wait <selector> | <max seconds>` in the
@@ -446,6 +581,12 @@ contract of the port: one C# file per Python module, the same names, the same ou
 ---
 
 ## 📥 Install
+
+**Windows:** nothing to install. Download `Tramoya-0.6.0-windows.zip` from the
+[latest release](https://github.com/gitsual/tramoya/releases/tag/v0.6.0-rc4), unzip, double-click `Tramoya.exe`
+([step by step](#-your-first-video-step-by-step)).
+
+**Linux and macOS:** the Python package.
 
 ```bash
 pip install "tramoya @ git+https://github.com/gitsual/tramoya@v0.5.0"

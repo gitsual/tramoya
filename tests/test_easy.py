@@ -25,7 +25,7 @@ def run(playwright: Playwright) -> None:
     browser = playwright.chromium.launch(headless=False)
     context = browser.new_context()
     page = context.new_page()
-    page.goto("https://apps.example.net/Dedicaciones/home.xhtml")
+    page.goto("https://apps.example.net/Horas/home.xhtml")
     page.get_by_role("button", name="Añadir Código Proyecto").click()
     page.locator(".rowNotSaved > .tdCod > input").click()
     page.locator(".rowNotSaved > .tdCod > input").fill("EV4I02")

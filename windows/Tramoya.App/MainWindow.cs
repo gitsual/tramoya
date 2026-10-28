@@ -61,7 +61,7 @@ internal sealed class MainWindow : Form
         {
             Language = "es",
             // La ventana solo habla con 127.0.0.1. En los portátiles de empresa la política de
-            // Chromium impone un proxy que deja esa dirección en blanco (visto en Indra con el
+            // Chromium impone un proxy que deja esa dirección en blanco (visto con el
             // kit de Python: Edge sí llegaba, el Chromium del kit no), así que aquí nunca hay proxy.
             AdditionalBrowserArguments = "--lang=es --disable-features=Translate --no-proxy-server",
         };

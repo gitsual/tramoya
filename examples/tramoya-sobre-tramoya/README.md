@@ -12,8 +12,10 @@ other examples do not:
 
 ```bash
 # Windows, Git Bash. Tramoya.exe in PATH or TRAMOYA_EXE; Ollama running (or ANTHROPIC_API_KEY).
-bash grabar.sh          # ~6 min: tramoya-sobre-tramoya.mp4 next to this file
+TRAMOYA_HEADLESS=1 bash grabar.sh   # 6-15 min, the model decides: tramoya-sobre-tramoya.mp4 next to this file
 ```
 
-The outer recording is headless: the window of tramoya exists only as a page. The model's
-own browser is a normal window, so run it when nothing else needs the screen.
+The outer recording is headless: the window of tramoya exists only as a page. With
+`TRAMOYA_HEADLESS=1` the model's own browser is headless too, so nothing appears on the
+desktop and you can keep working. The result of one run is the tutorial at the top of the
+main README: [`assets/video/tramoya-tutorial.mp4`](../../assets/video/tramoya-tutorial.mp4).
