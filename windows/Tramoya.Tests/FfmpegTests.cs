@@ -110,7 +110,7 @@ public sealed class FfmpegTests
         var vf = Ffmpeg.WaitCompress(5.0, "4 minutes later");
         Assert.StartsWith("setpts=PTS/5.0,", vf);
         Assert.Contains("drawtext=text='4 minutes later'", vf);
-        Assert.Contains("fontcolor=white:fontsize=42", vf);
+        Assert.Contains("fontcolor=0xF0CB66:fontsize=42", vf);
     }
 
     [Fact]

@@ -103,7 +103,7 @@ def test_wait_compress_builds_setpts_and_drawtext() -> None:
     vf = wait_compress(5.0, "4 minutes later")
     assert vf.startswith("setpts=PTS/5.0,")
     assert "drawtext=text='4 minutes later'" in vf
-    assert "fontcolor=white:fontsize=42" in vf
+    assert "fontcolor=0xF0CB66:fontsize=42" in vf
 
 
 def test_wait_compress_escapes_apostrophes_and_colons_in_the_label() -> None:

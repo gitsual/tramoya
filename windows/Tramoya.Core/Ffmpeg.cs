@@ -105,7 +105,7 @@ public static class Ffmpeg
     /// <summary>loudnorm upsamples to 192 kHz internally; without the aresample the AAC goes out at 96 kHz, which Windows plays as silence.</summary>
     public const string Loudnorm = "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000";
 
-    private const string DrawtextFontColor = "white";
+    private const string DrawtextFontColor = "0xF0CB66";
     private const int DrawtextFontSize = 42;
 
     /// <summary>Scale-then-letterbox filter fitting any source into a fixed grid.</summary>
@@ -120,7 +120,7 @@ public static class Ffmpeg
         $"setpts=PTS/{Fmt.Py(factor)}," +
         $"drawtext=text='{EscapeDrawtext(label)}':fontcolor={DrawtextFontColor}:" +
         $"fontsize={DrawtextFontSize}:x=(w-text_w)/2:y=h-th-40:" +
-        "box=1:boxcolor=black@0.5:boxborderw=12";
+        "box=1:boxcolor=0x1F1E1C@0.92:boxborderw=16";
 
     /// <summary>A tpad filter cloning the last frame for <paramref name="seconds"/>.</summary>
     public static string FreezeTail(double seconds) =>
