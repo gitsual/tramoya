@@ -236,6 +236,11 @@ above were recorded that way while the machine was in use. Without a model, the 
 else changes. The model reads what the page says, so buttons with visible text, `aria-label` or `title` give better
 videos and better answers.
 
+**When the job is the task itself, not the video:** [faena](https://github.com/gitsual/faena), tramoya's sibling,
+does errands in the background on a web or a Windows program without taking the screen, stops before anything that
+cannot be undone, writes a report with a photo of each step and learns what went well as skills. It can learn a skill
+from a tramoya project.
+
 ---
 
 <a id="the-stage"></a>
