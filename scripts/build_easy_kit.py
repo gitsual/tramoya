@@ -6,7 +6,7 @@ nothing to install, nothing downloaded on the target machine.
 
 Inside: a relocatable CPython (python-build-standalone) with tramoya[easy]
 installed from this checkout, Playwright's Chromium in app/navegador, an
-ffmpeg in app/ffmpeg, the launcher «Abrir Tramoya.bat» and LÉEME.txt. On first
+ffmpeg in app/ffmpeg, the launcher «Open Tramoya.bat» and README.txt. On first
 start the app adds a «Tramoya» shortcut with its icon next to the launcher.
 Corporate laptops are the point: no admin rights, no installer, and no
 download at run time for a proxy to cut.
@@ -29,40 +29,42 @@ PY_VERSION = "3.12.16"
 PBS_URL = ("https://github.com/astral-sh/python-build-standalone/releases/download/"
            f"{PBS_TAG}/cpython-{PY_VERSION}%2B{PBS_TAG}-x86_64-pc-windows-msvc-install_only.tar.gz")
 
-LANZADOR = '@echo off\r\nrem Tramoya: abre la app. No hace falta instalar nada.\r\n' \
+LANZADOR = '@echo off\r\nrem Tramoya: opens the app. Nothing to install.\r\n' \
            'start "" "%~dp0app\\python\\pythonw.exe" -m tramoya.easy\r\n'
 
-LEEME = """TRAMOYA: vídeos de procesos, sin esfuerzo
-=========================================
+LEEME = """TRAMOYA: videos of any process, without effort
+===============================================
 
-1. Descomprime esta carpeta donde quieras (por ejemplo, en Documentos).
-2. Doble clic en «Abrir Tramoya». La primera vez aparece también un acceso
-   directo «Tramoya» con su icono; desde la app puedes ponerlo en el escritorio.
+1. Unzip this folder wherever you like (for example, in Documents).
+2. Double-click «Open Tramoya». The first time a «Tramoya» shortcut with its
+   icon appears too; from the app you can put it on the desktop.
 
-No hay que instalar nada ni pedir permisos: todo va dentro de la carpeta.
+Nothing to install, no permissions to ask for: everything lives in the folder.
+The window is in English; Settings -> Language switches it to Spanish.
 
-Cómo se hace un vídeo
----------------------
-1. «Nuevo vídeo»: le pones nombre y pegas la dirección de la web.
-2. «Abrir la web»: entras como siempre y vas a donde empieza el proceso.
-   Pulsas «Empezar a grabar», haces el proceso una vez y «Ya he terminado».
-3. Escribes una frase en los pasos que quieras explicar. Puedes escucharla,
-   cambiar lo que se escribe en cada campo o quitar los pasos que sobren.
-4. «Hacer el vídeo»: Tramoya repite el proceso sola y graba el vídeo, con la
-   voz de Windows si la activas. Mientras tanto, no toques esa ventana.
+How a video is made
+-------------------
+1. «New video»: give it a name and paste the address of the website.
+2. «Open the website»: sign in as usual and go to where the process starts.
+   Press «Start recording», do the process once, then «I am done».
+3. Write a sentence on the steps you want to explain. You can listen to it,
+   change what is typed in each field or remove the extra steps.
+4. «Make the video»: Tramoya repeats the process by itself and records the
+   video, with the Windows voice if you turn it on. Meanwhile, do not touch
+   that window.
 
-Los vídeos terminados (y sus subtítulos .srt) quedan en «Mis vídeos».
-En «Ajustes»: la voz y su velocidad, el ritmo y el tamaño del vídeo.
+Finished videos (and their .srt subtitles) are in «My videos».
+In «Settings»: the language, the voice and its speed, the pace and the size.
 
-Bueno saber
------------
-- Tu contraseña nunca se graba: no se apunta nada hasta que pulsas «Empezar a
-  grabar». La web recuerda la sesión como un navegador normal.
-- Al repetir el proceso, el último botón que guarda (Guardar, Enviar…) solo se
-  señala con el cursor, sin pulsarlo, para no guardar dos veces. En cada botón
-  puedes cambiarlo con «Solo señalar, sin pulsar».
-- Si un paso falla (la web ha cambiado, por ejemplo), Tramoya te dice cuál.
-  Puedes quitarlo o volver a grabar; las frases que ya escribiste se conservan.
+Good to know
+------------
+- Your password is never recorded: nothing is written down until you press
+  «Start recording». The website remembers the session like a normal browser.
+- When the process is repeated, the last button that saves (Save, Send...) is
+  only pointed at with the cursor, not pressed, so nothing is saved twice. On
+  each button you can change that with «Point only, do not click».
+- If a step fails (the website changed, for example), Tramoya tells you which.
+  You can remove it or record again; the sentences you wrote are kept.
 """
 
 
@@ -118,8 +120,8 @@ def construir(out: Path) -> Path:
 
     for basura in [*app.rglob("*.pdb"), *app.rglob("__pycache__")]:
         shutil.rmtree(basura) if basura.is_dir() else basura.unlink()
-    (kit / "Abrir Tramoya.bat").write_bytes(LANZADOR.encode("ascii"))
-    (kit / "LÉEME.txt").write_text(LEEME.replace("\n", "\r\n"), encoding="utf-8-sig",
+    (kit / "Open Tramoya.bat").write_bytes(LANZADOR.encode("ascii"))
+    (kit / "README.txt").write_text(LEEME.replace("\n", "\r\n"), encoding="utf-8-sig",
                                    newline="")
 
     zip_path = out / f"Tramoya-{version()}-windows.zip"

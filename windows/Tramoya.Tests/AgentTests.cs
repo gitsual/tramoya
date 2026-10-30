@@ -429,7 +429,7 @@ public sealed class AgentTests(ITestOutputHelper salida)
             """{"accion":"clic","ref":1,"pensamiento":"no debería llegar"}""");
         var registro = new List<string>();
 
-        var r = await AgentRunner.RunAsync(pagina.Page, new AgentOptions("Pulsa dos veces", MaxPasos: 2), modelo, new Registro(registro), CancellationToken.None);
+        var r = await AgentRunner.RunAsync(pagina.Page, new AgentOptions("Pulsa dos veces", Lang: "es", MaxPasos: 2), modelo, new Registro(registro), CancellationToken.None);
 
         Assert.False(r.Ok);
         Assert.Equal(2, r.Pasos.Count);

@@ -1,6 +1,6 @@
 # Tramoya grabando a Tramoya: una persona abre la ventana, mira los ajustes, crea un
 # vídeo y se lo pide a la IA. La web es la propia interfaz de «tramoya easy»; la URL la
-# da `Tramoya.exe easy --no-window` y se pasa con --url (grabar.sh lo hace todo).
+# da `Tramoya.exe easy --no-window` y se pasa con --url (record.sh es lo hace todo).
 # La web que la IA recorre es la app de notas de examples/notes-app, servida en local.
 
 [app]

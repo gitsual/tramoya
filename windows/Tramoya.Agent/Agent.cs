@@ -63,17 +63,17 @@ public static class Agent
         {
             if (ct.IsCancellationRequested)
             {
-                resultado.Avisos.Add("Se ha cancelado antes de terminar.");
+                resultado.Avisos.Add(Lengua.T("Se ha cancelado antes de terminar.", "It was cancelled before finishing.", options.Lang));
                 break;
             }
             if (resultado.Pasos.Count >= options.MaxPasos)
             {
-                resultado.Avisos.Add($"Se ha llegado al tope de {options.MaxPasos} pasos sin terminar.");
+                resultado.Avisos.Add(Lengua.T($"Se ha llegado al tope de {options.MaxPasos} pasos sin terminar.", $"It reached the limit of {options.MaxPasos} steps without finishing.", options.Lang));
                 break;
             }
             if (++turnos > maxTurnos)
             {
-                resultado.Avisos.Add("El modelo no ha conseguido avanzar; se deja aquí.");
+                resultado.Avisos.Add(Lengua.T("El modelo no ha conseguido avanzar; se deja aquí.", "The model could not move on; it stops here.", options.Lang));
                 break;
             }
 
@@ -82,11 +82,11 @@ public static class Agent
             catch (Exception e)
             {
                 // La página está navegando o se ha cerrado: se espera un poco y se vuelve a mirar (sin gastar turno).
-                log?.Report($"No he podido mirar la página ({Breve(e)}); espero.");
+                log?.Report(Lengua.T($"No he podido mirar la página ({Breve(e)}); espero.", $"The page could not be read ({Breve(e)}); waiting.", options.Lang));
                 turnos--;
                 if (++miradasFallidas > 5)
                 {
-                    resultado.Avisos.Add($"No se puede mirar la página: {Breve(e)}");
+                    resultado.Avisos.Add(Lengua.T($"No se puede mirar la página: {Breve(e)}", $"The page cannot be read: {Breve(e)}", options.Lang));
                     resultado.Resumen = resultado.Avisos[^1];
                     break;
                 }
@@ -115,7 +115,7 @@ public static class Agent
                 catch (ArgumentException e)
                 {
                     // Un JSON torcido no es un fallo: se le enseña el error y se le pide otra vez, una sola.
-                    log?.Report($"La respuesta del modelo no vale ({e.Message}); se lo pido otra vez.");
+                    log?.Report(Lengua.T($"La respuesta del modelo no vale ({e.Message}); se lo pido otra vez.", $"The model's answer is not valid ({e.Message}); asking again.", options.Lang));
                     var reintento = new List<ChatMessage>(mensajes)
                     {
                         new("assistant", respuesta),
@@ -127,12 +127,12 @@ public static class Agent
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                resultado.Avisos.Add("Se ha cancelado antes de terminar.");
+                resultado.Avisos.Add(Lengua.T("Se ha cancelado antes de terminar.", "It was cancelled before finishing.", options.Lang));
                 break;
             }
             catch (Exception e)
             {
-                resultado.Avisos.Add($"El modelo no ha contestado bien: {Breve(e)}");
+                resultado.Avisos.Add(Lengua.T($"El modelo no ha contestado bien: {Breve(e)}", $"The model did not answer properly: {Breve(e)}", options.Lang));
                 resultado.Resumen = resultado.Avisos[^1];
                 log?.Report(resultado.Resumen);
                 break;
@@ -146,7 +146,7 @@ public static class Agent
             {
                 resultado.Ok = true;
                 resultado.Resumen = decision.Resumen.Length != 0 ? decision.Resumen : decision.Pensamiento;
-                log?.Report($"Terminado: {resultado.Resumen}");
+                log?.Report(Lengua.T($"Terminado: {resultado.Resumen}", $"Done: {resultado.Resumen}", options.Lang));
                 // A una pregunta se contesta: la respuesta cierra la narración del último paso.
                 if (options.EsPregunta && resultado.Pasos.Count != 0 && decision.Resumen.Length != 0)
                 {
@@ -160,8 +160,8 @@ public static class Agent
             if (decision.Accion == "fallo")
             {
                 resultado.Resumen = decision.Resumen.Length != 0 ? decision.Resumen : decision.Pensamiento;
-                resultado.Avisos.Add($"El agente se ha rendido: {resultado.Resumen}");
-                log?.Report($"No he podido: {resultado.Resumen}");
+                resultado.Avisos.Add(Lengua.T($"El agente se ha rendido: {resultado.Resumen}", $"The agent gave up: {resultado.Resumen}", options.Lang));
+                log?.Report(Lengua.T($"No he podido: {resultado.Resumen}", $"It could not: {resultado.Resumen}", options.Lang));
                 break;
             }
             if (decision.Accion == "esperar")
@@ -179,16 +179,16 @@ public static class Agent
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                resultado.Avisos.Add("Se ha cancelado antes de terminar.");
+                resultado.Avisos.Add(Lengua.T("Se ha cancelado antes de terminar.", "It was cancelled before finishing.", options.Lang));
                 break;
             }
             catch (Exception e)
             {
                 ultimo = $"la acción «{resumenTurno}» ha fallado: {Explicar(e)}";
-                log?.Report($"Falló: {ultimo}");
+                log?.Report(Lengua.T($"Falló: {ultimo}", $"Failed: {ultimo}", options.Lang));
                 if (++fallosSeguidos >= 4)
                 {
-                    resultado.Avisos.Add("Cuatro acciones seguidas han fallado; se deja aquí.");
+                    resultado.Avisos.Add(Lengua.T("Cuatro acciones seguidas han fallado; se deja aquí.", "Four actions in a row failed; it stops here.", options.Lang));
                     resultado.Resumen = resultado.Avisos[^1];
                     break;
                 }
@@ -198,7 +198,7 @@ public static class Agent
             if (paso is null)
             {
                 ultimo = $"no existe el elemento {decision.Ref}; usa solo los números de la lista actual.";
-                log?.Report($"El modelo ha pedido un elemento que no existe ({decision.Ref}).");
+                log?.Report(Lengua.T($"El modelo ha pedido un elemento que no existe ({decision.Ref}).", $"The model asked for an item that does not exist ({decision.Ref}).", options.Lang));
                 continue;
             }
             await AsentarAsync(page).ConfigureAwait(false);
