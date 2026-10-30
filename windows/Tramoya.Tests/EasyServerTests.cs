@@ -121,7 +121,7 @@ public class EasyServerTests : IDisposable
     public void AjustesSinFicheroSonLosDeFabrica()
     {
         var a = Proyectos.LeerAjustes(_o);
-        Assert.Equal("""{"idioma":"","voz":"","velocidad":0,"ritmo":"normal","tamano":"800p","srt":true,"dominios":[]}""",
+        Assert.Equal("""{"idioma":"","voz":"","velocidad":0,"ritmo":"normal","tamano":"800p","srt":true,"dominios":[],"ia_backend":"","ia_modelo":"","ia_url":"","ia_clave":""}""",
             Json.Dump(a, indent: false));
     }
 
@@ -549,7 +549,7 @@ public class EasyServerTests : IDisposable
         using var c = Cliente(s);
         var (code, a) = await Post(c, "/api/ajustes", """{"voz":"Helena","velocidad":-2,"dominios":"x.com y.com","nada":1}""");
         Assert.Equal(HttpStatusCode.OK, code);
-        Assert.Equal("""{"idioma":"","voz":"Helena","velocidad":-2,"ritmo":"normal","tamano":"800p","srt":true,"dominios":["x.com","y.com"]}""",
+        Assert.Equal("""{"idioma":"","voz":"Helena","velocidad":-2,"ritmo":"normal","tamano":"800p","srt":true,"dominios":["x.com","y.com"],"ia_backend":"","ia_modelo":"","ia_url":"","ia_clave":"","ia_clave_guardada":false,"ia_clave_fin":""}""",
             Json.Dump(a, indent: false));
         Assert.True(File.Exists(Path.Combine(_datos, "ajustes.json")));
         (code, var ok) = await Post(c, "/api/oir", """{"texto":"  Hola.  "}""");

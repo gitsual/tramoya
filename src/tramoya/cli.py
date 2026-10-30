@@ -269,7 +269,7 @@ def _current_profile() -> Profile | None:
 
 
 def _plan_for(args: argparse.Namespace):
-    backend = pick_backend(args.backend, model=args.model)
+    backend = pick_backend(args.backend, model=args.model, ajustes=_window_settings())
     return ask(backend, args.request, _visible_files(), profile=_current_profile())
 
 
@@ -417,6 +417,15 @@ def cmd_login(args: argparse.Namespace) -> int:
     return 0
 
 
+def _window_settings() -> dict:
+    """The AI settings saved by the window (`tramoya easy`), if it was ever used here."""
+    try:
+        from tramoya.easy.app import leer_ajustes
+    except Exception:  # noqa: BLE001  the window is optional
+        return {}
+    return leer_ajustes()
+
+
 def cmd_easy(args: argparse.Namespace) -> int:
     try:
         from tramoya.easy.app import main as easy_main
@@ -532,8 +541,8 @@ def build_parser() -> argparse.ArgumentParser:
     ):
         p = sub.add_parser(name, help=help_text)
         p.add_argument("request", help='e.g. "make the video from take.mp4 with the English voice"')
-        p.add_argument("--backend", choices=("ollama", "claude"), default=None,
-                       help="default: $TRAMOYA_LLM, else claude when $ANTHROPIC_API_KEY is set, "
+        p.add_argument("--backend", choices=("ollama", "claude", "openai"), default=None,
+                       help="default: the window's Settings → AI, else $TRAMOYA_LLM, else claude when $ANTHROPIC_API_KEY is set, "
                             "else ollama")
         p.add_argument("--model", default=None, help="model name; default: $TRAMOYA_LLM_MODEL")
         if name == "do":

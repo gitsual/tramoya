@@ -646,6 +646,28 @@ const TEXTOS = {
   hola_voz: {en: "Hello. This is how the voice of your videos will sound.", es: "Hola. Así sonará la voz de tus vídeos."},
   ajustes_ok: {en: "Settings saved.", es: "Ajustes guardados."},
   escritorio_ok: {en: "Done: Tramoya is on your desktop.", es: "Listo: tienes Tramoya en el escritorio."},
+  ia: {en: "AI", es: "IA"},
+  ia_sub: {en: "The model behind «Ask the AI». Everything runs where you say: on this computer with Ollama, on a server of yours, or with Claude.", es: "El modelo que hay detrás de «Pídeselo a la IA». Va donde digas: en este equipo con Ollama, en un servidor tuyo o con Claude."},
+  ia_auto: {en: "Automatic", es: "Automático"},
+  ia_auto_sub: {en: "Ollama on this computer, or Claude if ANTHROPIC_API_KEY is set.", es: "Ollama en este equipo, o Claude si está ANTHROPIC_API_KEY."},
+  ia_openai: {en: "OpenAI-compatible", es: "Compatible con OpenAI"},
+  ia_off: {en: "Off", es: "Apagada"},
+  ia_off_sub: {en: "The «Ask the AI» card is hidden.", es: "La tarjeta «Pídeselo a la IA» no sale."},
+  ia_url_ollama: {en: "Ollama address", es: "Dirección de Ollama"},
+  ia_url_openai: {en: "Server address (ends in /v1)", es: "Dirección del servidor (termina en /v1)"},
+  ia_modelo: {en: "Model", es: "Modelo"},
+  ia_modelo_ph: {en: "Choose one or type its name", es: "Elige uno o escribe su nombre"},
+  ia_cargar: {en: "Load the list", es: "Cargar la lista"},
+  ia_modelos_n: {en: "{n} models on the server.", es: "{n} modelos en el servidor."},
+  ia_clave: {en: "API key", es: "Clave de API"},
+  ia_clave_ph: {en: "Paste the key", es: "Pega la clave"},
+  ia_clave_guardada: {en: "Saved (…{fin}). Leave empty to keep it.", es: "Guardada (…{fin}). Déjalo vacío para conservarla."},
+  ia_clave_borrar: {en: "Remove the key", es: "Quitar la clave"},
+  ia_clave_nota: {en: "Kept only in this computer's settings file; never shown again.", es: "Solo se guarda en el archivo de ajustes de este equipo; no se vuelve a enseñar."},
+  ia_probar: {en: "Test connection", es: "Probar la conexión"},
+  ia_probando: {en: "Asking the model…", es: "Preguntando al modelo…"},
+  ia_ok: {en: "{m} answered in {s} s: “{r}”", es: "Ha contestado {m} en {s} s: «{r}»"},
+  ia_mal: {en: "No answer: {e}", es: "Sin respuesta: {e}"},
 };
 let LANG = "en";
 const T_ = (k, v) => t(k, v);  // inside grabar() and video() `t` is the task
@@ -1213,6 +1235,21 @@ function ajustes() {
     <p style="margin-bottom:8px">${t("valen_todos")}</p>
     <div class="ajuste"><b>${t("idioma")}</b><small>${t("idioma_sub")}</small>
       ${seg("idioma", [["en", "English"], ["es", "Español"]])}</div>
+    <div class="ajuste" id="a-ia"><b>${t("ia")}</b><small>${t("ia_sub")}</small>
+      ${seg("ia_backend", [["", t("ia_auto")], ["ollama", "Ollama"], ["claude", "Claude"], ["openai", t("ia_openai")], ["off", t("ia_off")]])}
+      <small class="ia-solo" data-para="" style="margin-top:8px">${t("ia_auto_sub")}</small>
+      <small class="ia-solo" data-para="off" style="margin-top:8px">${t("ia_off_sub")}</small>
+      <label class="campo ia-solo" data-para="ollama openai" style="margin-top:12px"><span id="a-ia-url-t"></span>
+        <input type="text" id="a-ia-url" value="${esc(a.ia_url || "")}" spellcheck="false"></label>
+      <label class="campo ia-solo" data-para="ollama claude openai"><span>${t("ia_modelo")}</span>
+        <div style="display:flex;gap:8px"><input type="text" id="a-ia-modelo" list="a-ia-lista" value="${esc(a.ia_modelo || "")}" placeholder="${t("ia_modelo_ph")}" spellcheck="false" style="flex:1">
+        <button class="btn" id="a-ia-cargar" type="button">${t("ia_cargar")}</button></div>
+        <datalist id="a-ia-lista"></datalist><small id="a-ia-n"></small></label>
+      <label class="campo ia-solo" data-para="claude openai"><span>${t("ia_clave")}</span>
+        <input type="password" id="a-ia-clave" autocomplete="off" placeholder="${t("ia_clave_ph")}" spellcheck="false">
+        <small>${a.ia_clave_guardada ? t("ia_clave_guardada", {fin: esc(a.ia_clave_fin || "")}) + ` <a href="#" id="a-ia-borrar">${t("ia_clave_borrar")}</a>` : t("ia_clave_nota")}</small></label>
+      <div class="ia-solo" data-para=" ollama claude openai" style="margin-top:4px"><button class="btn" id="a-ia-probar" type="button">${ico("bombilla")} ${t("ia_probar")}</button>
+        <p class="pista" id="a-ia-resultado" style="margin:10px 0 0"></p></div></div>
     ${INICIO.voces.length ? `<div class="ajuste"><b>${t("voz")}</b><small>${t("voz_sub")}</small>
       <select id="a-voz">${INICIO.voces.map((v) => `<option value="${esc(v)}" ${v === (a.voz || vozDelIdioma()) ? "selected" : ""}>${esc(nombreVoz(v))} · ${esc((v.split(" - ")[1] || "").trim())}</option>`).join("")}</select>
       <div style="margin-top:14px"><b style="font-weight:500">${t("velocidad")}</b>
@@ -1243,7 +1280,48 @@ function ajustes() {
   const leer = () => {
     if ($("#a-voz", d)) { a.voz = $("#a-voz", d).value; a.velocidad = Number($("#a-vel", d).value); }
     a.srt = $("#a-srt", d).checked; a.dominios = $("#a-dom", d).value;
+    a.ia_url = $("#a-ia-url", d).value.trim(); a.ia_modelo = $("#a-ia-modelo", d).value.trim();
+    a.ia_clave = $("#a-ia-clave", d).value.trim();
   };
+  // --- the AI section: which fields show, the model list, the test
+  const iaVista = () => {
+    const b = a.ia_backend || "";
+    d.querySelectorAll(".ia-solo").forEach((el) => {
+      const para = el.dataset.para.split(" ");
+      el.style.display = (b === "" ? para.includes("") : para.includes(b)) ? "" : "none";
+    });
+    $("#a-ia-url-t", d).textContent = b === "openai" ? t("ia_url_openai") : t("ia_url_ollama");
+    $("#a-ia-url", d).placeholder = b === "openai" ? "http://127.0.0.1:1234/v1" : "http://localhost:11434";
+  };
+  const borrador = () => ({ia_backend: a.ia_backend || "", ia_url: $("#a-ia-url", d).value.trim(),
+    ia_modelo: $("#a-ia-modelo", d).value.trim(), ia_clave: $("#a-ia-clave", d).value.trim()});
+  const cargarModelos = async () => {
+    const r = await api("/api/ia/modelos", borrador());
+    const n = $("#a-ia-n", d);
+    if (r.error) { n.textContent = t("ia_mal", {e: r.error}); return; }
+    $("#a-ia-lista", d).innerHTML = (r.modelos || []).map((m) => `<option value="${esc(m)}">`).join("");
+    n.textContent = t("ia_modelos_n", {n: (r.modelos || []).length});
+    if (!$("#a-ia-modelo", d).value && r.modelo) $("#a-ia-modelo", d).placeholder = r.modelo;
+  };
+  $("#a-ia-cargar", d).onclick = cargarModelos;
+  $("#a-ia-probar", d).onclick = async () => {
+    const res = $("#a-ia-resultado", d);
+    res.textContent = t("ia_probando");
+    const r = await api("/api/ia/probar", borrador());
+    res.textContent = r.ok ? "✓ " + t("ia_ok", {m: r.modelo, s: (r.ms / 1000).toFixed(1), r: r.respuesta}) : "✗ " + t("ia_mal", {e: r.error});
+  };
+  const borrar = $("#a-ia-borrar", d);
+  if (borrar) borrar.onclick = (e) => { e.preventDefault(); a.ia_clave_borrar = true; borrar.parentElement.textContent = t("ia_clave_nota"); };
+  let antes = a.ia_backend || "";
+  d.querySelector('.segmentos[data-clave="ia_backend"]').addEventListener("click", () => {
+    // The model and the address belong to the backend they were written for.
+    if ((a.ia_backend || "") !== antes) { $("#a-ia-modelo", d).value = ""; $("#a-ia-url", d).value = ""; antes = a.ia_backend || ""; }
+    iaVista(); $("#a-ia-lista", d).innerHTML = ""; $("#a-ia-n", d).textContent = ""; $("#a-ia-resultado", d).textContent = "";
+    if (["ollama", "openai"].includes(a.ia_backend || "")) cargarModelos();
+  });
+  iaVista();
+  if (["", "ollama"].includes(a.ia_backend || "")) cargarModelos();
+
   const probar = $("#a-probar", d);
   if (probar) probar.onclick = async () => {
     leer();
@@ -1257,7 +1335,7 @@ function ajustes() {
   d.onclick = (e) => { if (e.target === d) cerrar(); };
   $("#a-ok", d).onclick = async () => {
     leer(); INICIO.ajustes = await api("/api/ajustes", a); cerrar();
-    LANG = INICIO.ajustes.idioma || LANG; traducirFijos(); pintarLista(); avisar(t("ajustes_ok")); pintar();
+    LANG = INICIO.ajustes.idioma || LANG; await cargarInicio(); avisar(t("ajustes_ok")); pintar();
   };
 }
 

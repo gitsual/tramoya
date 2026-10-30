@@ -85,9 +85,13 @@ public static class Tareas
         return psi;
     }
 
-    private static Process Lanzar(ServerOptions o, string pid, IEnumerable<string> argv, bool entrada = false)
+    /// <summary>The variable that carries the settings' API key to the agent's process.</summary>
+    public const string VariableClave = "TRAMOYA_IA_CLAVE";
+
+    private static Process Lanzar(ServerOptions o, string pid, IEnumerable<string> argv, bool entrada = false, string clave = "")
     {
         var psi = Preparar(o, argv, Proyectos.Carpeta(o, pid), tuberias: true);
+        if (clave.Length != 0) psi.Environment[VariableClave] = clave;
         psi.RedirectStandardInput = entrada;
         if (entrada) psi.StandardInputEncoding = new UTF8Encoding(false);
         return Process.Start(psi) ?? throw new InvalidOperationException($"No se ha podido lanzar {psi.FileName}");
@@ -398,9 +402,11 @@ public static class Tareas
         // retocarlo y repetir, y queda constancia de qué se le pidió.
         p["objetivo"] = objetivo;
         Proyectos.Guardar(o, pid, p);
+        // The API key does not travel on the command line (anyone can list it): it goes in the environment.
+        var ajustes = Proyectos.LeerAjustes(o);
         string[] argv = ["agente", Proyectos.Carpeta(o, pid), Pasos.Str(p, "url"), PerfilWeb(o),
-            Json.Dump(Proyectos.LeerAjustes(o), indent: false), objetivo];
-        var proc = Lanzar(o, pid, argv);
+            Json.Dump(Ia.SinClave(ajustes), indent: false), objetivo];
+        var proc = Lanzar(o, pid, argv, clave: Ia.Str(ajustes, Ia.KClave));
         lock (Cerrojo)
             Mapa[pid] = new Entrada
             {
@@ -457,7 +463,7 @@ public static class Tareas
                     },
                 };
             }
-        }, e => Fallo(o, pid, proc, "No he podido guardar lo que ha hecho la IA en el proyecto", e, cola));
+        }, e => Fallo(o, pid, proc, Lengua.T("No he podido guardar lo que ha hecho la IA en el proyecto", "What the AI did could not be saved in the project"), e, cola));
     }
 
     private static readonly HttpClient Sonda = new() { Timeout = TimeSpan.FromSeconds(1) };
@@ -469,16 +475,29 @@ public static class Tareas
     /// </summary>
     internal static Func<bool> ModeloDisponible { get; set; } = ModeloDisponibleDefecto;
 
+    private static JsonObject? _ajustesSonda;
+
     private static bool ModeloDisponibleDefecto()
     {
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY"))) return true;
         try
         {
-            var url = Backends.UrlOllama(Environment.GetEnvironmentVariable("OLLAMA_HOST"));
+            var ia = Ia.Elegir(null, null, _ajustesSonda);
+            if (ia.Backend == "off") return false;
+            if (ia.Backend == "claude") return ia.Key.Length != 0;
+            if (ia.Backend == "openai")
+            {
+                if (ia.Url.Length == 0) return false;
+                using var m = Sonda.GetAsync($"{ia.Url}/models").GetAwaiter().GetResult();
+                return (int)m.StatusCode < 500;
+            }
             // /api/version responde al instante; /api/tags recorre los manifiestos de cada
             // modelo y en un disco lento tarda segundos, más que la sonda.
-            using var r = Sonda.GetAsync($"{url}/api/version").GetAwaiter().GetResult();
+            using var r = Sonda.GetAsync($"{ia.Url}/api/version").GetAwaiter().GetResult();
             return r.IsSuccessStatusCode;
+        }
+        catch (ArgumentException)
+        {
+            return false; // un backend desconocido en los ajustes: sin tarjeta
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException or UriFormatException)
         {
@@ -492,8 +511,11 @@ public static class Tareas
     /// </summary>
     public static bool HayModelo(ServerOptions o)
     {
+        var ajustes = Proyectos.LeerAjustes(o);
+        if (Ia.Apagada(ajustes)) return false;
         lock (Oyendo)
         {
+            _ajustesSonda = ajustes;
             if (_modelo is { } m && m.Hasta > DateTime.UtcNow) return m.Valor;
         }
         var valor = ModeloDisponible();
@@ -513,7 +535,7 @@ public static class Tareas
         var p = Proyectos.Leer(o, pid);
         p["voz"] = voz;
         p["mis_videos"] = o.MisVideos;
-        p["ajustes"] = Proyectos.LeerAjustes(o);
+        p["ajustes"] = Ia.SinClave(Proyectos.LeerAjustes(o));
         Proyectos.Guardar(o, pid, p);
         List<string> argv = ["video", Proyectos.Carpeta(o, pid)];
         if (voz) argv.Add("--voz");
@@ -673,6 +695,12 @@ public static class Tareas
     }
 
     /// <summary>Para los tests: olvida la caché de voces y cualquier tarea de otra prueba.</summary>
+    /// <summary>The AI settings changed: ask again whether a model answers.</summary>
+    public static void OlvidarModelo()
+    {
+        lock (Oyendo) _modelo = null;
+    }
+
     internal static void Reiniciar()
     {
         CancelarTodas();

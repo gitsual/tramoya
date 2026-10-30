@@ -41,8 +41,9 @@ internal static class Cli
         Profile profile, string @out, double? pace, bool rehearse, string? lang,
         string? url, string? launch, string? storageState, bool headless);
 
+    // ask/do: --backend and --model, then the window's AI settings, then the environment.
     internal static Func<string?, string?, IBackend> PickBackend { get; set; } =
-        (name, model) => Assistant.PickBackend(name, model: model);
+        (name, model) => Assistant.PickBackend(name, model: model, ajustes: Proyectos.LeerAjustes(EasyHost.Options()));
 
     internal static Func<string[], int> RunStep { get; set; } = RunStepDefault;
 
@@ -68,7 +69,7 @@ internal static class Cli
     private static Task<AgentResult> RunAgentDefault(string url, AgentOptions options,
         string? backendName, string? model, JsonObject ajustes, string authPath) =>
         Engine.CorrerAgenteAsync(url, Paths.PerfilWeb, options, ajustes, authPath,
-            Backends.Pick(backendName, model), new StderrProgress(), CancellationToken.None);
+            Backends.Desde(Ia.Elegir(backendName, model, ajustes)), new StderrProgress(), CancellationToken.None);
 
     private static int CmdAgent(ParsedArgs args)
     {
@@ -84,12 +85,9 @@ internal static class Cli
         }
         if (args.Flag("dry_run"))
         {
-            var backend = args.Get("backend") ?? Environment.GetEnvironmentVariable("TRAMOYA_LLM");
-            if (string.IsNullOrEmpty(backend))
-                backend = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")) ? "ollama" : "claude";
-            var model = args.Get("model") ?? Environment.GetEnvironmentVariable("TRAMOYA_LLM_MODEL");
-            if (string.IsNullOrEmpty(model)) model = backend == "ollama" ? "qwen3-coder:30b" : Assistant.DefaultClaudeModel;
-            Console.WriteLine($"backend: {backend}\nmodel: {model}\nurl: {url}\ngoal: {goal}\nmax steps: {maxPasos}\nlanguage: {lang}");
+            // The same choice the run would make: flag, then the window's settings, then the environment.
+            var ia = Ia.Elegir(args.Get("backend"), args.Get("model"), Proyectos.LeerAjustes(EasyHost.Options()));
+            Console.WriteLine($"backend: {ia.Backend}\nmodel: {ia.Model}\nurl: {url}\ngoal: {goal}\nmax steps: {maxPasos}\nlanguage: {lang}");
             return 0;
         }
         if (EnsureBrowser() is { } missing) return missing;
@@ -904,8 +902,8 @@ internal static class Cli
         {
             p = ap.AddSubparser("command", name, help: helpText);
             p.Add("request", help: "e.g. \"make the video from take.mp4 with the English voice\"");
-            p.Add("--backend", choices: new[] { "ollama", "claude" },
-                  help: "default: $TRAMOYA_LLM, else claude when $ANTHROPIC_API_KEY is set, else ollama");
+            p.Add("--backend", choices: new[] { "ollama", "claude", "openai" },
+                  help: "default: the window's Settings → AI, else $TRAMOYA_LLM, else claude when $ANTHROPIC_API_KEY is set, else ollama");
             p.Add("--model", help: "model name; default: $TRAMOYA_LLM_MODEL");
             if (name == "do")
             {
@@ -918,7 +916,7 @@ internal static class Cli
         p = ap.AddSubparser("command", "agent", help: "describe the process (or ask a question) and a model records it");
         p.Add("goal", help: "the process to show, or a question");
         p.Add("--url", required: true);
-        p.Add("--backend", choices: new[] { "ollama", "claude" });
+        p.Add("--backend", choices: new[] { "ollama", "claude", "openai" });
         p.Add("--model");
         p.Add("--max-pasos", kind: ArgKind.Int, @default: "25");
         p.Add("--nombre");

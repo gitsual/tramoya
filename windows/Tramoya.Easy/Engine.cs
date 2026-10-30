@@ -361,7 +361,10 @@ public static class Engine
             // el resultado y sin modelo no hay a quién preguntar.
             if (!Directory.Exists(carpeta)) throw new DirectoryNotFoundException($"no existe la carpeta {carpeta}");
             if (objetivo.Trim().Length == 0) throw new ArgumentException(Lengua.T("no me has dicho qué tiene que hacer", "you did not say what it has to do"));
-            var backend = Backends.Pick(Vacio(Pasos.Str(ajustes, "ia_backend")), Vacio(Pasos.Str(ajustes, "ia_modelo")));
+            // The key of the settings arrives through the environment, never on the command line.
+            var clave = Environment.GetEnvironmentVariable(Tareas.VariableClave);
+            if (!string.IsNullOrEmpty(clave)) ajustes[Ia.KClave] = clave;
+            var backend = Backends.Desde(Ia.Elegir(null, null, ajustes));
             var opciones = new AgentOptions(objetivo.Trim(), Lengua.Actual, MaxPasosAgente);
             var r = await CorrerAgenteAsync(url, perfil, opciones, ajustes, Path.Combine(carpeta, "auth.json"),
                 backend, new ProgresoAgente(MaxPasosAgente), CancellationToken.None).ConfigureAwait(false);

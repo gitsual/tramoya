@@ -34,6 +34,12 @@ public static class Proyectos
         ["tamano"] = "800p",
         ["srt"] = true,
         ["dominios"] = new JsonArray(),
+        // The AI: "" (decide from the environment), "off", "ollama", "claude" or "openai"; the model,
+        // the Ollama host or OpenAI-compatible URL, and the API key (never sent back to the window).
+        ["ia_backend"] = "",
+        ["ia_modelo"] = "",
+        ["ia_url"] = "",
+        ["ia_clave"] = "",
     };
 
     /// <summary>Segundos Unix con decimales, como <c>time.time()</c>.</summary>
@@ -104,9 +110,13 @@ public static class Proyectos
     public static JsonObject GuardarAjustes(ServerOptions o, JsonObject nuevos)
     {
         var a = LeerAjustes(o);
+        var claveAntes = Ia.Str(a, Ia.KClave);
         foreach (var (k, v) in nuevos)
             if (a.ContainsKey(k))
                 a[k] = v?.DeepClone();
+        // The window never sees the key: an empty field keeps the saved one, «ia_clave_borrar» removes it.
+        if (Ia.Str(a, Ia.KClave).Length == 0) a[Ia.KClave] = claveAntes;
+        if (nuevos["ia_clave_borrar"] is JsonValue borrar && borrar.TryGetValue<bool>(out var si) && si) a[Ia.KClave] = "";
         if (a["dominios"] is JsonValue dv && dv.TryGetValue<string>(out var texto))
         {
             var lista = new JsonArray();

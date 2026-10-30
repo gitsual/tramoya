@@ -27,6 +27,7 @@ import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from tramoya import ia
 from tramoya.easy import lengua
 
 
@@ -48,7 +49,7 @@ MIS_VIDEOS = CASA / "Mis vídeos" if (CASA / "Mis vídeos").is_dir() else CASA /
 UI = Path(__file__).resolve().parent / "ui" / "index.html"
 ICONO = Path(__file__).resolve().parent / "ui" / "tramoya.ico"
 AJUSTES = DATOS / "ajustes.json"
-AJUSTES_DEFECTO = {"idioma": "", "voz": "", "velocidad": 0, "ritmo": "normal", "tamano": "800p", "srt": True,
+AJUSTES_DEFECTO = {"idioma": "", "ia_backend": "", "ia_modelo": "", "ia_url": "", "ia_clave": "", "voz": "", "velocidad": 0, "ritmo": "normal", "tamano": "800p", "srt": True,
                    "dominios": []}
 # pythonw (the kit launcher, no console) for the window; python for the workers
 PY = Path(sys.executable).with_name(Path(sys.executable).name.replace("pythonw", "python"))
@@ -106,9 +107,15 @@ def leer_ajustes() -> dict:
 
 def guardar_ajustes(nuevos: dict) -> dict:
     a = leer_ajustes()
+    clave_antes = a.get("ia_clave") or ""
     for k, v in nuevos.items():
         if k in AJUSTES_DEFECTO:
             a[k] = v
+    # The window never sees the key: an empty field keeps the saved one, ia_clave_borrar removes it.
+    if not (a.get("ia_clave") or "").strip():
+        a["ia_clave"] = clave_antes
+    if nuevos.get("ia_clave_borrar") is True:
+        a["ia_clave"] = ""
     if isinstance(a["dominios"], str):
         a["dominios"] = [d.strip() for d in re.split(r"[,\s]+", a["dominios"]) if d.strip()]
     AJUSTES.write_text(json.dumps(a, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -379,7 +386,7 @@ class H(BaseHTTPRequestHandler):
         if ruta == "/api/inicio":
             esc = escritorio()
             return self.responder({
-                "proyectos": lista(), "voces": voces(), "webs": webs(), "ajustes": leer_ajustes(), "idioma": lengua.actual(),
+                "proyectos": lista(), "voces": voces(), "webs": webs(), "ajustes": ia.publicos(leer_ajustes()), "idioma": lengua.actual(),
                 "windows": sys.platform == "win32", "carpeta": str(MIS_VIDEOS),
                 "acceso": bool(esc and (esc / "Tramoya.lnk").exists()),
                 # Pedírselo a la IA solo existe en la versión de Windows: aquí se oculta.
@@ -434,7 +441,21 @@ class H(BaseHTTPRequestHandler):
             guardados = guardar_ajustes(cuerpo)
             if guardados.get("idioma"):
                 lengua.fijar(guardados["idioma"])
-            return self.responder(guardados)
+            return self.responder(ia.publicos(guardados))
+        if ruta in ("/api/ia/modelos", "/api/ia/probar"):
+            guardados = leer_ajustes()
+            borrador = {**guardados, **{k: (cuerpo.get(k) or "").strip()
+                                        for k in ("ia_backend", "ia_modelo", "ia_url")}}
+            if (cuerpo.get("ia_clave") or "").strip():
+                borrador["ia_clave"] = cuerpo["ia_clave"].strip()
+            try:
+                elegida = ia.elegir(None, None, borrador)
+                if ruta == "/api/ia/modelos":
+                    return self.responder({"backend": elegida.backend, "url": elegida.url,
+                                           "modelo": elegida.model, "modelos": ia.modelos(elegida)})
+                return self.responder(ia.probar(elegida))
+            except Exception as exc:  # noqa: BLE001  shown to the person, never raised
+                return self.responder({"ok": False, "error": str(exc).splitlines()[0][:200]})
         if ruta == "/api/oir":
             texto = (cuerpo.get("texto") or "").strip()
             if texto:
