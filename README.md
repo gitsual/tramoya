@@ -13,10 +13,11 @@ The audience never sees it. The show runs on time because of it.</em>
 <p><strong>Narrated videos of how a web application is used,<br>made from a process done once, described in a sentence, or asked as a question.</strong></p>
 
 <p>
-  <img alt="version 1.2.0" src="https://img.shields.io/badge/version-1.2.0-1F1E1C?style=for-the-badge&labelColor=1F1E1C&color=E9A80E">
+  <img alt="version 1.3.0" src="https://img.shields.io/badge/version-1.3.0-1F1E1C?style=for-the-badge&labelColor=1F1E1C&color=E9A80E">
   <img alt="Windows, Linux, macOS" src="https://img.shields.io/badge/windows%20%C2%B7%20linux%20%C2%B7%20macos-0E2A47?style=for-the-badge&labelColor=0E2A47&color=245680">
-  <img alt="852 tests" src="https://img.shields.io/badge/tests-852-1F1E1C?style=for-the-badge&labelColor=1F1E1C&color=8FB5CC">
+  <img alt="876 tests" src="https://img.shields.io/badge/tests-876-1F1E1C?style=for-the-badge&labelColor=1F1E1C&color=8FB5CC">
   <img alt="runs offline" src="https://img.shields.io/badge/runs-offline-0E2A47?style=for-the-badge&labelColor=0E2A47&color=F0CB66">
+  <img alt="English and Spanish" src="https://img.shields.io/badge/english%20%C2%B7%20espa%C3%B1ol-0E2A47?style=for-the-badge&labelColor=0E2A47&color=E9A80E">
   <img alt="MIT" src="https://img.shields.io/badge/license-MIT-1F1E1C?style=for-the-badge&labelColor=1F1E1C&color=6F9FBC">
 </p>
 
@@ -30,6 +31,7 @@ The audience never sees it. The show runs on time because of it.</em>
 <a href="#the-assistant"><strong>Assistant</strong></a> ·
 <a href="#pipeline"><strong>Pipeline</strong></a> ·
 <a href="#architecture"><strong>Architecture</strong></a> ·
+<a href="#languages"><strong>Languages and AI</strong></a> ·
 <a href="#install"><strong>Install</strong></a> ·
 <a href="#verification"><strong>Verification</strong></a> ·
 <a href="#status-and-limits"><strong>Limits</strong></a>
@@ -59,8 +61,8 @@ There are three ways to get the list:
 
 It ships as two implementations of the same tool that read and write the same files:
 
-- **Windows**: `Tramoya.exe`, one program in C#/.NET 9 with a window, its own Chromium and ffmpeg, the Windows
-  voices and the AI agent. Nothing to install, no administrator rights.
+- **Windows**: `Tramoya.exe`, one program in C#/.NET 9 with a window in English or Spanish, its own Chromium and
+  ffmpeg, the Windows voices and the AI agent. Nothing to install, no administrator rights.
 - **Linux and macOS**: the `tramoya` Python package, a command-line pipeline with a zero-dependency core, Kokoro
   voices, and the same window in a browser.
 
@@ -73,42 +75,43 @@ the same computer.
 
 ## Tutorial
 
-Three minutes, in Spanish, of the Windows application. Tramoya recorded it: a profile drives the application's own
-window on a clean install, the Windows voice reads the narration, `assemble` cuts it. Inside the tutorial, the AI
-records a second video of its own on the notes app of the examples. Nothing in either video was edited by hand.
+Four minutes, in English, of the Windows application. Tramoya recorded it: a profile drives the application's own
+window on a clean install, the Windows voice reads the narration, `assemble` cuts it. On the way it shows the new
+*Settings*: the language and the AI, with a real connection test. Inside the tutorial, the AI records a second video of
+its own on the notes app of the examples. Nothing in either video was edited by hand.
 
 <p align="center">
-  <a href="assets/video/tramoya-tutorial.mp4"><img src="assets/gifs/tutorial.gif" alt="The Tramoya window recorded by Tramoya: the stage, the settings, a new video, asking the AI, the script it wrote, the finished video" width="760"></a>
+  <a href="assets/video/tramoya-tutorial.mp4"><img src="assets/gifs/tutorial.gif" alt="The Tramoya window recorded by Tramoya, in English: the stage, the settings, a new video, asking the AI, the script it wrote, the finished video" width="760"></a>
 </p>
 
 <p align="center"><sub>Preview without sound.
-<a href="assets/video/tramoya-tutorial.mp4"><b>Tutorial with narration</b></a> (3:09) ·
+<a href="assets/video/tramoya-tutorial.mp4"><b>Tutorial with narration</b></a> (4:03) ·
 <a href="assets/video/tutorial-the-ai-made-this.mp4"><b>The video the AI made inside it</b></a> ·
-<a href="assets/video/ask-where.mp4"><b>A question answered by the AI</b></a> (0:22)</sub></p>
+<a href="assets/video/ask-where.mp4"><b>A question answered by the AI</b></a> (0:15)</sub></p>
 
 The window is a small theatre. The home screen raises the curtain; the three steps are three acts with the
 spotlight on the one in progress; the steps of a video are a script, each with its stage direction in brackets and
 the line the voice will say; the AI and the finished video come out on stage.
 
 <p align="center">
-  <img src="assets/easy/telon-arriba.png" alt="Home screen: a stage with pleated curtains, a valance, a spotlight on the headline «Haz un vídeo de cualquier proceso» and the boards underneath" width="49%">
-  <img src="assets/easy/la-ia-en-escena.png" alt="The AI doing the process: the acts strip lit on Grabar, a stage panel with the step counter and the last step it took" width="49%">
-  <img src="assets/easy/el-guion.png" alt="The script: each step numbered like a cue, its stage direction in brackets and the sentence the voice will say" width="49%">
-  <img src="assets/easy/estreno.png" alt="The premiere: the finished video under a valance, on the stage" width="49%">
+  <img src="assets/easy/curtain-up.png" alt="Home screen: a stage with pleated curtains, a valance, a spotlight on the headline «Make a video of any process» and the boards underneath" width="49%">
+  <img src="assets/easy/the-ai-on-stage.png" alt="The AI doing the process: the acts strip lit on Record, a stage panel with the step counter and the last step it took" width="49%">
+  <img src="assets/easy/the-script.png" alt="The script: each step numbered like a cue, its stage direction and the sentence the voice will say" width="49%">
+  <img src="assets/easy/premiere.png" alt="The premiere: the finished video under a valance, on the stage" width="49%">
 </p>
 
-<p align="center"><sub>Curtain up · the AI on stage · the script · the premiere. Screenshots of the window itself.</sub></p>
+<p align="center"><sub>Curtain up · the AI on stage · the script · the premiere. Frames of the tutorial's take: the window itself, with the stage's caption band.</sub></p>
 
 | In the tutorial | What it shows |
 |---|---|
-| Settings | A Windows voice and its speed, a preview, optional subtitles, and the domains allowed to use Windows sign-in. |
+| Settings | The language of the window; the AI (Ollama here, tested: «qwen3-coder:30b answered»); a Windows voice and its speed, a preview, optional subtitles, and the domains allowed to use Windows sign-in. |
 | A new video | A name and the address of any web page: an intranet, a SaaS tool, an application on `localhost`. |
-| «O pídeselo a la IA» | One paragraph typed into the window. The model opened the page, made seven correct steps and wrote the sentence of each. |
+| «Or ask the AI» | One paragraph typed into the window. The model opened the page, made seven correct steps and wrote the sentence of each, in English. |
 | The script it wrote | The same review screen as a recorded process: every sentence can be changed, every step removed or set to *point without pressing*. |
 | The video | Replayed, voiced and cut, with an `.srt` next to it. Any wait longer than twenty seconds is compressed to a few, with a caption that says how long it took. |
 
-[`examples/tramoya-sobre-tramoya/`](examples/tramoya-sobre-tramoya) is that tutorial as a profile and a script:
-`bash grabar.sh` makes it again.
+[`examples/tramoya-on-tramoya/`](examples/tramoya-on-tramoya) is that tutorial as a profile and a script:
+`bash record.sh` makes it again, and `bash record.sh es` makes the Spanish one.
 
 ---
 
@@ -117,44 +120,44 @@ the line the voice will say; the AI and the finished video come out on stage.
 ## Your first video, step by step
 
 For a person who knows the process (how to file an expense, approve a request, set up a report) and has never
-opened a terminal. Windows, no administrator rights, nothing to install. The window is in Spanish; button names are
-quoted as they appear.
+opened a terminal. Windows, no administrator rights, nothing to install. Button names are quoted as they appear in
+the English window; *Settings → Language* switches it to Spanish.
 
-**1. Download.** From the [v1.2.0 release](https://github.com/gitsual/tramoya/releases/tag/v1.2.0), take
-`Tramoya-1.2.0-windows.zip` (about 545 MB: the program, its own Chromium and ffmpeg, so nothing is downloaded
+**1. Download.** From the [v1.3.0 release](https://github.com/gitsual/tramoya/releases/tag/v1.3.0), take
+`Tramoya-1.3.0-windows.zip` (about 545 MB: the program, its own Chromium and ffmpeg, so nothing is downloaded
 later). On a network that cuts large downloads, take the six parts `….zip.part0` to `part5` and `unir.bat`, put them
 in one folder and double-click `unir.bat`; it joins the parts and unzips them.
 
 **2. Open.** Unzip anywhere and double-click `Tramoya.exe`. The program is not code-signed yet, so the first time
-Windows SmartScreen shows a warning: *Más información* → *Ejecutar de todas formas*. Settings, projects and finished
-videos (in *Mis vídeos*, next to `Tramoya.exe`) are kept inside that folder: it can be moved or copied to a USB
+Windows SmartScreen shows a warning: *More info* → *Run anyway*. Settings, projects and finished
+videos (in *My videos*, next to `Tramoya.exe`) are kept inside that folder: it can be moved or copied to a USB
 drive, and deleting it removes everything.
 
-**3. Act I, record (*Grabar*).**
-- *Empezar un vídeo*: a name («Cómo se pide un día libre») and the address of the page.
-- *Abrir la web*: a browser opens. Sign in as usual and go to where the process starts.
-- *Empezar a grabar*, and do the process once. Mistakes can be removed afterwards.
-- *Ya he terminado*, or close that browser.
+**3. Act I, *Record*.**
+- *Start a video*: a name («How to request a day off») and the address of the page.
+- *Open the website*: a browser opens. Sign in as usual and go to where the process starts.
+- *Start recording*, and do the process once. Mistakes can be removed afterwards.
+- *I am done*, or close that browser.
 
 > [!NOTE]
-> Nothing is recorded before *Empezar a grabar*, so a password never ends up in a step or a video. The browser keeps
+> Nothing is recorded before *Start recording*, so a password never ends up in a step or a video. The browser keeps
 > the session, so the next video starts signed in.
 
-**4. Act II, the script (*Explicar*).** Each click, typed value and choice comes back as a stage direction
-(«(Pulsa el botón «Guardar»)»). Write under each one what the narrator should say there, and listen to it. A typed
+**4. Act II, the script (*Explain*).** Each click, typed value and choice comes back as a stage direction
+(«Click the “Save” button»). Write under each one what the narrator should say there, and listen to it. A typed
 value can be changed (a sample name instead of a real one), steps can be removed, and a button can be set to
-*solo señalar*: the video points at it without pressing it. The last button that saves is set that way by default,
+*Point only, do not click*: the video points at it without pressing it. The last button that saves is set that way by default,
 so making the video never submits anything twice.
 
-**5. Act III, the video (*Vídeo*).** Choose the voice and press *Hacer el vídeo*. Tramoya replays the steps on the
-page by itself, reads the sentences and assembles the video; *Abrir el vídeo* plays it. If a step fails, the window
+**5. Act III, the *Video*.** Choose the voice and press *Make the video*. Tramoya replays the steps on the
+page by itself, reads the sentences and assembles the video; *Open the video* plays it. If a step fails, the window
 names it, gives the reason and opens it. When the application changes, the same project makes the new video.
 
 **Or describe it.** With a model available (see [below](#describe-it-or-ask)), the first act shows the card
-*O pídeselo a la IA*. Describe the process as you would to a colleague, and the model does it on the real page and
+*Or ask the AI*. Describe the process as you would to a colleague, and the model does it on the real page and
 leaves the script ready for Act II, to be reviewed as if it had been recorded.
 
-**Or ask.** Type a question («¿Dónde veo las notas que ya he terminado?») and the model does not run a process: it
+**Or ask.** Type a question («Where do I see the notes I have finished?») and the model does not run a process: it
 goes to the place, points at the element, says what it is for, and the answer closes the video.
 
 <details>
@@ -162,21 +165,22 @@ goes to the place, points at the element, says what it is for, and the answer cl
 
 | Message or symptom | What to do |
 |---|---|
-| «La sesión ha caducado» | *Abrir la web*, sign in again, close the browser, and make the video again. |
-| A step fails («no encuentro…») | The page changed, or the step was a one-off (a dialog that appears only sometimes). Remove or record that step again. |
+| «The session has expired» | *Open the website*, sign in again, close the browser, and make the video again. |
+| A step fails («it is not on the page…») | The page changed, or the step was a one-off (a dialog that appears only sometimes). Remove or record that step again. |
 | The window opens blank on a managed laptop | The window uses the Edge engine with no proxy, because it only talks to `127.0.0.1`. If a policy still blocks it, that is the address to allow. |
-| SmartScreen or an antivirus stops `Tramoya.exe` | The executable is not signed yet. *Ejecutar de todas formas*, or ask for it to be allowed. |
-| The voice sounds mechanical | *Ajustes*: another voice, a slower speed. Windows installs more voices under *Settings → Time & language → Speech*. |
+| SmartScreen or an antivirus stops `Tramoya.exe` | The executable is not signed yet. *Run anyway*, or ask for it to be allowed. |
+| The voice sounds mechanical | *Settings*: another voice, a slower speed. Windows installs more voices under *Settings → Time & language → Speech*. |
 </details>
 
 <details>
 <summary><b>La misma guía, en español</b></summary>
 
 Para quien sabe hacer el proceso y nunca ha abierto una terminal. Windows, sin permisos de administrador, sin
-instalar nada.
+instalar nada. La ventana sale en inglés: **Settings → Language → Español** la pone en español, y desde ese momento
+los pasos, los avisos, la IA y la voz van en español.
 
-1. **Descarga.** De la [versión 1.2.0](https://github.com/gitsual/tramoya/releases/tag/v1.2.0), baja
-   `Tramoya-1.2.0-windows.zip` (unos 545 MB, lo lleva todo dentro). Si tu red corta las descargas grandes, baja las
+1. **Descarga.** De la [versión 1.3.0](https://github.com/gitsual/tramoya/releases/tag/v1.3.0), baja
+   `Tramoya-1.3.0-windows.zip` (unos 545 MB, lo lleva todo dentro). Si tu red corta las descargas grandes, baja las
    seis partes `….zip.part0` … `part5` y `unir.bat` a la misma carpeta y haz doble clic en `unir.bat`.
 2. **Abre.** Descomprime donde quieras y haz doble clic en `Tramoya.exe`. La primera vez Windows avisa de que no está
    firmado: *Más información* → *Ejecutar de todas formas*.
@@ -186,10 +190,11 @@ instalar nada.
 4. **Acto II, el guion.** Cada paso vuelve como una acotación. Escribe debajo lo que dirá la voz y escúchalo; cambia
    un valor (un nombre de ejemplo en vez del real), quita los pasos que sobran o marca un botón como *solo señalar*.
 5. **Acto III, el vídeo.** Elige la voz y pulsa *Hacer el vídeo*. En un par de minutos está en la carpeta
-   *Mis vídeos*, con sus subtítulos al lado. Cuando cambie la web, se vuelve a hacer desde el mismo proyecto.
+   *My videos*, con sus subtítulos al lado. Cuando cambie la web, se vuelve a hacer desde el mismo proyecto.
 
 **O pídeselo a la IA:** describe el proceso como se lo pedirías a un compañero; la IA lo hace en la web y te deja el
 guion con sus frases para revisarlo. **O pregúntale** «¿dónde está…?»: te lleva hasta allí, lo señala y lo explica.
+Para grabar el tutorial en español: `bash examples/tramoya-on-tramoya/record.sh es`.
 </details>
 
 ---
@@ -210,28 +215,37 @@ decides one action, performs it, and writes the sentence of that step:
    Playwright's own generator (role and accessible name first, never generated ids). The result is an ordinary
    project of the window: the same script to review, the same video.
 
-If the objective is a question (it starts with *¿*, *dónde*, *cómo*, *qué*, or ends with *?*), the agent switches
-to **question mode**: it changes nothing on the page, navigates to the answer, uses `señalar` (hover and point, never
+If the objective is a question (it starts with *where*, *how*, *what*, *which*, *¿*, *dónde*, *cómo*, *qué*, or ends
+with *?*), the agent switches to **question mode**: it changes nothing on the page, navigates to the answer, uses `señalar` (hover and point, never
 press), and the answer is spoken at the end of the video.
 
 ```
-Tramoya.exe agent "Enseña cómo se apunta una nota: pulsa Nueva nota, escribe el título Compra y el texto Leche y pan, guárdala, búscala y márcala como hecha" --url http://127.0.0.1:8770/index.html --video --voz
-Tramoya.exe agent "¿Dónde veo las notas que ya he terminado?" --url http://127.0.0.1:8770/index.html --video --voz
+Tramoya.exe agent "Show how a note is added: click New note, type the title Shopping and the text Milk and bread, save it, find it and mark it as done" --url http://127.0.0.1:8770/index.html --video --voz
+Tramoya.exe agent "Where do I see the notes I have finished?" --url http://127.0.0.1:8770/index.html --video --voz
+Tramoya.exe agent "¿Dónde veo las notas que ya he terminado?" --url http://127.0.0.1:8770/index.html --video --voz --lang es
 ```
 
-| Measured on the notes example, local `qwen3-coder:30b` through Ollama | Result |
+| Measured on the notes example in 1.2.0 (in Spanish), local `qwen3-coder:30b` through Ollama | Result |
 |---|---|
 | The process of the tutorial, described in one paragraph, in three recordings | 7 steps every time, all correct, each with its sentence |
 | The same question, asked five times | 5 of 5 opened the *Done* view and answered; each points at a finished note's *Undo* button rather than at the list |
 | A model answer that broke the protocol (a repeated JSON key) | recovered on the next turn; since 1.0 a repeated key is accepted |
 
-| Backend | Selection | Default model |
-|---|---|---|
-| Ollama, local | default; `--backend ollama`; `OLLAMA_HOST` | `qwen3-coder:30b` |
-| Claude API | `ANTHROPIC_API_KEY`; `--backend claude` | `claude-sonnet-5-5` |
+| Backend | In the window | Command line, environment | Default model |
+|---|---|---|---|
+| Ollama, on this computer or another | *Settings → AI → Ollama*: address and model | `--backend ollama`; `OLLAMA_HOST` | `qwen3-coder:30b` |
+| Claude API | *Settings → AI → Claude*: model and API key | `--backend claude`; `ANTHROPIC_API_KEY` | `claude-sonnet-5-5` |
+| Any OpenAI-compatible server (LM Studio, llama.cpp, vLLM, LiteLLM, OpenAI) | *Settings → AI → OpenAI-compatible*: address (`…/v1`), model, key if it needs one | `--backend openai`; `OPENAI_BASE_URL`, `OPENAI_API_KEY` | the server's |
+| None | *Settings → AI → Off*: the «Ask the AI» card is hidden | | |
 
-Options: `--model`, `--max-pasos`, `--nombre`, `--video`, `--voz`, `--capturas` (sends a screenshot to models that
-accept images), `--dry-run`. `TRAMOYA_HEADLESS=1` runs every browser without a window: the tutorial and the question
+The order is the same for every choice: a flag, then the window's settings, then the environment, then the defaults.
+`tramoya ask` and `do` read the same settings. The model field lists what the server offers (Ollama's `/api/tags`,
+the server's `/models`) and takes any name; *Test connection* asks one short question and says which model answered
+and how long it took.
+
+Options: `--lang en|es` (the language of the steps, the sentences, the answer and the voice; English by default),
+`--model`, `--max-pasos`, `--nombre`, `--video`, `--voz`, `--capturas` (sends a screenshot to models that accept
+images), `--dry-run`. `TRAMOYA_HEADLESS=1` runs every browser without a window: the tutorial and the question
 above were recorded that way while the machine was in use. Without a model, the window hides the AI card and nothing
 else changes. The model reads what the page says, so buttons with visible text, `aria-label` or `title` give better
 videos and better answers.
@@ -537,27 +551,63 @@ optional dependency or an injectable function, so tests never open a socket or e
 
 ---
 
+<a id="languages"></a>
+
+## Languages and AI, in the window
+
+Everything Tramoya can be told is in its own *Settings*, not only in flags or variables: the language, the voice, the
+pace and size of the video, the subtitles, and the AI.
+
+<p align="center">
+  <img src="assets/easy/settings-ai.png" alt="The Settings dialog: Language (English, Español) and AI (Automatic, Ollama, Claude, OpenAI-compatible, Off), the Ollama address, the model, Test connection and the model that answered" width="560">
+</p>
+
+The API key is kept only in the settings file next to the program (`app/datos/ajustes.json` in the kit): the window
+gets back whether there is one and its last four characters, an empty field keeps it, and it reaches the agent's
+process through the environment, never a command line or a project file. The backends, and how a flag, the settings
+and the environment are weighed, are in [the agent's section](#describe-it-or-ask).
+
+### Languages
+
+Tramoya speaks English by default and Spanish when asked, everywhere a person reads or hears it:
+
+| | English (default) | Español |
+|---|---|---|
+| The window | every screen, message and button | *Settings → Language → Español*, saved with the other settings |
+| The steps it writes | «Click the “Save” button» · «Type “Milk” in the “Title” field» | «Pulsa el botón «Guardar»» · «Escribe «Leche» en el campo «Título»» |
+| The AI | sentences and answers in English; recognises *where / how / what* questions | frases y respuestas en español; reconoce *¿dónde / cómo / qué…?* |
+| The voice | the first English Windows voice (Zira on most systems) | the first Spanish one (Helena) |
+| Command line | `Tramoya.exe easy --lang en` · `agent --lang en` | `--lang es` |
+| Narration of a profile | `[demo] languages = ["en", "es"]`, one `tts` and `assemble` per language | |
+
+A language saved in the window wins over `--lang`; without one, `--lang`, then `TRAMOYA_LANG`, then English. The
+window keeps its finished videos in *My videos* (a folder made by an earlier version keeps its name, *Mis vídeos*).
+The internal names of the files (`proyecto.json`, `ajustes.json`) did not change, so projects made in 1.2 open in 1.3.
+
+---
+
 <a id="install"></a>
 
 ## Install
 
-**Windows.** Download `Tramoya-1.2.0-windows.zip` from the
-[release](https://github.com/gitsual/tramoya/releases/tag/v1.2.0), unzip, run `Tramoya.exe`. Everything it needs is
+**Windows.** Download `Tramoya-1.3.0-windows.zip` from the
+[release](https://github.com/gitsual/tramoya/releases/tag/v1.3.0), unzip, run `Tramoya.exe`. Everything it needs is
 in the folder: `Tramoya.exe`, the Playwright driver, Chromium, ffmpeg and the licences of the fonts. Data and videos
 stay in the folder. The command line is the same executable:
 
 ```
 Tramoya.exe                                     the window
 Tramoya.exe direct tramoya.toml --out out       any subcommand; the console attaches when there are arguments
-Tramoya.exe tts --script out/script.json --lang es --out-dir out/voices/es
+Tramoya.exe easy --lang es                      the window in Spanish (until Settings says otherwise)
+Tramoya.exe tts --script out/script.json --lang en --out-dir out/voices/en
 Tramoya.exe agent "<objective or question>" --url <page> --video --voz
 ```
 
 **Linux and macOS.** Pin the tag: the package is installed from git and the tag is the contract.
 
 ```bash
-pip install "tramoya @ git+https://github.com/gitsual/tramoya@v1.2.0"                       # core, no dependencies
-pip install "tramoya[playwright,tts,easy] @ git+https://github.com/gitsual/tramoya@v1.2.0"  # stage, voice, window
+pip install "tramoya @ git+https://github.com/gitsual/tramoya@v1.3.0"                       # core, no dependencies
+pip install "tramoya[playwright,tts,easy] @ git+https://github.com/gitsual/tramoya@v1.3.0"  # stage, voice, window
 python -m playwright install chromium
 ```
 
@@ -580,7 +630,7 @@ brew install ffmpeg                                              # macOS: use di
 
 ```powershell
 dotnet test windows/Tramoya.Tests -c Release
-powershell -File windows/publish.ps1 -Ffmpeg <folder with ffmpeg.exe and ffprobe.exe>   # -> windows/dist/Tramoya-1.2.0-windows.zip
+powershell -File windows/publish.ps1 -Ffmpeg <folder with ffmpeg.exe and ffprobe.exe>   # -> windows/dist/Tramoya-1.3.0-windows.zip
 ```
 
 **Rendering this page's assets.** `scripts/render_brand.py` draws the logos, the diagram, the cards and the
@@ -593,13 +643,13 @@ filmstrip from HTML with the window's fonts; `scripts/render-assets.sh` records 
 
 ## Verification
 
-| Suite | Command | Result for 1.2.0 |
+| Suite | Command | Result for 1.3.0 |
 |---|---|---|
-| Python, fast | `python -m pytest -q` | 306 passed, on Linux and on Windows; nothing encoded, no network |
+| Python, fast | `python -m pytest -q` | 313 passed on Windows; nothing encoded, no network |
 | Python, slow | `python -m pytest -q -m slow` | 1 passed: three real seconds through the whole pipeline |
-| C#, with browser tests | `TRAMOYA_BROWSER_TESTS=1 dotnet test windows/Tramoya.Tests -c Release` | 531 passed, 14 skipped (Linux-only: `/proc`, `wf-recorder`, Python director) |
+| C#, with browser tests | `TRAMOYA_BROWSER_TESTS=1 dotnet test windows/Tramoya.Tests -c Release` | 548 passed, 14 skipped (Linux-only: `/proc`, `wf-recorder`, Python director) |
 | Cross-implementation | the notes profile through both, then `snapshots diff` | snapshots match |
-| End to end | the [tutorial](#tutorial), the question, the notes demo and the walkthrough | recorded, voiced and assembled by the released program |
+| End to end | the [tutorial](#tutorial), the AI's video and the question, in English | recorded, voiced and assembled by the 1.3.0 program |
 
 Every picture on this page is the program's own output, or drawn from HTML by `scripts/render_brand.py` (the logos,
 the diagram, the filmstrip's frame). The window screenshots are the window; the terminal GIFs are asciinema
@@ -611,12 +661,13 @@ recordings of the installed command; the videos were directed, voiced and cut by
 
 ## Status and limits
 
-Version 1.2.0. The file formats (`tramoya.toml`, `marks.json`, `script.json`, the step language, the window's
+Version 1.3.0. The file formats (`tramoya.toml`, `marks.json`, `script.json`, the step language, the window's
 projects) are stable since 1.0.
 
 - **The Windows executable is not code-signed.** SmartScreen warns the first time; environments that only allow
   signed software will block it until it is.
-- **The window is in Spanish.** The command line, the profiles and the narration support English and Spanish.
+- **Two languages.** The window, the steps, the AI and the voices come in English and Spanish; the command line and
+  the profiles narrate in any language with a voice (Kokoro ships English and Spanish here).
 - **The window on Linux and macOS has no voice.** Its narration uses Windows voices, so there it produces videos with
   captions only; the command-line pipeline uses Kokoro on every system.
 - **Voices.** Windows uses the voices installed in Windows. Kokoro ships English and Spanish here; `preflight`

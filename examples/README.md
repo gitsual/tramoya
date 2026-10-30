@@ -11,7 +11,7 @@ private data (the last one needs the Windows exe and a model).
 | `validation-evidence/` | One scene per test step, each labelled with its id; the accessibility snapshots are diffed against the approved set and the take is kept as the evidence bundle. | `workflow.yml` on every pull request |
 | `support-kb/` | Three short "how do I" answers regenerated against the current build. | `workflow.yml` nightly |
 | `localized-onboarding/` | One take, one video per language; the cut adapts to each voice. | `make videos` |
-| `tramoya-sobre-tramoya/` | Windows: tramoya records its own window, including «ask the AI» (a model does the process on the notes app and writes the steps) and the `wait` windows the montage speeds up. | `bash grabar.sh` with `Tramoya.exe` and Ollama |
+| `tramoya-on-tramoya/` | Windows: tramoya records its own window, in English (or Spanish with `es`), including the AI settings and «ask the AI» (a model does the process on the notes app and writes the steps) and the `wait` windows the montage speeds up. | `bash record.sh [es]` with `Tramoya.exe` and Ollama |
 
 The `workflow.yml` files are meant to be copied into `.github/workflows/` of the app's own
 repository; they are not wired into this one.
