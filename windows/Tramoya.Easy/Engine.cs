@@ -90,12 +90,10 @@ public static class Engine
         var tipo = Pasos.Str(d, "tipo");
         var nombre = Pasos.Str(d, "nombre");
         var que = Pasos.Str(d, "que");
-        var cosa = nombre.Length != 0
-            ? (que.Length != 0 ? $"{que} «{nombre}»" : $"«{nombre}»")
-            : (que.Length != 0 ? que : "este elemento");
+        var cosa = Lengua.Cosa(que, nombre);
         var valor = Pasos.Str(d, "valor");
         if (tipo == "tecla")
-            return new() { ["tipo"] = "tecla", ["valor"] = valor, ["desc"] = $"Pulsa la tecla {Vocabulario.Teclas.GetValueOrDefault(valor, valor)}" };
+            return new() { ["tipo"] = "tecla", ["valor"] = valor, ["desc"] = Lengua.Tecla(valor) };
         var selectorCrudo = Pasos.Str(d, "selector");
         if (selectorCrudo.Length == 0) return null;
         var selector = prefijo + selectorCrudo;
@@ -103,23 +101,22 @@ public static class Engine
         {
             case "clic":
             {
-                var verbo = Pasos.Str(d, "marca") switch { "on" => "Marca", "off" => "Desmarca", _ => "Pulsa" };
+                var desc = Lengua.Clic(cosa, Pasos.Str(d, "marca"));
                 // El aviso de cookies sale la primera vez y luego ya no: ese clic es opcional.
                 if (Vocabulario.Cookies.IsMatch(nombre) || Vocabulario.Cookies.IsMatch(selectorCrudo))
-                    return new() { ["tipo"] = "clic", ["selector"] = selector, ["opcional"] = true, ["desc"] = $"{verbo} {cosa} (aviso de cookies: si no sale, se salta)" };
-                return new() { ["tipo"] = "clic", ["selector"] = selector, ["desc"] = $"{verbo} {cosa}", ["guarda"] = Vocabulario.Guardan.IsMatch(nombre) };
+                    return new() { ["tipo"] = "clic", ["selector"] = selector, ["opcional"] = true, ["desc"] = Lengua.Cookies(desc) };
+                return new() { ["tipo"] = "clic", ["selector"] = selector, ["desc"] = desc, ["guarda"] = Vocabulario.Guardan.IsMatch(nombre) };
             }
             case "escribir":
             {
-                var donde = nombre.Length != 0 ? $" en el campo «{nombre}»" : "";
-                return new() { ["tipo"] = "escribir", ["selector"] = selector, ["valor"] = valor, ["desc"] = $"Escribe «{valor}»{donde}" };
+                return new() { ["tipo"] = "escribir", ["selector"] = selector, ["valor"] = valor, ["desc"] = Lengua.Escribe(valor, nombre) };
             }
             case "elegir":
             {
-                var donde = nombre.Length != 0 && nombre.Length < 40 ? $" en «{nombre}»" : "";
+                var donde = nombre.Length != 0 && nombre.Length < 40 ? nombre : "";
                 var textoOpcion = Pasos.Str(d, "texto_opcion");
                 var visible = textoOpcion.Length != 0 ? textoOpcion : valor;
-                return new() { ["tipo"] = "elegir", ["selector"] = selector, ["valor"] = valor, ["desc"] = $"Elige «{visible}»{donde}" };
+                return new() { ["tipo"] = "elegir", ["selector"] = selector, ["valor"] = valor, ["desc"] = Lengua.Elige(visible, donde) };
             }
             default:
                 return null;
@@ -239,14 +236,14 @@ public static class Engine
                     if (inicio is null) continue;
                     if (!ReferenceEquals(pagina, principal))
                     {
-                        avisos.Add("Se abrió otra pestaña o ventana; lo que se hizo en ella no se puede repetir.");
+                        avisos.Add(Lengua.T("Se abrió otra pestaña o ventana; lo que se hizo en ella no se puede repetir.", "Another tab or window opened; what was done in it cannot be replayed."));
                         continue;
                     }
                     if (dato.ValueKind != JsonValueKind.Object) continue;
                     var d = JsonObject.Create(dato)!;
                     if (Pasos.Str(d, "tipo") == "clave")
                     {
-                        avisos.Add("No se ha apuntado ninguna contraseña.");
+                        avisos.Add(Lengua.T("No se ha apuntado ninguna contraseña.", "No password was recorded."));
                         continue;
                     }
                     string prefijo;
@@ -363,16 +360,16 @@ public static class Engine
             // Lo que puede fallar sin abrir nada se comprueba antes: sin carpeta no hay dónde dejar
             // el resultado y sin modelo no hay a quién preguntar.
             if (!Directory.Exists(carpeta)) throw new DirectoryNotFoundException($"no existe la carpeta {carpeta}");
-            if (objetivo.Trim().Length == 0) throw new ArgumentException("no me has dicho qué tiene que hacer");
+            if (objetivo.Trim().Length == 0) throw new ArgumentException(Lengua.T("no me has dicho qué tiene que hacer", "you did not say what it has to do"));
             var backend = Backends.Pick(Vacio(Pasos.Str(ajustes, "ia_backend")), Vacio(Pasos.Str(ajustes, "ia_modelo")));
-            var opciones = new AgentOptions(objetivo.Trim(), "es", MaxPasosAgente);
+            var opciones = new AgentOptions(objetivo.Trim(), Lengua.Actual, MaxPasosAgente);
             var r = await CorrerAgenteAsync(url, perfil, opciones, ajustes, Path.Combine(carpeta, "auth.json"),
                 backend, new ProgresoAgente(MaxPasosAgente), CancellationToken.None).ConfigureAwait(false);
             var limpios = Pasos.Limpiar(r.Pasos);
             if (limpios.Count == 0)
             {
                 // Sin pasos no hay nada que revisar: el motivo es lo que el modelo (o el agente) ha dicho.
-                var motivo = r.Resumen.Length != 0 ? r.Resumen : r.Avisos.LastOrDefault() ?? "no ha hecho ningún paso";
+                var motivo = r.Resumen.Length != 0 ? r.Resumen : r.Avisos.LastOrDefault() ?? Lengua.T("no ha hecho ningún paso", "it did not take any step");
                 throw new InvalidOperationException(motivo);
             }
             var inicio = r.Inicio.Length != 0 ? r.Inicio : url;
@@ -392,7 +389,7 @@ public static class Engine
         catch (Exception e)
         {
             var motivo = Recortar((e.Message ?? e.GetType().Name).Split('\n', 2)[0].TrimEnd('\r').Trim().TrimEnd('.'), 200);
-            Emitir(("error", $"La IA no ha podido hacerlo: {motivo}."));
+            Emitir(("error", Lengua.T($"La IA no ha podido hacerlo: {motivo}.", $"The AI could not do it: {motivo}.")));
             return 1;
         }
     }
@@ -459,9 +456,9 @@ public static class Engine
         var t = e.Message ?? "";
         if (t.Contains("Timeout", StringComparison.Ordinal) || t.Contains("timeout", StringComparison.Ordinal)
             || t.Contains("not visible", StringComparison.Ordinal))
-            return "no lo he encontrado en la página (puede que la web haya cambiado o tarde más)";
+            return Lengua.T("no lo he encontrado en la página (puede que la web haya cambiado o tarde más)", "it is not on the page (the website may have changed, or it takes longer)");
         if (t.Contains("strict mode", StringComparison.Ordinal))
-            return "hay varios iguales en la página y no sé cuál es";
+            return Lengua.T("hay varios iguales en la página y no sé cuál es", "there are several identical ones on the page and it is not clear which");
         var primera = t.Split('\n', 2)[0].TrimEnd('\r');
         return Recortar(primera, 200);
     }
@@ -480,21 +477,21 @@ public static class Engine
         var salida = Path.Combine(carpeta, "out");
         try { if (Directory.Exists(salida)) Directory.Delete(salida, recursive: true); }
         catch (Exception) { /* como rmtree(ignore_errors=True) */ }
-        var voces = Path.Combine(salida, "voices", "es");
+        var voces = Path.Combine(salida, "voices", Lengua.Actual);
         Directory.CreateDirectory(voces);
 
         if (conVoz)
         {
-            Emitir(("fase", "voz"), ("msg", "Preparando la voz…"), ("p", 0.05));
+            Emitir(("fase", "voz"), ("msg", Lengua.T("Preparando la voz…", "Preparing the voice…")), ("p", 0.05));
             var textos = new Dictionary<string, string>();
             foreach (var e in lista.Where(e => e.Texto.Length != 0))
                 textos[Path.Combine(voces, $"scene-{e.Name}.wav")] = e.Texto;
             var voz = Pasos.Str(ajustes, "voz");
-            Sapi.Hablar(textos, voz.Length != 0 ? voz : null, Entero(ajustes["velocidad"]));
+            Sapi.Hablar(textos, voz.Length != 0 ? voz : null, Entero(ajustes["velocidad"]), idioma: Lengua.Actual);
         }
 
-        Emitir(("fase", "grabar"), ("msg", "Grabando. No toques la ventana del navegador."), ("p", 0.15));
-        var pacing = new Pacing(pace: Vocabulario.Ritmos.GetValueOrDefault(Pasos.Str(ajustes, "ritmo"), 1.0), lang: "es");
+        Emitir(("fase", "grabar"), ("msg", Lengua.T("Grabando. No toques la ventana del navegador.", "Recording. Do not touch the browser window.")), ("p", 0.15));
+        var pacing = new Pacing(pace: Vocabulario.Ritmos.GetValueOrDefault(Pasos.Str(ajustes, "ritmo"), 1.0), lang: Lengua.Actual);
         // La voz ya está en los wav: en el escenario solo hay que esperar lo que duran.
         var narrador = new Narrator(Path.Combine(salida, "voices"), pacing,
             clip => new SilentClip(Narration.WavSeconds(clip), pacing));
@@ -552,7 +549,7 @@ public static class Engine
                             page.SetDefaultTimeout(15000);
                         }
                         hechos++;
-                        Emitir(("fase", "grabar"), ("msg", $"Grabando paso {hechos} de {total}…"), ("p", 0.15 + 0.6 * hechos / total));
+                        Emitir(("fase", "grabar"), ("msg", Lengua.T($"Grabando paso {hechos} de {total}…", $"Recording step {hechos} of {total}…")), ("p", 0.15 + 0.6 * hechos / total));
                     }
                     if (ReferenceEquals(e, lista[^1])) await stage.BeatAsync(2.0).ConfigureAwait(false);
                     await stage.CaptionAsync("").ConfigureAwait(false);
@@ -563,11 +560,11 @@ public static class Engine
         var toma = Path.Combine(salida, "take.webm");
         File.Copy(take, toma, overwrite: true);
 
-        Emitir(("fase", "montar"), ("msg", "Montando el vídeo…"), ("p", 0.8));
+        Emitir(("fase", "montar"), ("msg", Lengua.T("Montando el vídeo…", "Editing the video…")), ("p", 0.8));
         var final = Path.Combine(salida, "video.mp4");
-        var tabla = Core.Assembly.AssembleMarks(new Runner(), toma, Path.Combine(salida, "marks.json"), voces, final, lang: "es");
+        var tabla = Core.Assembly.AssembleMarks(new Runner(), toma, Path.Combine(salida, "marks.json"), voces, final, lang: Lengua.Actual);
         var nombre = Regex.Replace(Pasos.Str(proyecto, "nombre"), "[<>:\"/\\\\|?*]+", "").Trim();
-        if (nombre.Length == 0) nombre = "vídeo";
+        if (nombre.Length == 0) nombre = Lengua.T("vídeo", "video");
         var destino = Path.Combine(Pasos.Str(proyecto, "mis_videos"), nombre + ".mp4");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destino))!);
         File.Copy(final, destino, overwrite: true);
@@ -619,7 +616,7 @@ public static class Engine
         {
             if (args.Length < 6)
             {
-                Emitir(("error", "La IA no ha podido hacerlo: faltan datos (carpeta, web, perfil, ajustes y objetivo)."));
+                Emitir(("error", Lengua.T("La IA no ha podido hacerlo: faltan datos (carpeta, web, perfil, ajustes y objetivo).", "The AI could not do it: data is missing (folder, website, profile, settings and goal).")));
                 return 1;
             }
             JsonObject? ajustes;
@@ -636,7 +633,7 @@ public static class Engine
         {
             var d = Json.Parse(args[1])!.AsObject();
             var voz = Pasos.Str(d, "voz");
-            Sapi.Oir(Pasos.Str(d, "texto"), voz.Length != 0 ? voz : null, Entero(d["velocidad"]));
+            Sapi.Oir(Pasos.Str(d, "texto"), voz.Length != 0 ? voz : Sapi.VozPara(Lengua.Actual), Entero(d["velocidad"]));
             return 0;
         }
         try
@@ -654,21 +651,23 @@ public static class Engine
                 var id = Entero(f.Paso["id"]);
                 var antes = pasos.Where(p => Entero(p["id"]) < id && Pasos.Bool(p, "seguro") && !Pasos.Bool(p, "quitado")).ToList();
                 if (antes.Count > 0)
-                    pista = $" Puede ser porque el paso {Entero(antes[^1]["id"])} está en «solo señalar» y, al no pulsarse, la web no ha avanzado.";
+                    pista = Lengua.T($" Puede ser porque el paso {Entero(antes[^1]["id"])} está en «solo señalar» y, al no pulsarse, la web no ha avanzado.", $" It may be because step {Entero(antes[^1]["id"])} is set to “point only” and, as it was not clicked, the website did not move on.");
             }
             catch (Exception) { /* sin proyecto legible no hay pista */ }
-            Emitir(("error", $"No he podido hacer el paso {Pasos.Str(f.Paso, "id")} ({Pasos.Str(f.Paso, "desc")}): {ExplicarFallo(f.Causa)}.{pista}"),
+            Emitir(("error", Lengua.T($"No he podido hacer el paso {Pasos.Str(f.Paso, "id")} ({Pasos.Str(f.Paso, "desc")}): {ExplicarFallo(f.Causa)}.{pista}", $"Step {Pasos.Str(f.Paso, "id")} could not be done ({Pasos.Str(f.Paso, "desc")}): {ExplicarFallo(f.Causa)}.{pista}")),
                 ("paso", f.Paso["id"]));
         }
         catch (SesionCaducada)
         {
-            Emitir(("error", "La web pide volver a entrar (la sesión ha caducado). Ve a «Grabar», pulsa «Abrir la web», "
-                             + "entra con tu usuario y cierra la ventana sin grabar; luego vuelve aquí y haz el vídeo."),
+            Emitir(("error", Lengua.T("La web pide volver a entrar (la sesión ha caducado). Ve a «Grabar», pulsa «Abrir la web», "
+                             + "entra con tu usuario y cierra la ventana sin grabar; luego vuelve aquí y haz el vídeo.",
+                             "The website asks you to sign in again (the session has expired). Go to “Record”, press “Open the website”, "
+                             + "sign in and close the window without recording; then come back here and make the video.")),
                 ("sesion", true));
         }
         catch (Exception exc)
         {
-            Emitir(("error", $"Algo ha fallado: {ExplicarFallo(exc)}"));
+            Emitir(("error", Lengua.T($"Algo ha fallado: {ExplicarFallo(exc)}", $"Something went wrong: {ExplicarFallo(exc)}")));
         }
         return 1;
     }

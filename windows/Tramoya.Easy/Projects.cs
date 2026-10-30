@@ -27,6 +27,7 @@ public static class Proyectos
     /// <summary>Los ajustes de fábrica; solo estas claves se guardan (<c>AJUSTES_DEFECTO</c>).</summary>
     public static JsonObject AjustesDefecto() => new()
     {
+        ["idioma"] = "",
         ["voz"] = "",
         ["velocidad"] = 0,
         ["ritmo"] = "normal",
@@ -213,7 +214,7 @@ public static class Proyectos
     public static string Duplicar(ServerOptions o, string pid)
     {
         var p = Leer(o, pid);
-        var nombre = $"{Pasos.Str(p, "nombre")} (copia)";
+        var nombre = Lengua.T($"{Pasos.Str(p, "nombre")} (copia)", $"{Pasos.Str(p, "nombre")} (copy)");
         var nuevo = IdLibre(o, nombre);
         CopiarArbol(Carpeta(o, pid), Carpeta(o, nuevo));
         p["id"] = nuevo;
@@ -252,10 +253,10 @@ public static class Proyectos
     public static string Crear(ServerOptions o, string? nombre, string? url)
     {
         nombre = (nombre ?? "").Trim();
-        if (nombre.Length == 0) nombre = "Mi vídeo";
+        if (nombre.Length == 0) nombre = Lengua.T("Mi vídeo", "My video");
         url = (url ?? "").Trim();
         if (url.Length == 0)
-            throw new ArgumentException("Falta la dirección de la web");
+            throw new ArgumentException(Lengua.T("Falta la dirección de la web", "The website address is missing"));
         if (!Esquema.IsMatch(url))
             url = "https://" + url;
         var pid = IdLibre(o, nombre);

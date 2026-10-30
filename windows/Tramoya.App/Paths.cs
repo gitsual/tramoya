@@ -49,9 +49,12 @@ public static class Paths
         ? Path.Combine(kit, "app", "datos")
         : Path.Combine(LocalAppData, "Tramoya", "datos");
 
-    /// <summary>Where the finished videos end up («Mis vídeos»).</summary>
+    /// <summary>
+    /// Where the finished videos end up: «My videos» next to the program (a kit made before 1.3
+    /// keeps its «Mis vídeos»), or Videos\Tramoya.
+    /// </summary>
     public static string MisVideos => Kit is { } kit
-        ? Path.Combine(kit, "Mis vídeos")
+        ? (Directory.Exists(Path.Combine(kit, "Mis vídeos")) ? Path.Combine(kit, "Mis vídeos") : Path.Combine(kit, "My videos"))
         : Path.Combine(VideosFolder, "Tramoya");
 
     public static string Ajustes => Path.Combine(Datos, "ajustes.json");

@@ -27,6 +27,8 @@ import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from tramoya.easy import lengua
+
 
 def _kit() -> Path | None:
     """The portable kit: <kit>/app/python/python(w).exe, or TRAMOYA_KIT."""
@@ -41,11 +43,12 @@ def _kit() -> Path | None:
 KIT = _kit()
 CASA = KIT or Path.home() / "Tramoya"
 DATOS = (KIT / "app" / "datos") if KIT else CASA / ".datos"
-MIS_VIDEOS = CASA / "Mis vídeos"
+# «My videos»; a folder made before 1.3 keeps its old name
+MIS_VIDEOS = CASA / "Mis vídeos" if (CASA / "Mis vídeos").is_dir() else CASA / "My videos"
 UI = Path(__file__).resolve().parent / "ui" / "index.html"
 ICONO = Path(__file__).resolve().parent / "ui" / "tramoya.ico"
 AJUSTES = DATOS / "ajustes.json"
-AJUSTES_DEFECTO = {"voz": "", "velocidad": 0, "ritmo": "normal", "tamano": "800p", "srt": True,
+AJUSTES_DEFECTO = {"idioma": "", "voz": "", "velocidad": 0, "ritmo": "normal", "tamano": "800p", "srt": True,
                    "dominios": []}
 # pythonw (the kit launcher, no console) for the window; python for the workers
 PY = Path(sys.executable).with_name(Path(sys.executable).name.replace("pythonw", "python"))
@@ -180,11 +183,12 @@ def convertir(pid: str) -> None:
     try:
         res = json.loads(ruta.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        TAREAS[pid] = {"estado": "error", "msg": "No he podido leer la grabación."}
+        TAREAS[pid] = {"estado": "error", "msg": lengua.t("No he podido leer la grabación.", "The recording could not be read.")}
         return
     if not res["pasos"]:
-        TAREAS[pid] = {"estado": "error", "msg": "No se ha apuntado ningún paso. Pulsa «Empezar "
-                       "a grabar» y luego haz los clics en la ventana de la web."}
+        TAREAS[pid] = {"estado": "error", "msg": lengua.t(
+            "No se ha apuntado ningún paso. Pulsa «Empezar a grabar» y luego haz los clics en la ventana de la web.",
+            "No step was recorded. Press “Start recording”, then click in the website's window.")}
         return
     p = leer(pid)
     viejos = {x["desc"]: x.get("texto", "") for x in p.get("pasos", [])}
@@ -206,7 +210,7 @@ def hacer_video(pid: str, voz: bool) -> None:
     guardar(pid, p)
     argv = MOTOR + ["video", str(DATOS / pid)] + (["--voz"] if voz else [])
     proc = lanzar(pid, argv)
-    TAREAS[pid] = {"estado": "haciendo", "msg": "Empezando…", "p": 0.02, "proc": proc}
+    TAREAS[pid] = {"estado": "haciendo", "msg": lengua.t("Empezando…", "Starting…"), "p": 0.02, "proc": proc}
 
     def leer_salida() -> None:
         fin: dict = {}
@@ -234,7 +238,7 @@ def hacer_video(pid: str, voz: bool) -> None:
         else:
             (DATOS / pid / "ultimo-error.txt").write_text("\n".join(cola), encoding="utf-8")
             TAREAS[pid] = {"estado": "error", "paso": fin.get("paso"),
-                           "msg": fin.get("error") or "El vídeo no se ha podido hacer."}
+                           "msg": fin.get("error") or lengua.t("El vídeo no se ha podido hacer.", "The video could not be made.")}
     threading.Thread(target=leer_salida, daemon=True).start()
 
 
@@ -375,7 +379,7 @@ class H(BaseHTTPRequestHandler):
         if ruta == "/api/inicio":
             esc = escritorio()
             return self.responder({
-                "proyectos": lista(), "voces": voces(), "webs": webs(), "ajustes": leer_ajustes(),
+                "proyectos": lista(), "voces": voces(), "webs": webs(), "ajustes": leer_ajustes(), "idioma": lengua.actual(),
                 "windows": sys.platform == "win32", "carpeta": str(MIS_VIDEOS),
                 "acceso": bool(esc and (esc / "Tramoya.lnk").exists()),
                 # Pedírselo a la IA solo existe en la versión de Windows: aquí se oculta.
@@ -427,7 +431,10 @@ class H(BaseHTTPRequestHandler):
         cuerpo = json.loads(self.rfile.read(largo) or b"{}")
         ruta = self.path
         if ruta == "/api/ajustes":
-            return self.responder(guardar_ajustes(cuerpo))
+            guardados = guardar_ajustes(cuerpo)
+            if guardados.get("idioma"):
+                lengua.fijar(guardados["idioma"])
+            return self.responder(guardados)
         if ruta == "/api/oir":
             texto = (cuerpo.get("texto") or "").strip()
             if texto:
@@ -439,10 +446,10 @@ class H(BaseHTTPRequestHandler):
             except Exception as exc:  # noqa: BLE001
                 return self.responder({"error": f"No he podido crear el acceso directo ({exc})"})
         if ruta == "/api/crear":
-            nombre = (cuerpo.get("nombre") or "").strip() or "Mi vídeo"
+            nombre = (cuerpo.get("nombre") or "").strip() or lengua.t("Mi vídeo", "My video")
             url = (cuerpo.get("url") or "").strip()
             if not url:
-                return self.responder({"error": "Falta la dirección de la web"}, 400)
+                return self.responder({"error": lengua.t("Falta la dirección de la web", "The website address is missing")}, 400)
             if not re.match(r"https?://", url):
                 url = "https://" + url
             base, n = slug(nombre), 2
@@ -511,6 +518,11 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     DATOS.mkdir(parents=True, exist_ok=True)
     MIS_VIDEOS.mkdir(parents=True, exist_ok=True)
+    # The language saved in the settings wins; without one, --lang (or TRAMOYA_LANG, or English).
+    if "--lang" in argv[:-1]:
+        lengua.fijar(argv[argv.index("--lang") + 1])
+    if leer_ajustes().get("idioma"):
+        lengua.fijar(leer_ajustes()["idioma"])
     puerto = puerto_libre()
     servidor = ThreadingHTTPServer(("127.0.0.1", puerto), H)
     threading.Thread(target=servidor.serve_forever, daemon=True).start()

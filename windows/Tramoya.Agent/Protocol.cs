@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Tramoya.Core;
 
 namespace Tramoya.Agent;
 
@@ -26,7 +27,7 @@ public static class Protocol
     /// <summary>Las acciones que necesitan un elemento numerado.</summary>
     public static readonly IReadOnlySet<string> ConRef = new HashSet<string>(StringComparer.Ordinal) { "clic", "señalar", "escribir", "elegir" };
 
-    private static readonly Regex Pregunta = new(@"^\s*(¿|d[oó]nde\b|c[oó]mo\b|qu[eé]\b|cu[aá]l(es)?\b|hay\b|existe\b)|\?\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex Pregunta = new(@"^\s*(¿|d[oó]nde\b|c[oó]mo\b|qu[eé]\b|cu[aá]l(es)?\b|hay\b|existe\b|where\b|how\b|what\b|which\b|is there\b|are there\b|can i\b)|\?\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Si el objetivo es una pregunta («¿dónde está…?», «cómo se cambia…») en vez de un encargo: entonces
@@ -38,7 +39,7 @@ public static class Protocol
     /// Las reglas del juego, en español y cortas: un modelo local las lee en cada turno. El
     /// objetivo va dentro para que no se pierda cuando el historial se recorta.
     /// </summary>
-    public static string SystemPrompt(string objetivo, bool pregunta = false) => $$"""
+    public static string SystemPrompt(string objetivo, bool pregunta = false, string lang = "en") => $$"""
         Manejas un navegador para grabar un vídeo que enseña cómo se hace algo en una web. En cada turno ves la página (título, url, texto y una lista numerada de elementos) y decides UNA sola acción. Al final el vídeo se reproduce con tus pasos y un narrador lee tus frases.
 
         OBJETIVO: {{objetivo}}
@@ -61,13 +62,25 @@ public static class Protocol
         4. Prefiere los elementos con nombre visible. Si la página aún está cargando o vacía, "esperar".
         5. Si la lista está recortada, lo que buscas puede no estar: haz scroll con la tecla ArrowDown o usa un enlace que lleve hacia ello.
         6. Cuando la página ya muestra lo que pide el objetivo, "terminar" en ese mismo turno. No hagas pasos de más.
-        7. "frase": lo que dirá el narrador en el vídeo en ese paso, para la persona que lo ve: una frase corta, natural, en español, en presente y sin tecnicismos ("Escribimos el nombre del cliente", "Abrimos su ficha", "Pulsamos Intro para buscar"). Nada de "ref", "clic", "elemento", "Enter" ni números. En el primer paso, presenta además lo que se va a ver ("Vamos a dar de alta un cliente: empezamos por su nombre"). Deja "frase" vacía en los pasos que no aportan nada (cerrar un aviso, esperar, cerrar un menú).
+        7. "frase": lo que dirá el narrador en el vídeo en ese paso, para la persona que lo ve: una frase corta, natural, en {{Lengua.NombreParaModelo(lang)}}, en presente y sin tecnicismos ({{EjemplosFrase(lang)}}). Nada de "ref", "clic", "elemento", "Enter" ni números. En el primer paso, presenta además lo que se va a ver ({{PrimeraFrase(lang)}}). Escribe "frase" y "resumen" SIEMPRE en {{Lengua.NombreParaModelo(lang)}}, aunque la página esté en otro idioma. Deja "frase" vacía en los pasos que no aportan nada (cerrar un aviso, esperar, cerrar un menú).
         8. "pensamiento": una línea con el porqué. No es para el vídeo.
 
         Responde SOLO con un objeto JSON, sin texto alrededor, con esta forma exacta:
         {"pensamiento":"…","accion":"clic|escribir|elegir|tecla|ir|esperar|terminar|fallo","ref":N,"valor":"…","frase":"…","resumen":"…"}
-        Ejemplo: {"pensamiento":"El campo 7 es el buscador del catálogo","accion":"escribir","ref":7,"valor":"impresora láser","frase":"Vamos a localizar una impresora en el catálogo: escribimos lo que buscamos","resumen":""}
+        Ejemplo: {"pensamiento":"El campo 7 es el buscador del catálogo","accion":"escribir","ref":7,"valor":"impresora láser","frase":"{{FraseEjemplo(lang)}}","resumen":""}
         """.ReplaceLineEndings("\n");
+
+    private static string EjemplosFrase(string lang) => Lengua.T(
+        "\"Escribimos el nombre del cliente\", \"Abrimos su ficha\", \"Pulsamos Intro para buscar\"",
+        "\"We type the customer's name\", \"We open their record\", \"We press Enter to search\"", lang);
+
+    private static string PrimeraFrase(string lang) => Lengua.T(
+        "\"Vamos a dar de alta un cliente: empezamos por su nombre\"",
+        "\"Let's add a new customer: we start with their name\"", lang);
+
+    private static string FraseEjemplo(string lang) => Lengua.T(
+        "Vamos a localizar una impresora en el catálogo: escribimos lo que buscamos",
+        "Let's find a printer in the catalogue: we type what we are looking for", lang);
 
     /// <summary>Lo que cambia cuando el objetivo es una pregunta: enseñar en vez de hacer, y contestar al final.</summary>
     public const string ModoPregunta = """

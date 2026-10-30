@@ -1,16 +1,17 @@
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
+using Tramoya.Core;
 
 namespace Tramoya.Agent;
 
 /// <summary>Lo que se le pide al agente.</summary>
 /// <param name="Goal">El objetivo en lenguaje natural («Busca "Madrid" y abre el artículo»).</param>
-/// <param name="Lang">El idioma de las frases (por ahora solo español).</param>
+/// <param name="Lang">El idioma de los pasos y de las frases: "en" o "es" (<see cref="Lengua"/>).</param>
 /// <param name="MaxPasos">Tope de pasos apuntados; las esperas y las acciones fallidas no cuentan.</param>
 /// <param name="Capturas">Mandar también una captura de pantalla en cada turno (solo la aprovechan los modelos con visión).</param>
 /// <param name="Pregunta">El objetivo es una pregunta («¿dónde está…?»): enseñar en vez de hacer, y contestar al final. Sin valor, se deduce del texto.</param>
-public sealed record AgentOptions(string Goal, string Lang = "es", int MaxPasos = 25, bool Capturas = false, bool? Pregunta = null)
+public sealed record AgentOptions(string Goal, string Lang = "en", int MaxPasos = 25, bool Capturas = false, bool? Pregunta = null)
 {
     public bool EsPregunta => Pregunta ?? Protocol.EsPregunta(Goal);
 }
@@ -48,7 +49,7 @@ public static class Agent
         var resultado = new AgentResult { Inicio = page.Url ?? "" };
         try { resultado.Titulo = Observer.Recortar((await page.TitleAsync().ConfigureAwait(false) ?? "").Trim(), 60); }
         catch (Exception) { resultado.Titulo = ""; }
-        var system = Protocol.SystemPrompt(options.Goal, options.EsPregunta);
+        var system = Protocol.SystemPrompt(options.Goal, options.EsPregunta, options.Lang);
         var historial = new List<(string Usuario, string Resumen, string Respuesta)>();
         var hechos = new List<string>();
         var ultimo = "acabamos de abrir la página.";
@@ -174,7 +175,7 @@ public static class Agent
             JsonObject? paso;
             try
             {
-                paso = await ActuarAsync(page, obs, decision, ct).ConfigureAwait(false);
+                paso = await ActuarAsync(page, obs, decision, options.Lang, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -237,19 +238,19 @@ public static class Agent
     /// Hace la acción en la página y devuelve el paso apuntado; null si el elemento no existe.
     /// Una acción que falla lanza: quien llama se lo cuenta al modelo.
     /// </summary>
-    private static async Task<JsonObject?> ActuarAsync(IPage page, Observation obs, Decision d, CancellationToken ct)
+    private static async Task<JsonObject?> ActuarAsync(IPage page, Observation obs, Decision d, string lang, CancellationToken ct)
     {
         if (d.Accion == "tecla")
         {
             var tecla = Palabras.Tecla(d.Valor);
             await page.Keyboard.PressAsync(tecla).ConfigureAwait(false);
-            return new JsonObject { ["tipo"] = "tecla", ["valor"] = tecla, ["desc"] = $"Pulsa la tecla {Palabras.Teclas.GetValueOrDefault(tecla, tecla)}" };
+            return new JsonObject { ["tipo"] = "tecla", ["valor"] = tecla, ["desc"] = Lengua.Tecla(tecla, lang) };
         }
         if (d.Accion == "ir")
         {
             var url = d.Valor.Trim();
             await page.GotoAsync(url).ConfigureAwait(false);
-            return new JsonObject { ["tipo"] = "ir", ["valor"] = url, ["desc"] = $"Ve a «{url}»" };
+            return new JsonObject { ["tipo"] = "ir", ["valor"] = url, ["desc"] = Lengua.Ve(url, lang) };
         }
         var el = d.Ref is int n ? obs.Elemento(n) : null;
         if (el is null) return null;
@@ -260,7 +261,7 @@ public static class Agent
         if (selector.Length == 0) selector = $"[data-tramoya-ref=\"{el.Ref}\"]";
         var locator = Observer.LocatorDe(page, obs, el);
         var nombre = el.Nombre;
-        var cosa = nombre.Length != 0 ? $"{el.Tipo} «{nombre}»" : el.Tipo;
+        var cosa = Lengua.Cosa(el.Tipo, nombre, lang);
         switch (d.Accion)
         {
             case "señalar":
@@ -269,24 +270,24 @@ public static class Agent
                 // comprobar que el elemento está ahí y a la vista.
                 try { await locator.ScrollIntoViewIfNeededAsync(new LocatorScrollIntoViewIfNeededOptions { Timeout = 5000 }).ConfigureAwait(false); } catch (Exception) { }
                 await locator.HoverAsync(new LocatorHoverOptions { Timeout = 10000 }).ConfigureAwait(false);
-                return new JsonObject { ["tipo"] = "señalar", ["selector"] = selector, ["desc"] = $"Señala {cosa}" };
+                return new JsonObject { ["tipo"] = "señalar", ["selector"] = selector, ["desc"] = Lengua.Senala(cosa, lang) };
             }
             case "clic":
             {
                 await locator.ClickAsync(new LocatorClickOptions { Timeout = 10000 }).ConfigureAwait(false);
-                var verbo = el.Tipo == "la casilla" ? (el.Estado.Contains("marcado") ? "Desmarca" : "Marca") : "Pulsa";
+                var marca = el.Tipo == "la casilla" ? (el.Estado.Contains("marcado") ? "off" : "on") : "";
+                var desc = Lengua.Clic(cosa, marca, lang);
                 // El aviso de cookies sale la primera vez y luego ya no: ese clic es opcional.
                 if (Palabras.Cookies.IsMatch(nombre) || Palabras.Cookies.IsMatch(selector))
-                    return new JsonObject { ["tipo"] = "clic", ["selector"] = selector, ["opcional"] = true, ["desc"] = $"{verbo} {cosa} (aviso de cookies: si no sale, se salta)" };
-                return new JsonObject { ["tipo"] = "clic", ["selector"] = selector, ["desc"] = $"{verbo} {cosa}", ["guarda"] = Palabras.Guardan.IsMatch(nombre) };
+                    return new JsonObject { ["tipo"] = "clic", ["selector"] = selector, ["opcional"] = true, ["desc"] = Lengua.Cookies(desc, lang) };
+                return new JsonObject { ["tipo"] = "clic", ["selector"] = selector, ["desc"] = desc, ["guarda"] = Palabras.Guardan.IsMatch(nombre) };
             }
             case "escribir":
             {
                 await locator.FillAsync(d.Valor, new LocatorFillOptions { Timeout = 10000 }).ConfigureAwait(false);
                 // fill() solo no despierta a todos los frameworks; el evento input sí.
                 try { await locator.DispatchEventAsync("input").ConfigureAwait(false); } catch (Exception) { }
-                var donde = nombre.Length != 0 ? $" en el campo «{nombre}»" : "";
-                return new JsonObject { ["tipo"] = "escribir", ["selector"] = selector, ["valor"] = d.Valor, ["desc"] = $"Escribe «{d.Valor}»{donde}" };
+                return new JsonObject { ["tipo"] = "escribir", ["selector"] = selector, ["valor"] = d.Valor, ["desc"] = Lengua.Escribe(d.Valor, nombre, lang) };
             }
             case "elegir":
             {
@@ -302,8 +303,8 @@ public static class Agent
                     var valores = await locator.SelectOptionAsync(d.Valor, new LocatorSelectOptionOptions { Timeout = 10000 }).ConfigureAwait(false);
                     elegido = valores.Count != 0 ? valores[0] : d.Valor;
                 }
-                var donde = nombre.Length != 0 && nombre.Length < 40 ? $" en «{nombre}»" : "";
-                return new JsonObject { ["tipo"] = "elegir", ["selector"] = selector, ["valor"] = elegido, ["desc"] = $"Elige «{d.Valor}»{donde}" };
+                var donde = nombre.Length != 0 && nombre.Length < 40 ? nombre : "";
+                return new JsonObject { ["tipo"] = "elegir", ["selector"] = selector, ["valor"] = elegido, ["desc"] = Lengua.Elige(d.Valor, donde, lang) };
             }
             default:
                 throw new ArgumentException($"acción desconocida «{d.Accion}»");

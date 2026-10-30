@@ -40,14 +40,14 @@ public class EasyEngineTests
     public void RecordedEventsNameWhatWasTouched()
     {
         var clic = Engine.PasoDeEvento(Obj("""{"tipo": "clic", "selector": "internal:role=button[name=\"IMPUTAR\"i]", "nombre": "IMPUTAR", "que": "el botón"}"""), "")!;
-        Assert.Equal("Pulsa el botón «IMPUTAR»", Pasos.Str(clic, "desc"));
+        Assert.Equal("Click the “IMPUTAR” button", Pasos.Str(clic, "desc"));
         Assert.True(Pasos.Bool(clic, "guarda"));
         var marco = Engine.PasoDeEvento(Obj("""{"tipo": "clic", "selector": "#x", "nombre": "", "que": "la casilla", "marca": "on"}"""), "iframe >> internal:control=enter-frame >> ")!;
-        Assert.Equal("Marca la casilla", Pasos.Str(marco, "desc"));
+        Assert.Equal("Check the checkbox", Pasos.Str(marco, "desc"));
         Assert.Equal("iframe >> internal:control=enter-frame >> #x", Pasos.Str(marco, "selector"));
         var cookies = Engine.PasoDeEvento(Obj("""{"tipo": "clic", "selector": "#ok", "nombre": "Aceptar todas", "que": "el botón"}"""), "")!;
         Assert.True(Pasos.Bool(cookies, "opcional"));
-        Assert.Contains("cookies", Pasos.Str(cookies, "desc"));
+        Assert.Contains("cookie notice", Pasos.Str(cookies, "desc"));
         Assert.Null(Engine.PasoDeEvento(Obj("""{"tipo": "clic", "selector": "", "nombre": "x"}"""), ""));
     }
 
@@ -55,11 +55,11 @@ public class EasyEngineTests
     public void RecordedKeysFieldsAndChoicesAreDescribed()
     {
         var tecla = Engine.PasoDeEvento(Obj("""{"tipo": "tecla", "valor": "Enter"}"""), "")!;
-        Assert.Equal("Pulsa la tecla Intro", Pasos.Str(tecla, "desc"));
+        Assert.Equal("Press Enter", Pasos.Str(tecla, "desc"));
         var campo = Engine.PasoDeEvento(Obj("""{"tipo": "escribir", "selector": "#t", "valor": "Regar", "nombre": "Título"}"""), "")!;
-        Assert.Equal("Escribe «Regar» en el campo «Título»", Pasos.Str(campo, "desc"));
+        Assert.Equal("Type “Regar” in the “Título” field", Pasos.Str(campo, "desc"));
         var elegir = Engine.PasoDeEvento(Obj("""{"tipo": "elegir", "selector": "#s", "valor": "2", "texto_opcion": "Febrero", "nombre": "Mes"}"""), "")!;
-        Assert.Equal("Elige «Febrero» en «Mes»", Pasos.Str(elegir, "desc"));
+        Assert.Equal("Choose “Febrero” in “Mes”", Pasos.Str(elegir, "desc"));
         Assert.Equal("2", Pasos.Str(elegir, "valor"));
         Assert.Null(Engine.PasoDeEvento(Obj("""{"tipo": "otro", "selector": "#s"}"""), ""));
     }
@@ -104,11 +104,11 @@ public class EasyEngineTests
     [Fact]
     public void FailuresAreExplainedForPeople()
     {
-        Assert.Equal("no lo he encontrado en la página (puede que la web haya cambiado o tarde más)",
+        Assert.Equal("it is not on the page (the website may have changed, or it takes longer)",
             Engine.ExplicarFallo(new TimeoutException("Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator")));
-        Assert.Equal("no lo he encontrado en la página (puede que la web haya cambiado o tarde más)",
+        Assert.Equal("it is not on the page (the website may have changed, or it takes longer)",
             Engine.ExplicarFallo(new InvalidOperationException("element is not visible")));
-        Assert.Equal("hay varios iguales en la página y no sé cuál es",
+        Assert.Equal("there are several identical ones on the page and it is not clear which",
             Engine.ExplicarFallo(new InvalidOperationException("strict mode violation: locator resolved to 2 elements")));
         Assert.Equal("primera línea", Engine.ExplicarFallo(new InvalidOperationException("primera línea\nsegunda línea")));
         Assert.Equal(200, Engine.ExplicarFallo(new InvalidOperationException(new string('x', 300))).Length);
@@ -176,7 +176,7 @@ public class EasyEngineTests
         var (codigo, lineas) = Correr("video", carpeta);
         Assert.Equal(1, codigo);
         var salida = Assert.Single(lineas);
-        Assert.StartsWith("Algo ha fallado: ", Pasos.Str(salida, "error"));
+        Assert.StartsWith("Something went wrong: ", Pasos.Str(salida, "error"));
         Assert.False(salida.ContainsKey("paso"));
     }
 
@@ -190,7 +190,7 @@ public class EasyEngineTests
         var (codigo, lineas) = Correr("agente", carpeta, "https://a.b/", perfil, "{}", "Entra en Pedidos");
         Assert.Equal(1, codigo);
         var salida = Assert.Single(lineas);
-        Assert.StartsWith("La IA no ha podido hacerlo: ", Pasos.Str(salida, "error"));
+        Assert.StartsWith("The AI could not do it: ", Pasos.Str(salida, "error"));
         Assert.Contains("no existe la carpeta", Pasos.Str(salida, "error"));
         Assert.EndsWith(".", Pasos.Str(salida, "error"));
         Assert.False(Directory.Exists(carpeta));
@@ -202,7 +202,7 @@ public class EasyEngineTests
         var (codigo, lineas) = Correr("agente", Path.GetTempPath(), "https://a.b/");
         Assert.Equal(1, codigo);
         var salida = Assert.Single(lineas);
-        Assert.StartsWith("La IA no ha podido hacerlo: faltan datos", Pasos.Str(salida, "error"));
+        Assert.StartsWith("The AI could not do it: data is missing", Pasos.Str(salida, "error"));
     }
 
     [Fact]

@@ -416,29 +416,29 @@ details summary { cursor: pointer; color: var(--suave); font-weight: 650; paddin
     <svg width="22" height="46" viewBox="0 0 22 46" aria-hidden="true"><rect x="10" y="0" width="2" height="28" fill="#A5A4A0"/><rect x="3" y="26" width="16" height="16" fill="#E9A80E"/></svg>
     <b>Tramoya</b>
   </div>
-  <span class="cue">Vídeos de procesos · todo en este equipo</span>
+  <span class="cue" data-t="cue_barra"></span>
 </header>
 
 <aside>
   <button class="nuevo" id="btn-nuevo">
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    Nuevo vídeo
+    <span data-t="nuevo_video"></span>
   </button>
-  <div class="titulo-lista"><b>En cartel</b><small>tus vídeos</small></div>
-  <div class="buscar oculto" id="buscar"><input type="text" id="filtro" placeholder="Buscar un vídeo…" aria-label="Buscar un vídeo"></div>
+  <div class="titulo-lista"><b data-t="en_cartel"></b><small data-t="tus_videos"></small></div>
+  <div class="buscar oculto" id="buscar"><input type="text" id="filtro" data-t-ph="buscar_video"></div>
   <div id="lista"></div>
   <div class="pie-lateral">
     <button class="enlace oculto" id="btn-acceso">
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-      Poner Tramoya en el escritorio
+      <span data-t="al_escritorio"></span>
     </button>
     <button class="enlace" id="btn-carpeta">
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5a1 1 0 0 1 1-1h3.6l1.5 1.6h5.9a1 1 0 0 1 1 1v6.4a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
-      Abrir la carpeta «Mis vídeos»
+      <span data-t="abrir_mis_videos"></span>
     </button>
     <button class="enlace" id="btn-ajustes">
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-      Ajustes
+      <span data-t="ajustes"></span>
     </button>
   </div>
 </aside>
@@ -483,6 +483,182 @@ const ICON = {
 };
 const ico = (n, t = 16) => `<svg width="${t}" height="${t}" viewBox="0 0 16 16" aria-hidden="true">${ICON[n]}</svg>`;
 
+/* ---------- idioma: English by default, español in Settings ---------- */
+const TEXTOS = {
+  cue_barra: {en: "Process videos · everything on this computer", es: "Vídeos de procesos · todo en este equipo"},
+  nuevo_video: {en: "New video", es: "Nuevo vídeo"},
+  en_cartel: {en: "Now showing", es: "En cartel"},
+  tus_videos: {en: "your videos", es: "tus vídeos"},
+  buscar_video: {en: "Find a video…", es: "Buscar un vídeo…"},
+  al_escritorio: {en: "Put Tramoya on the desktop", es: "Poner Tramoya en el escritorio"},
+  abrir_mis_videos: {en: "Open the “{carpeta}” folder", es: "Abrir la carpeta «{carpeta}»"},
+  ajustes: {en: "Settings", es: "Ajustes"},
+  ninguno_aun: {en: "None yet.", es: "Aún no hay ninguno."},
+  ninguno_asi: {en: "None is called that.", es: "Ninguno se llama así."},
+  en_marcha: {en: "In progress…", es: "En marcha…"},
+  video_listo: {en: "Video ready", es: "Vídeo listo"},
+  faltan_frases: {en: "Sentences missing", es: "Faltan las frases"},
+  sin_grabar: {en: "Not recorded", es: "Sin grabar"},
+  grabar: {en: "Record", es: "Grabar"},
+  explicar: {en: "Explain", es: "Explicar"},
+  video: {en: "Video", es: "Vídeo"},
+  acto: {en: "Act", es: "Acto"},
+  cue_portada: {en: "Cue 00 · Curtain up", es: "Cue 00 · Telón arriba"},
+  portada_h1: {en: "Make a video of any process", es: "Haz un vídeo de cualquier proceso"},
+  portada_sub: {en: "You do the process once, write what you want to say, and Tramoya records it clean: no waiting, no stumbles, and the cursor pointing at every step.",
+                es: "Haces el proceso una vez, escribes lo que quieres contar y Tramoya lo graba limpio: sin esperas, sin tropiezos y con el cursor señalando cada paso."},
+  empezar_video: {en: "Start a video", es: "Empezar un vídeo"},
+  acto1_b: {en: "You do it once", es: "Lo haces una vez"},
+  acto1_p: {en: "The website opens and you do the process as always. Tramoya writes down every click.", es: "Se abre la web y haces el proceso como siempre. Tramoya apunta cada clic."},
+  acto2_b: {en: "You write what to say", es: "Escribes qué decir"},
+  acto2_p: {en: "On the steps you choose, one sentence. It shows on screen and, if you like, a voice reads it.", es: "En los pasos que quieras, una frase. Sale en pantalla y, si quieres, la lee una voz."},
+  acto3_b: {en: "Out comes the video", es: "Sale el vídeo"},
+  acto3_p: {en: "Tramoya repeats the process by itself and records the video. Change a sentence? It is remade in a moment.", es: "Tramoya repite el proceso solo y graba el vídeo. ¿Cambias una frase? Se rehace en un momento."},
+  dos_datos: {en: "Two things and we begin.", es: "Dos datos y empezamos."},
+  como_se_llama: {en: "What is the video called?", es: "¿Cómo se llama el vídeo?"},
+  ej_nombre: {en: "For example: How to request a day off", es: "Por ejemplo: Cómo pedir vacaciones"},
+  en_que_web: {en: "On which website is it done?", es: "¿En qué web se hace?"},
+  otra_web: {en: "Another website…", es: "Otra web…"},
+  pega_url: {en: "Paste the website address here (https://…)", es: "Pega aquí la dirección de la web (https://…)"},
+  url_ayuda: {en: "Any website that opens in a browser works: your company intranet, a portal, a shop, your webmail… Copy the address from the browser bar and paste it here.",
+              es: "Sirve cualquier web que se abra en el navegador: la intranet de tu empresa, un portal, una tienda, tu correo web… Copia la dirección de la barra del navegador y pégala aquí."},
+  url_mal: {en: "This does not look like a web address. It should be something like https://www.example.com", es: "Esto no parece una dirección web. Debe ser algo como https://www.ejemplo.com"},
+  crear_y_grabar: {en: "Create and go to recording", es: "Crear y pasar a grabar"},
+  cancelar: {en: "Cancel", es: "Cancelar"},
+  ponle_nombre: {en: "Give it a name, for example “How to request a day off”", es: "Ponle un nombre, por ejemplo «Cómo pedir vacaciones»"},
+  mas_opciones: {en: "More options", es: "Más opciones"},
+  renombrar: {en: "Rename", es: "Cambiar el nombre"},
+  duplicar: {en: "Duplicate (to make another version)", es: "Duplicar (para hacer otra versión)"},
+  borrar: {en: "Delete", es: "Borrar"},
+  copia_creada: {en: "Copy created. You are now in the copy.", es: "Copia creada. Ahora estás en la copia."},
+  borrar_q: {en: "Delete this video?", es: "¿Borrar este vídeo?"},
+  borrar_txt: {en: "Its steps and sentences are deleted. A video already in “{carpeta}” is not touched.", es: "Se borran sus pasos y frases. El vídeo que ya esté en «{carpeta}» no se toca."},
+  borrado: {en: "Deleted.", es: "Borrado."},
+  nombre_video: {en: "Video name", es: "Nombre del vídeo"},
+  nombre_cambiado: {en: "Name changed.", es: "Nombre cambiado."},
+  abriendo: {en: "Opening {web}…", es: "Abriendo {web}…"},
+  primera_vez: {en: "The first time takes a few seconds.", es: "La primera vez tarda unos segundos."},
+  web_abierta: {en: "The website is open", es: "La web ya está abierta"},
+  nada_grabando: {en: "Nothing is being recorded yet.", es: "Todavía no se está grabando nada."},
+  prep1: {en: "If it asks for a user and password, <b>sign in as usual</b>. That is not recorded, and next time you will already be in.", es: "Si te pide usuario y contraseña, <b>entra como siempre</b>. Eso no se graba y la próxima vez ya estarás dentro."},
+  prep2: {en: "Go to the screen where the process <b>starts</b>.", es: "Ve a la pantalla donde <b>empieza</b> el proceso."},
+  prep3: {en: "Come back here and press <b>Start recording</b>.", es: "Vuelve aquí y pulsa <b>Empezar a grabar</b>."},
+  empezar_grabar: {en: "Start recording", es: "Empezar a grabar"},
+  grabando: {en: "Recording", es: "Grabando"},
+  haz_proceso: {en: "Do the process in the website's window.", es: "Haz el proceso en la ventana de la web."},
+  paso: {en: "step", es: "paso"},
+  pasos: {en: "steps", es: "pasos"},
+  esperando_clic: {en: "Waiting for your first click…", es: "Esperando tu primer clic…"},
+  consejo1: {en: "Take it calmly, as if you were showing someone. If you make a mistake, carry on: you can remove the extra steps later.", es: "Hazlo con calma, como si se lo enseñaras a alguien. Si te equivocas, sigue: luego podrás quitar los pasos que sobren."},
+  consejo2: {en: "Press the buttons that save (Save, Send, Submit…) as usual: when the video is made, the last one is pointed at without pressing it, so nothing is saved twice.", es: "Los botones que guardan (Imputar, Guardar, Enviar…) púlsalos con normalidad: al hacer el vídeo, el último se señala sin pulsarlo, para que no se guarde dos veces."},
+  ya_termine: {en: "I am done", es: "Ya he terminado"},
+  o_cierra: {en: "or close the website's window", es: "o cierra la ventana de la web"},
+  ia_haciendo: {en: "The AI is doing the process", es: "La IA está haciendo el proceso"},
+  no_toques: {en: "It works in the website's window. Do not touch it or close it.", es: "Lo hace en la ventana de la web. No la toques ni la cierres."},
+  pensando: {en: "Thinking…", es: "Pensando…"},
+  lo_que_pediste: {en: "What you asked for:", es: "Lo que pediste:"},
+  ordenando: {en: "Putting the steps in order…", es: "Ordenando los pasos…"},
+  ya_tiene: {en: "This video already has {n} recorded steps. If you record again they are replaced (the sentences of steps that repeat are kept).", es: "Este vídeo ya tiene {n} pasos grabados. Si grabas otra vez, se sustituyen (las frases de los pasos que se repitan se conservan)."},
+  asi_se_graba: {en: "How to record", es: "Así se graba"},
+  graba1: {en: "Press <b>Open the website</b>: <b>{web}</b> opens in a window.", es: "Pulsa <b>Abrir la web</b>: se abre <b>{web}</b> en una ventana."},
+  graba2: {en: "Sign in if needed and go to where the process starts.", es: "Entras si hace falta y vas a donde empieza el proceso."},
+  graba3: {en: "Press <b>Start recording</b> and do the process once.", es: "Pulsas <b>Empezar a grabar</b> y haces el proceso una vez."},
+  graba4: {en: "Press <b>I am done</b>. That's it.", es: "Pulsas <b>Ya he terminado</b>. Listo."},
+  abrir_web: {en: "Open the website", es: "Abrir la web"},
+  saltar: {en: "Go to the sentences without recording again", es: "Ir a las frases sin regrabar"},
+  web_dos_puntos: {en: "Website:", es: "Web:"},
+  cambiar: {en: "change", es: "cambiar"},
+  pideselo: {en: "Or ask the AI", es: "O pídeselo a la IA"},
+  pideselo_sub: {en: "Describe the process and the AI does it on the website for you: it writes down the steps and the sentence of each one. Then you review it as if you had recorded it. Or ask it a question, “where is…?”, “how do I change…?”, and it takes you there, points at it and answers at the end.",
+                 es: "Describe el proceso y la IA lo hace en la web por ti: apunta los pasos y escribe la frase de cada uno. Después lo revisas como si lo hubieras grabado tú. O hazle una pregunta, «¿dónde está…?», «¿cómo se cambia…?», y te lleva hasta allí, te lo señala y contesta al final."},
+  que_ver: {en: "What do you want to show?", es: "¿Qué quieres que se vea?"},
+  ej_objetivo: {en: "For example: go to Orders, find order 1234 and open its details. Or a question: where is the contrast of each colour?", es: "Por ejemplo: entra en Pedidos, busca el pedido 1234 y abre su detalle. O una pregunta: ¿dónde está el contraste de cada color?"},
+  ia_sesion: {en: "If the website asks for a user and password, sign in once first with “Open the website”: the AI uses that same session.", es: "Si la web pide usuario y contraseña, entra antes una vez con «Abrir la web»: la IA usa esa misma sesión."},
+  que_lo_haga: {en: "Let the AI do it", es: "Que lo haga la IA"},
+  cuentale: {en: "Tell it what to do, for example: go to Orders and open order 1234", es: "Cuéntale qué tiene que hacer, por ejemplo: entra en Pedidos y abre el pedido 1234"},
+  paso1de3: {en: "Step 1 of 3: do the process once and Tramoya writes down what you do.", es: "Paso 1 de 3: haz el proceso una vez y Tramoya apunta lo que haces."},
+  pega_dir: {en: "Paste the address of the page where the process starts.", es: "Pega la dirección de la página donde empieza el proceso."},
+  guardar: {en: "Save", es: "Guardar"},
+  la_web: {en: "the website", es: "la web"},
+  escribe_que: {en: "Write what you want to say", es: "Escribe qué quieres contar"},
+  paso2de3: {en: "Step 2 of 3: on the steps you choose, write a sentence. It shows on screen at that moment and, if you turn the voice on, it is read aloud. Steps without a sentence just happen.",
+             es: "Paso 2 de 3: en los pasos que quieras, escribe una frase. Saldrá en pantalla en ese momento y, si activas la voz, se leerá en alto. Los pasos sin frase se hacen sin más."},
+  el_guion: {en: "The script", es: "El guion"},
+  volver_grabar: {en: "Record again", es: "Volver a grabar"},
+  siguiente_video: {en: "Next: make the video", es: "Siguiente: hacer el vídeo"},
+  recuperar: {en: "Restore", es: "Recuperar"},
+  quitar: {en: "Remove", es: "Quitar"},
+  quitar_paso: {en: "Remove this step", es: "Quitar este paso"},
+  seguro_title: {en: "The cursor goes to the button but does not press it, so the video saves nothing", es: "El cursor va hasta el botón pero no lo pulsa, así el vídeo no guarda nada"},
+  solo_senalar: {en: "Point only, do not click", es: "Solo señalar, sin pulsar"},
+  fallo_paso: {en: "You can set it to “Point only”, remove it, or record again.", es: "Puedes marcarlo como «Solo señalar», quitarlo o volver a grabar."},
+  se_escribe: {en: "Typed:", es: "Se escribe:"},
+  que_pone: {en: "What you want it to say here (optional)", es: "Qué quieres que ponga aquí (opcional)"},
+  escribir_lo_que: {en: "Write what happens", es: "Escribir lo que se hace"},
+  escuchar: {en: "Listen", es: "Escuchar"},
+  contador: {en: "{n} steps · {c} with text", es: "{n} pasos · {c} con texto"},
+  empezando: {en: "Starting…", es: "Empezando…"},
+  se_mueve: {en: "The website moves by itself in another window. Do not touch it or close it.", es: "La web se mueve sola en otra ventana. No la toques ni la cierres."},
+  listo_video: {en: "<b>Video ready!</b> It is saved in the “{carpeta}” folder.", es: "<b>¡Vídeo listo!</b> Está guardado en la carpeta «{carpeta}»."},
+  abrir_video: {en: "Open the video", es: "Abrir el vídeo"},
+  mostrar_carpeta: {en: "Show in folder", es: "Mostrar en la carpeta"},
+  cambiar_rehacer: {en: "Change texts and remake", es: "Cambiar textos y rehacer"},
+  hecho_el: {en: "Made on {f}", es: "Hecho el {f}"},
+  con_voz_min: {en: ", with voice", es: ", con voz"},
+  srt_junto: {en: " Its subtitles (.srt) are next to the video too, in case you want to upload them to Teams, Stream or YouTube.", es: " Junto al vídeo están también sus subtítulos (.srt), por si los quieres subir a Teams, Stream o YouTube."},
+  ir_paso: {en: "Go to that step", es: "Ir a ese paso"},
+  sin_texto: {en: "You have not written any text: the video will only have the cursor. You can <a href=\"#\" id=\"a-textos\">add some</a>.", es: "No has escrito ningún texto: el vídeo saldrá solo con el cursor. Puedes <a href=\"#\" id=\"a-textos\">añadir algunos</a>."},
+  con_voz: {en: "With voice", es: "Con voz"},
+  voz_lee: {en: "Reads the sentences aloud with the Windows voice ({v}). You can change it in <a href=\"#\" id=\"a-ajustes\">Settings</a>.", es: "Lee las frases en alto con la voz de Windows ({v}). Puedes cambiarla en <a href=\"#\" id=\"a-ajustes\">Ajustes</a>."},
+  sin_voces: {en: "This computer has no voices installed; the sentences will only show on screen.", es: "Este ordenador no tiene voces instaladas; las frases saldrán solo en pantalla."},
+  hace1: {en: "Tramoya opens the website and repeats your steps by itself, calmly and without mistakes.", es: "Tramoya abre la web y repite tus pasos sola, con calma y sin errores."},
+  hace2: {en: "Meanwhile, <b>do not touch that window</b>. It takes about as long as the video lasts.", es: "Mientras tanto, <b>no toques esa ventana</b>. Tarda más o menos lo que dura el vídeo."},
+  hace3: {en: "When it finishes, the video appears here and in the “{carpeta}” folder.", es: "Al terminar, el vídeo aparece aquí y en la carpeta «{carpeta}»."},
+  hacer_video: {en: "Make the video", es: "Hacer el vídeo"},
+  volver_textos: {en: "Back to the texts", es: "Volver a los textos"},
+  paso3de3: {en: "Step 3 of 3: Tramoya repeats the process and records the video.", es: "Paso 3 de 3: Tramoya repite el proceso y graba el vídeo."},
+  fase_voz: {en: "Voice", es: "Voz"},
+  fase_grabar: {en: "Recording", es: "Grabación"},
+  fase_montar: {en: "Editing", es: "Montaje"},
+  valen_todos: {en: "They apply to every new video.", es: "Valen para todos los vídeos nuevos."},
+  idioma: {en: "Language", es: "Idioma"},
+  idioma_sub: {en: "The language of this window, of the steps it writes and of what the AI says. The voice follows it.", es: "El idioma de esta ventana, de los pasos que apunta y de lo que dice la IA. La voz lo sigue."},
+  voz: {en: "Voice", es: "Voz"},
+  voz_sub: {en: "The voice that reads the sentences. These are the Windows voices of this computer.", es: "La voz que lee las frases. Son las voces de Windows de este ordenador."},
+  velocidad: {en: "Voice speed", es: "Velocidad de la voz"},
+  mas_despacio: {en: "Slower", es: "Más despacio"},
+  normal: {en: "Normal", es: "Normal"},
+  mas_deprisa: {en: "Faster", es: "Más deprisa"},
+  probar_voz: {en: "Try the voice", es: "Probar la voz"},
+  ritmo: {en: "Pace of the video", es: "Ritmo del vídeo"},
+  ritmo_sub: {en: "How long it pauses between one step and the next.", es: "Cuánto se para entre un paso y el siguiente."},
+  tranquilo: {en: "Relaxed", es: "Tranquilo"},
+  agil: {en: "Brisk", es: "Ágil"},
+  tamano: {en: "Video size", es: "Tamaño del vídeo"},
+  tamano_sub: {en: "If you will watch it full screen, Full HD is better. It applies to what you record from now on.", es: "Si vas a verlo a pantalla completa, mejor Full HD. Se aplica a lo que grabes a partir de ahora."},
+  portatil: {en: "Laptop (1280×800)", es: "Portátil (1280×800)"},
+  srt: {en: "Also save the subtitles", es: "Guardar también los subtítulos"},
+  srt_sub: {en: "An .srt file next to the video, for Teams, Stream or YouTube.", es: "Un archivo .srt junto al vídeo, para Teams, Stream o YouTube."},
+  guardar_subt: {en: "Save subtitles", es: "Guardar subtítulos"},
+  avanzado: {en: "Advanced", es: "Avanzado"},
+  dominios_sub: {en: "If a website of your company asks for your Windows password every time, write its domain here (for example <code>*.mycompany.com</code>) so it signs in by itself. The website of each video is already included.", es: "Si una web de tu empresa te pide la contraseña de Windows cada vez, escribe aquí su dominio (por ejemplo <code>*.miempresa.com</code>) para que entre sola. La web de cada vídeo ya se incluye."},
+  dominios_ph: {en: "*.mycompany.com, *.mycompany.net", es: "*.miempresa.com, *.miempresa.net"},
+  hola_voz: {en: "Hello. This is how the voice of your videos will sound.", es: "Hola. Así sonará la voz de tus vídeos."},
+  ajustes_ok: {en: "Settings saved.", es: "Ajustes guardados."},
+  escritorio_ok: {en: "Done: Tramoya is on your desktop.", es: "Listo: tienes Tramoya en el escritorio."},
+};
+let LANG = "en";
+const T_ = (k, v) => t(k, v);  // inside grabar() and video() `t` is the task
+// The folder of finished videos, by its real name («Mis vídeos», «My videos», «Tramoya»…).
+const carpetaNombre = () => String(INICIO.carpeta || "").split(/[\\/]/).filter(Boolean).pop() || (LANG === "es" ? "Mis vídeos" : "My videos");
+const t = (k, v = {}) => String((TEXTOS[k] || {})[LANG] ?? (TEXTOS[k] || {}).en ?? k)
+  .replace(/\{(\w+)\}/g, (_, n) => n === "carpeta" && v[n] === undefined ? carpetaNombre() : (v[n] ?? ""));
+function traducirFijos() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  document.querySelectorAll("[data-t-ph]").forEach((el) => { el.placeholder = t(el.dataset.tPh); el.setAttribute("aria-label", t(el.dataset.tPh)); });
+}
+
 let INICIO = {proyectos: [], voces: [], webs: [], ajustes: {}};
 let P = null;              // proyecto abierto
 let VISTA = "portada";     // portada | crear | grabar | explicar | video
@@ -491,6 +667,8 @@ let guardarTimer = null;
 
 async function cargarInicio() {
   INICIO = await api("/api/inicio");
+  LANG = (INICIO.ajustes && INICIO.ajustes.idioma) || INICIO.idioma || "en";
+  traducirFijos();
   $("#btn-acceso").classList.toggle("oculto", !INICIO.windows || INICIO.acceso);
   $("#buscar").classList.toggle("oculto", INICIO.proyectos.length < 7);
   pintarLista();
@@ -504,16 +682,19 @@ function avisar(texto) {
 }
 
 const nombreVoz = (v) => (v || "").split(" - ")[0].replace("Microsoft ", "").replace(" Desktop", "");
+// «Microsoft Zira Desktop - English (United States)»: el idioma va después del guion.
+const vozEs = (v, lang) => new RegExp(lang === "es" ? "Spanish|Español|espa" : "English|Inglés|ingl", "i").test((v || "").split(" - ")[1] || "");
+const vozDelIdioma = () => INICIO.ajustes.voz || INICIO.voces.find((v) => vozEs(v, LANG)) || INICIO.voces[0];
 
 function pintarLista() {
   const l = $("#lista");
-  if (!INICIO.proyectos.length) { l.innerHTML = '<div class="vacio-lista">Aún no hay ninguno.</div>'; return; }
+  if (!INICIO.proyectos.length) { l.innerHTML = `<div class="vacio-lista">${t("ninguno_aun")}</div>`; return; }
   const f = ($("#filtro").value || "").trim().toLowerCase();
   const lista = INICIO.proyectos.filter((p) => !f || p.nombre.toLowerCase().includes(f));
-  if (!lista.length) { l.innerHTML = '<div class="vacio-lista">Ninguno se llama así.</div>'; return; }
+  if (!lista.length) { l.innerHTML = `<div class="vacio-lista">${t("ninguno_asi")}</div>`; return; }
   l.innerHTML = lista.map((p) => {
     const vivo = ["abriendo", "preparado", "grabando", "pensando", "haciendo"].includes(p.tarea);
-    const estado = vivo ? "En marcha…" : p.video ? "Vídeo listo" : p.fase === "explicar" ? "Faltan las frases" : "Sin grabar";
+    const estado = vivo ? t("en_marcha") : p.video ? t("video_listo") : p.fase === "explicar" ? t("faltan_frases") : t("sin_grabar");
     return `<button class="item ${P && P.id === p.id ? "activo" : ""}" data-id="${esc(p.id)}">
       <i class="punto ${vivo ? "vivo" : p.video ? "listo" : ""}"></i>
       <span>${esc(p.nombre)}<small>${estado}</small></span></button>`;
@@ -531,12 +712,12 @@ async function abrir(id, vista) {
 
 function guia() {
   const orden = ["grabar", "explicar", "video"];
-  const nombres = {grabar: "Grabar", explicar: "Explicar", video: "Vídeo"};
+  const nombres = {grabar: t("grabar"), explicar: t("explicar"), video: t("video")};
   const actual = orden.indexOf(VISTA);
   const alcanzable = (v) => v === "grabar" || (v === "explicar" && P.pasos.length) || (v === "video" && P.pasos.length);
   return `<ol class="pasos-guia">${orden.map((v, i) => {
     const cls = i === actual ? "ahora" : alcanzable(v) && i < actual ? "hecho" : alcanzable(v) ? "hecho" : "";
-    return `<li class="${cls}" data-v="${v}"><span class="n">${i < actual ? "✓ " : ""}Acto ${["I", "II", "III"][i]}</span><b>${nombres[v]}</b></li>`;
+    return `<li class="${cls}" data-v="${v}"><span class="n">${i < actual ? "✓ " : ""}${t("acto")} ${["I", "II", "III"][i]}</span><b>${nombres[v]}</b></li>`;
   }).join("")}</ol>`;
 }
 
@@ -561,34 +742,34 @@ function portada(v) {
     <i class="cono"></i><i class="telon izq"></i><i class="telon der"></i><i class="bambalina"></i><i class="feston"></i><i class="lampara"></i>
     <i class="tablas"></i><i class="luz"></i>
     <div class="escena-texto">
-      <span class="cue">Cue 00 · Telón arriba</span>
-      <h1>Haz un vídeo de cualquier proceso</h1>
-      <p class="sub">Haces el proceso una vez, escribes lo que quieres contar y Tramoya lo graba limpio: sin esperas, sin tropiezos y con el cursor señalando cada paso.</p>
-      <button class="btn principal grande" id="empezar">Empezar un vídeo</button>
+      <span class="cue">${t("cue_portada")}</span>
+      <h1>${t("portada_h1")}</h1>
+      <p class="sub">${t("portada_sub")}</p>
+      <button class="btn principal grande" id="empezar">${t("empezar_video")}</button>
     </div></div>
     <div class="tres">
-      <div class="acto"><span class="cue">Acto I</span><b>Lo haces una vez</b><p>Se abre la web y haces el proceso como siempre. Tramoya apunta cada clic.</p></div>
-      <div class="acto"><span class="cue">Acto II</span><b>Escribes qué decir</b><p>En los pasos que quieras, una frase. Sale en pantalla y, si quieres, la lee una voz.</p></div>
-      <div class="acto"><span class="cue">Acto III</span><b>Sale el vídeo</b><p>Tramoya repite el proceso solo y graba el vídeo. ¿Cambias una frase? Se rehace en un momento.</p></div>
+      <div class="acto"><span class="cue">${t("acto")} I</span><b>${t("acto1_b")}</b><p>${t("acto1_p")}</p></div>
+      <div class="acto"><span class="cue">${t("acto")} II</span><b>${t("acto2_b")}</b><p>${t("acto2_p")}</p></div>
+      <div class="acto"><span class="cue">${t("acto")} III</span><b>${t("acto3_b")}</b><p>${t("acto3_p")}</p></div>
     </div>`;
   $("#empezar").onclick = () => { VISTA = "crear"; P = null; pintar(); pintarLista(); };
 }
 
 /* ---------- crear ---------- */
 function crear(v) {
-  v.innerHTML = `<h1>Nuevo vídeo</h1>
-    <p class="sub">Dos datos y empezamos.</p>
+  v.innerHTML = `<h1>${t("nuevo_video")}</h1>
+    <p class="sub">${t("dos_datos")}</p>
     <div class="tarjeta">
-      <label class="campo"><span>¿Cómo se llama el vídeo?</span>
-        <input type="text" id="nombre" placeholder="Por ejemplo: Cómo pedir vacaciones" maxlength="80"></label>
-      <div class="campo"><span>¿En qué web se hace?</span>
+      <label class="campo"><span>${t("como_se_llama")}</span>
+        <input type="text" id="nombre" placeholder="${t("ej_nombre")}" maxlength="80"></label>
+      <div class="campo"><span>${t("en_que_web")}</span>
         ${(INICIO.webs || []).length ? `<div class="webs">${INICIO.webs.map((w, i) => `<button class="web ${i === 0 ? "on" : ""}" data-url="${esc(w.url)}" title="${esc(w.url)}">${ico("globo", 14)} ${esc(w.nombre)}</button>`).join("")}
-          <button class="web" data-url="">${ico("lapiz", 14)} Otra web…</button></div>` : ""}
-        <input type="text" id="url" class="${(INICIO.webs || []).length ? "oculto" : ""}" placeholder="Pega aquí la dirección de la web (https://…)" spellcheck="false">
-        <small>Sirve cualquier web que se abra en el navegador: la intranet de tu empresa, un portal, una tienda, tu correo web… Copia la dirección de la barra del navegador y pégala aquí.</small>
-        <small id="url-error" class="oculto" style="color:var(--rojo)">Esto no parece una dirección web. Debe ser algo como https://www.ejemplo.com</small></div>
-      <div class="botones"><button class="btn principal grande" id="crear">Crear y pasar a grabar</button>
-        <button class="btn discreto" id="anular">Cancelar</button></div>
+          <button class="web" data-url="">${ico("lapiz", 14)} ${t("otra_web")}</button></div>` : ""}
+        <input type="text" id="url" class="${(INICIO.webs || []).length ? "oculto" : ""}" placeholder="${t("pega_url")}" spellcheck="false">
+        <small>${t("url_ayuda")}</small>
+        <small id="url-error" class="oculto" style="color:var(--rojo)">${t("url_mal")}</small></div>
+      <div class="botones"><button class="btn principal grande" id="crear">${t("crear_y_grabar")}</button>
+        <button class="btn discreto" id="anular">${t("cancelar")}</button></div>
     </div>`;
   const nombre = $("#nombre");
   nombre.focus();
@@ -601,7 +782,7 @@ function crear(v) {
     if (!url) campo.focus();
   });
   const ir = async () => {
-    if (!nombre.value.trim()) { nombre.focus(); nombre.placeholder = "Ponle un nombre, por ejemplo «Cómo pedir vacaciones»"; return; }
+    if (!nombre.value.trim()) { nombre.focus(); nombre.placeholder = t("ponle_nombre"); return; }
     let elegida = url || $("#url").value.trim();
     if (elegida && !/^https?:\/\//i.test(elegida)) elegida = "https://" + elegida;
     let valida = false;
@@ -622,7 +803,7 @@ function crear(v) {
 /* ---------- grabar ---------- */
 function cabecera(titulo, sub) {
   return `${guia()}<div class="titular"><h1 id="titulo">${titulo}</h1>
-    <div class="menu"><button class="icono-btn" id="btn-menu" aria-label="Más opciones" title="Más opciones">${ico("puntos", 18)}</button></div></div>
+    <div class="menu"><button class="icono-btn" id="btn-menu" aria-label="${t("mas_opciones")}" title="${t("mas_opciones")}">${ico("puntos", 18)}</button></div></div>
     <p class="sub">${sub}</p>`;
 }
 
@@ -633,9 +814,9 @@ function enlazarCabecera() {
     const viejo = $(".menu-lista"); if (viejo) { viejo.remove(); return; }
     const m = document.createElement("div");
     m.className = "menu-lista";
-    m.innerHTML = `<button data-m="renombrar">${ico("lapiz")} Cambiar el nombre</button>
-      <button data-m="duplicar">${ico("copia")} Duplicar (para hacer otra versión)</button>
-      <button data-m="borrar" class="peligro">${ico("quitar")} Borrar</button>`;
+    m.innerHTML = `<button data-m="renombrar">${ico("lapiz")} ${t("renombrar")}</button>
+      <button data-m="duplicar">${ico("copia")} ${t("duplicar")}</button>
+      <button data-m="borrar" class="peligro">${ico("quitar")} ${t("borrar")}</button>`;
     b.parentElement.append(m);
     m.onclick = async (ev) => {
       const o = ev.target.closest("button"); if (!o) return;
@@ -643,10 +824,10 @@ function enlazarCabecera() {
       if (o.dataset.m === "renombrar") renombrar();
       if (o.dataset.m === "duplicar") {
         const r = await api(`/api/p/${P.id}/duplicar`, {});
-        await cargarInicio(); await abrir(r.id); avisar("Copia creada. Ahora estás en la copia.");
+        await cargarInicio(); await abrir(r.id); avisar(t("copia_creada"));
       }
-      if (o.dataset.m === "borrar") confirmar("¿Borrar este vídeo?", "Se borran sus pasos y frases. El vídeo que ya esté en «Mis vídeos» no se toca.", "Borrar", async () => {
-        await api(`/api/p/${P.id}/borrar`, {}); P = null; VISTA = "portada"; await cargarInicio(); pintar(); avisar("Borrado.");
+      if (o.dataset.m === "borrar") confirmar(t("borrar_q"), t("borrar_txt"), t("borrar"), async () => {
+        await api(`/api/p/${P.id}/borrar`, {}); P = null; VISTA = "portada"; await cargarInicio(); pintar(); avisar(t("borrado"));
       });
     };
   };
@@ -655,12 +836,12 @@ document.addEventListener("click", () => { const m = $(".menu-lista"); if (m) m.
 
 function renombrar() {
   const h = $("#titulo");
-  h.innerHTML = `<input type="text" maxlength="80" value="${esc(P.nombre)}" aria-label="Nombre del vídeo">`;
+  h.innerHTML = `<input type="text" maxlength="80" value="${esc(P.nombre)}" aria-label="${t("nombre_video")}">`;
   const i = $("input", h); i.focus(); i.select();
   const fin = async (guardarlo) => {
     const n = i.value.trim();
     if (guardarlo && n && n !== P.nombre) {
-      await api(`/api/p/${P.id}/guardar`, {nombre: n}); P.nombre = n; await cargarInicio(); avisar("Nombre cambiado.");
+      await api(`/api/p/${P.id}/guardar`, {nombre: n}); P.nombre = n; await cargarInicio(); avisar(t("nombre_cambiado"));
     }
     pintar();
   };
@@ -673,65 +854,65 @@ function grabar(v) {
   const web = esc(nombreWeb(P.url));
   let cuerpo;
   if (t.estado === "abriendo") {
-    cuerpo = `<div class="tarjeta"><div class="en-vivo"><div class="girando"></div><h2 style="margin:0">Abriendo ${web}…</h2></div>
-      <p class="pista" style="margin:0">La primera vez tarda unos segundos.</p></div>`;
+    cuerpo = `<div class="tarjeta"><div class="en-vivo"><div class="girando"></div><h2 style="margin:0">${T_("abriendo", {web})}</h2></div>
+      <p class="pista" style="margin:0">${T_("primera_vez")}</p></div>`;
   } else if (t.estado === "preparado") {
     cuerpo = `<div class="tarjeta">
-      <div class="en-vivo"><div class="icono-redondo oro">${ico("globo", 20)}</div><div><h2 style="margin:0">La web ya está abierta</h2>
-        <span class="pista">Todavía no se está grabando nada.</span></div></div>
+      <div class="en-vivo"><div class="icono-redondo oro">${ico("globo", 20)}</div><div><h2 style="margin:0">${T_("web_abierta")}</h2>
+        <span class="pista">${T_("nada_grabando")}</span></div></div>
       <ol class="lista-num">
-        <li><span>Si te pide usuario y contraseña, <b>entra como siempre</b>. Eso no se graba y la próxima vez ya estarás dentro.</span></li>
-        <li><span>Ve a la pantalla donde <b>empieza</b> el proceso.</span></li>
-        <li><span>Vuelve aquí y pulsa <b>Empezar a grabar</b>.</span></li>
+        <li><span>${T_("prep1")}</span></li>
+        <li><span>${T_("prep2")}</span></li>
+        <li><span>${T_("prep3")}</span></li>
       </ol>
-      <div class="botones"><button class="btn principal grande" id="empezar"><span class="punto-rojo"></span> Empezar a grabar</button>
-        <button class="btn discreto" id="cancelar">Cancelar</button></div></div>`;
+      <div class="botones"><button class="btn principal grande" id="empezar"><span class="punto-rojo"></span> ${T_("empezar_grabar")}</button>
+        <button class="btn discreto" id="cancelar">${T_("cancelar")}</button></div></div>`;
   } else if (t.estado === "grabando") {
     cuerpo = `<div class="tarjeta">
-      <div class="en-vivo"><div class="anillo"></div><div><h2 style="margin:0">Grabando</h2>
-        <span class="pista">Haz el proceso en la ventana de la web.</span></div>
-        <div class="derecha marcador"><b>${t.n || 0}</b><small>${(t.n || 0) === 1 ? "paso" : "pasos"}</small></div></div>
-      ${t.ultimo ? `<div class="ultimo">${ico("bien")}<span>${esc(t.ultimo)}</span></div>` : `<div class="ultimo espera">${ico("clic")}<span>Esperando tu primer clic…</span></div>`}
+      <div class="en-vivo"><div class="anillo"></div><div><h2 style="margin:0">${T_("grabando")}</h2>
+        <span class="pista">${T_("haz_proceso")}</span></div>
+        <div class="derecha marcador"><b>${t.n || 0}</b><small>${(t.n || 0) === 1 ? T_("paso") : T_("pasos")}</small></div></div>
+      ${t.ultimo ? `<div class="ultimo">${ico("bien")}<span>${esc(t.ultimo)}</span></div>` : `<div class="ultimo espera">${ico("clic")}<span>${T_("esperando_clic")}</span></div>`}
       <div class="consejos">
-        <div class="consejo">${ico("bombilla")}<span>Hazlo con calma, como si se lo enseñaras a alguien. Si te equivocas, sigue: luego podrás quitar los pasos que sobren.</span></div>
-        <div class="consejo">${ico("ojo")}<span>Los botones que guardan (Imputar, Guardar, Enviar…) púlsalos con normalidad: al hacer el vídeo, el último se señala sin pulsarlo, para que no se guarde dos veces.</span></div>
+        <div class="consejo">${ico("bombilla")}<span>${T_("consejo1")}</span></div>
+        <div class="consejo">${ico("ojo")}<span>${T_("consejo2")}</span></div>
       </div>
-      <div class="botones"><button class="btn principal grande" id="terminar">Ya he terminado</button>
-        <span class="pista">o cierra la ventana de la web</span></div></div>`;
+      <div class="botones"><button class="btn principal grande" id="terminar">${T_("ya_termine")}</button>
+        <span class="pista">${T_("o_cierra")}</span></div></div>`;
   } else if (t.estado === "pensando") {
     cuerpo = `<div class="tarjeta" id="tarjeta-pensando">
-      <div class="en-vivo"><div class="anillo"></div><div><h2 style="margin:0">La IA está haciendo el proceso</h2>
-        <span class="pista">Lo hace en la ventana de la web. No la toques ni la cierres.</span></div>
-        <div class="derecha marcador"><b>${t.n || 0}</b><small>${(t.n || 0) === 1 ? "paso" : "pasos"}</small></div></div>
-      <div class="ultimo espera" id="msg">${ico("bombilla")}<span>${esc(t.msg || "Pensando…")}</span></div>
+      <div class="en-vivo"><div class="anillo"></div><div><h2 style="margin:0">${T_("ia_haciendo")}</h2>
+        <span class="pista">${T_("no_toques")}</span></div>
+        <div class="derecha marcador"><b>${t.n || 0}</b><small>${(t.n || 0) === 1 ? T_("paso") : T_("pasos")}</small></div></div>
+      <div class="ultimo espera" id="msg">${ico("bombilla")}<span>${esc(t.msg || T_("pensando"))}</span></div>
       <div class="progreso"><i id="barra" style="width:${Math.round((t.p || 0) * 100)}%"></i></div>
-      <p class="pista" style="margin:0 0 18px">Lo que pediste: ${esc(P.objetivo || "")}</p>
-      <div class="botones"><button class="btn discreto" id="cancelar">Cancelar</button></div></div>`;
+      <p class="pista" style="margin:0 0 18px">${T_("lo_que_pediste")} ${esc(P.objetivo || "")}</p>
+      <div class="botones"><button class="btn discreto" id="cancelar">${T_("cancelar")}</button></div></div>`;
   } else if (t.estado === "convirtiendo") {
-    cuerpo = `<div class="tarjeta"><div class="en-vivo"><div class="girando"></div><h2 style="margin:0">Ordenando los pasos…</h2></div></div>`;
+    cuerpo = `<div class="tarjeta"><div class="en-vivo"><div class="girando"></div><h2 style="margin:0">${T_("ordenando")}</h2></div></div>`;
   } else {
     const error = t.estado === "error" ? `<div class="aviso mal">${ico("mal")}<p>${esc(t.msg)}</p></div>` : "";
-    const ya = P.pasos.length ? `<div class="aviso info">${ico("info")}<p>Este vídeo ya tiene ${P.pasos.length} pasos grabados. Si grabas otra vez, se sustituyen (las frases de los pasos que se repitan se conservan).</p></div>` : "";
+    const ya = P.pasos.length ? `<div class="aviso info">${ico("info")}<p>${T_("ya_tiene", {n: P.pasos.length})}</p></div>` : "";
     cuerpo = `${error}${ya}<div class="tarjeta">
-      <h2>Así se graba</h2>
+      <h2>${T_("asi_se_graba")}</h2>
       <ol class="lista-num">
-        <li><span>Pulsa <b>Abrir la web</b>: se abre <b>${web}</b> en una ventana.</span></li>
-        <li><span>Entras si hace falta y vas a donde empieza el proceso.</span></li>
-        <li><span>Pulsas <b>Empezar a grabar</b> y haces el proceso una vez.</span></li>
-        <li><span>Pulsas <b>Ya he terminado</b>. Listo.</span></li>
+        <li><span>${T_("graba1", {web})}</span></li>
+        <li><span>${T_("graba2")}</span></li>
+        <li><span>${T_("graba3")}</span></li>
+        <li><span>${T_("graba4")}</span></li>
       </ol>
-      <div class="botones"><button class="btn principal grande" id="abrir-web">${ico("globo")} Abrir la web</button>
-        ${P.pasos.length ? '<button class="btn discreto derecha" id="saltar">Ir a las frases sin regrabar</button>' : ""}</div>
-      <p class="pista" style="margin:16px 0 0">Web: ${esc(P.url)} · <a href="#" id="cambiar-web">cambiar</a></p></div>`;
+      <div class="botones"><button class="btn principal grande" id="abrir-web">${ico("globo")} ${T_("abrir_web")}</button>
+        ${P.pasos.length ? `<button class="btn discreto derecha" id="saltar">${T_("saltar")}</button>` : ""}</div>
+      <p class="pista" style="margin:16px 0 0">${T_("web_dos_puntos")} ${esc(P.url)} · <a href="#" id="cambiar-web">${T_("cambiar")}</a></p></div>`;
     if (INICIO.agente) cuerpo += `<div class="tarjeta" id="tarjeta-ia">
-      <h2>O pídeselo a la IA</h2>
-      <p class="sub" style="margin-bottom:16px">Describe el proceso y la IA lo hace en la web por ti: apunta los pasos y escribe la frase de cada uno. Después lo revisas como si lo hubieras grabado tú. O hazle una pregunta, «¿dónde está…?», «¿cómo se cambia…?», y te lleva hasta allí, te lo señala y contesta al final.</p>
-      <label class="campo"><span>¿Qué quieres que se vea?</span>
-        <textarea id="objetivo-ia" rows="2" maxlength="600" placeholder="Por ejemplo: entra en Pedidos, busca el pedido 1234 y abre su detalle. O una pregunta: ¿dónde está el contraste de cada color?">${esc(P.objetivo || "")}</textarea>
-        <small>Si la web pide usuario y contraseña, entra antes una vez con «Abrir la web»: la IA usa esa misma sesión.</small></label>
-      <div class="botones"><button class="btn principal grande" id="btn-ia">${ico("bombilla", 18)} Que lo haga la IA</button></div></div>`;
+      <h2>${T_("pideselo")}</h2>
+      <p class="sub" style="margin-bottom:16px">${T_("pideselo_sub")}</p>
+      <label class="campo"><span>${T_("que_ver")}</span>
+        <textarea id="objetivo-ia" rows="2" maxlength="600" placeholder="${T_("ej_objetivo")}">${esc(P.objetivo || "")}</textarea>
+        <small>${T_("ia_sesion")}</small></label>
+      <div class="botones"><button class="btn principal grande" id="btn-ia">${ico("bombilla", 18)} ${T_("que_lo_haga")}</button></div></div>`;
   }
-  v.innerHTML = cabecera(esc(P.nombre), "Paso 1 de 3: haz el proceso una vez y Tramoya apunta lo que haces.") + cuerpo;
+  v.innerHTML = cabecera(esc(P.nombre), T_("paso1de3")) + cuerpo;
   enlazarGuia();
   enlazarCabecera();
   const on = (id, fn) => { const b = $("#" + id); if (b) b.onclick = fn; };
@@ -745,14 +926,14 @@ function grabar(v) {
   if (objetivo) { crecer(objetivo); objetivo.oninput = () => crecer(objetivo); }
   on("btn-ia", async () => {
     const texto = objetivo.value.trim();
-    if (!texto) { objetivo.focus(); objetivo.placeholder = "Cuéntale qué tiene que hacer, por ejemplo: entra en Pedidos y abre el pedido 1234"; return; }
+    if (!texto) { objetivo.focus(); objetivo.placeholder = T_("cuentale"); return; }
     $("#btn-ia").disabled = true;
     const r = await api(`/api/p/${P.id}/agente`, {objetivo: texto});
     if (r.error) { $("#btn-ia").disabled = false; avisar(r.error); return; }
     P.objetivo = texto;
     refrescar();
   });
-  on("borrar", () => confirmar("¿Borrar este vídeo?", "Se borran sus pasos y frases. El vídeo que ya esté en «Mis vídeos» no se toca.", "Borrar", async () => {
+  on("borrar", () => confirmar(T_("borrar_q"), T_("borrar_txt"), T_("borrar"), async () => {
     await api(`/api/p/${P.id}/borrar`, {}); P = null; VISTA = "portada"; await cargarInicio(); pintar();
   }));
   if (["abriendo", "preparado", "grabando", "pensando", "convirtiendo"].includes(t.estado)) vigilar();
@@ -761,10 +942,10 @@ function grabar(v) {
 function pedirWeb() {
   const d = document.createElement("div");
   d.className = "dialogo-fondo";
-  d.innerHTML = `<div class="dialogo" role="dialog" aria-modal="true"><h2>¿En qué web se hace?</h2>
-    <p>Pega la dirección de la página donde empieza el proceso.</p>
+  d.innerHTML = `<div class="dialogo" role="dialog" aria-modal="true"><h2>${t("en_que_web")}</h2>
+    <p>${t("pega_dir")}</p>
     <input type="text" id="d-url" value="${esc(P.url)}">
-    <div class="botones" style="margin-top:18px"><button class="btn principal" id="d-si">Guardar</button><button class="btn discreto" id="d-no">Cancelar</button></div></div>`;
+    <div class="botones" style="margin-top:18px"><button class="btn principal" id="d-si">${t("guardar")}</button><button class="btn discreto" id="d-no">${t("cancelar")}</button></div></div>`;
   document.body.append(d);
   const i = $("#d-url", d); i.focus(); i.select();
   $("#d-no", d).onclick = () => d.remove();
@@ -778,7 +959,7 @@ function pedirWeb() {
 function nombreWeb(url) {
   const w = (INICIO.webs || []).find((x) => x.url === url);
   if (w) return w.nombre;
-  try { return new URL(url).hostname; } catch { return "la web"; }
+  try { return new URL(url).hostname; } catch { return t("la_web"); }
 }
 
 async function refrescar() {
@@ -803,7 +984,7 @@ function vigilar() {
       if (VISTA === "grabar" && q.tarea.estado === "grabando" && P.tarea.estado === "grabando" && $(".marcador")) {
         P = q;
         $(".marcador b").textContent = q.tarea.n || 0;
-        $(".marcador small").textContent = (q.tarea.n || 0) === 1 ? "paso" : "pasos";
+        $(".marcador small").textContent = (q.tarea.n || 0) === 1 ? t("paso") : t("pasos");
         const u = $(".ultimo");
         u.classList.remove("espera", "nuevo"); void u.offsetWidth; u.classList.add("nuevo");
         u.innerHTML = `${ico("bien")}<span>${esc(q.tarea.ultimo || "")}</span>`;
@@ -813,12 +994,12 @@ function vigilar() {
         const cambioPaso = (q.tarea.n || 0) !== (P.tarea.n || 0);
         P = q;
         $(".marcador b").textContent = q.tarea.n || 0;
-        $(".marcador small").textContent = (q.tarea.n || 0) === 1 ? "paso" : "pasos";
+        $(".marcador small").textContent = (q.tarea.n || 0) === 1 ? t("paso") : t("pasos");
         $("#barra").style.width = Math.round((q.tarea.p || 0) * 100) + "%";
         const u = $("#msg");
         u.classList.toggle("espera", !(q.tarea.n > 0));
         if (cambioPaso) { u.classList.remove("nuevo"); void u.offsetWidth; u.classList.add("nuevo"); }
-        u.innerHTML = `${ico(q.tarea.n > 0 ? "bien" : "bombilla")}<span>${esc(q.tarea.msg || "Pensando…")}</span>`;
+        u.innerHTML = `${ico(q.tarea.n > 0 ? "bien" : "bombilla")}<span>${esc(q.tarea.msg || t("pensando"))}</span>`;
         return;
       }
       const antes = P.tarea.estado;
@@ -834,14 +1015,13 @@ function explicar(v) {
   const pasos = P.pasos;
   const fallo = P.tarea?.estado === "error" ? P.tarea.paso : null;
   const avisos = (P.avisos || []).map((a) => `<p>${esc(a)}</p>`).join("");
-  v.innerHTML = cabecera("Escribe qué quieres contar",
-      "Paso 2 de 3: en los pasos que quieras, escribe una frase. Saldrá en pantalla en ese momento y, si activas la voz, se leerá en alto. Los pasos sin frase se hacen sin más.")
+  v.innerHTML = cabecera(t("escribe_que"), t("paso2de3"))
     + (avisos ? `<div class="aviso info">${ico("info")}<div>${avisos}</div></div>` : "")
-    + `<div class="cabecera-pasos"><h2 style="margin:0">El guion</h2><span class="contador derecha" id="contador"></span></div>
+    + `<div class="cabecera-pasos"><h2 style="margin:0">${t("el_guion")}</h2><span class="contador derecha" id="contador"></span></div>
     <div id="pasos">${pasos.map(pasoHTML).join("")}</div>
     <div class="barra-fija">
-      <button class="btn discreto" id="regrabar">${ico("volver")} Volver a grabar</button>
-      <button class="btn principal grande derecha" id="seguir">Siguiente: hacer el vídeo</button>
+      <button class="btn discreto" id="regrabar">${ico("volver")} ${t("volver_grabar")}</button>
+      <button class="btn principal grande derecha" id="seguir">${t("siguiente_video")}</button>
     </div>`;
   enlazarGuia();
   enlazarCabecera();
@@ -868,30 +1048,31 @@ function pasoHTML(p) {
     return `<div class="paso tecla ${p.quitado ? "quitado" : ""}" data-id="${p.id}">
       <div class="num">${String(p.id).padStart(2, "0")}</div>
       <div class="que"><span style="color:var(--suave)">${ico("tecla")}</span><b>${esc(p.desc)}</b>
-        <button class="chip" data-a="quitar">${p.quitado ? ico("volver", 13) + " Recuperar" : ico("quitar", 13) + " Quitar"}</button></div></div>`;
+        <button class="chip" data-a="quitar">${p.quitado ? ico("volver", 13) + " " + t("recuperar") : ico("quitar", 13) + " " + t("quitar")}</button></div></div>`;
   }
   const fallo = P.tarea?.estado === "error" && P.tarea.paso === p.id;
-  const seguro = p.tipo === "clic" ? `<button class="chip ${p.seguro ? "on" : ""}" data-a="seguro" title="El cursor va hasta el botón pero no lo pulsa, así el vídeo no guarda nada">
+  const seguro = p.tipo === "clic" ? `<button class="chip ${p.seguro ? "on" : ""}" data-a="seguro" title="${t("seguro_title")}">
       <span class="marca-check">${p.seguro ? '<svg width="9" height="9" viewBox="0 0 10 10"><path d="m2 5 2 2 4-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' : ""}</span>
-      Solo señalar, sin pulsar</button>` : "";
+      ${t("solo_senalar")}</button>` : "";
   return `<div class="paso ${p.texto ? "con-texto" : ""} ${p.quitado ? "quitado" : ""} ${fallo ? "fallo" : ""}" data-id="${p.id}">
     <div class="num">${String(p.id).padStart(2, "0")}</div>
     <div class="que"><span style="color:var(--suave)">${ico(p.tipo)}</span><b>${esc(p.desc)}</b></div>
     <div>
-      ${fallo ? `<div class="aviso mal" style="margin:6px 0 10px">${ico("mal")}<p>${esc(P.tarea.msg)} Puedes marcarlo como «Solo señalar», quitarlo o volver a grabar.</p></div>` : ""}
-      ${p.tipo === "escribir" && !p.quitado ? `<label class="valor">Se escribe:<input type="text" data-valor value="${esc(p.valor)}" spellcheck="false"></label>` : ""}
-      <textarea rows="1" maxlength="260" placeholder="Qué quieres que ponga aquí (opcional)" ${p.quitado ? "disabled" : ""}>${esc(p.texto || "")}</textarea>
+      ${fallo ? `<div class="aviso mal" style="margin:6px 0 10px">${ico("mal")}<p>${esc(P.tarea.msg)} ${t("fallo_paso")}</p></div>` : ""}
+      ${p.tipo === "escribir" && !p.quitado ? `<label class="valor">${t("se_escribe")}<input type="text" data-valor value="${esc(p.valor)}" spellcheck="false"></label>` : ""}
+      <textarea rows="1" maxlength="260" placeholder="${t("que_pone")}" ${p.quitado ? "disabled" : ""}>${esc(p.texto || "")}</textarea>
       <div class="acciones">
         ${p.quitado ? "" : seguro}
-        ${p.quitado || p.texto ? "" : `<button class="chip" data-a="usar" title="${esc(sugerencia(p))}">${ico("lapiz", 13)} Escribir lo que se hace</button>`}
-        ${!p.quitado && p.texto && INICIO.voces.length ? `<button class="chip" data-a="oir">${ico("altavoz", 13)} Escuchar</button>` : ""}
-        <button class="chip derecha" data-a="quitar">${p.quitado ? ico("volver", 13) + " Recuperar" : ico("quitar", 13) + " Quitar este paso"}</button>
+        ${p.quitado || p.texto ? "" : `<button class="chip" data-a="usar" title="${esc(sugerencia(p))}">${ico("lapiz", 13)} ${t("escribir_lo_que")}</button>`}
+        ${!p.quitado && p.texto && INICIO.voces.length ? `<button class="chip" data-a="oir">${ico("altavoz", 13)} ${t("escuchar")}</button>` : ""}
+        <button class="chip derecha" data-a="quitar">${p.quitado ? ico("volver", 13) + " " + t("recuperar") : ico("quitar", 13) + " " + t("quitar_paso")}</button>
       </div>
     </div></div>`;
 }
 
 function sugerencia(p) {
-  return p.desc.replace(/^Pulsa (el botón|el enlace|la pestaña) /, "Pulsa ").replace(/ en el campo «/, " en «");
+  return p.desc.replace(/^Pulsa (el botón|el enlace|la pestaña) /, "Pulsa ").replace(/ en el campo «/, " en «")
+    .replace(/^Click the (“[^”]*”) (button|link|tab)$/, "Click $1").replace(/ in the (“[^”]*”) field$/, " in $1");
 }
 
 const pasoDe = (el) => P.pasos.find((p) => p.id === Number(el.dataset.id));
@@ -928,7 +1109,7 @@ function contar() {
   const c = $("#contador"); if (!c) return;
   const vivos = P.pasos.filter((p) => !p.quitado);
   const con = vivos.filter((p) => (p.texto || "").trim()).length;
-  c.textContent = `${vivos.length} pasos · ${con} con texto`;
+  c.textContent = t("contador", {n: vivos.length, c: con});
 }
 
 function cambiarValor(input) {
@@ -946,7 +1127,7 @@ function cambiarValor(input) {
     });
     q.selector = sel;
   });
-  p.desc = p.desc.replace(/^Escribe «.*?»/, `Escribe «${input.value}»`);
+  p.desc = p.desc.replace(/^Escribe «.*?»/, `Escribe «${input.value}»`).replace(/^Type “.*?”/, `Type “${input.value}”`);
   $(".que b", el).textContent = p.desc;
   clearTimeout(guardarTimer);
   guardarTimer = setTimeout(guardarYa, 500);
@@ -962,39 +1143,39 @@ function video(v) {
   let cuerpo;
   if (t.estado === "haciendo") {
     cuerpo = `<div class="tarjeta">
-      <div class="en-vivo"><div class="anillo"></div><div><h2 style="margin:0" id="msg">${esc(t.msg || "Empezando…")}</h2>
-      <span class="pista">La web se mueve sola en otra ventana. No la toques ni la cierres.</span></div></div>
+      <div class="en-vivo"><div class="anillo"></div><div><h2 style="margin:0" id="msg">${esc(t.msg || T_("empezando"))}</h2>
+      <span class="pista">${T_("se_mueve")}</span></div></div>
       <div class="progreso"><i id="barra" style="width:${Math.round((t.p || 0) * 100)}%"></i></div>
       <div class="fases" id="fases"></div>
-      <div class="botones" style="margin-top:20px"><button class="btn discreto" id="cancelar">Cancelar</button></div></div>`;
+      <div class="botones" style="margin-top:20px"><button class="btn discreto" id="cancelar">${T_("cancelar")}</button></div></div>`;
   } else if (P.video && t.estado !== "error") {
-    cuerpo = `${t.estado === "listo" ? `<div class="aviso bien">${ico("bien")}<p><b>¡Vídeo listo!</b> Está guardado en la carpeta «Mis vídeos».</p></div>` : ""}
+    cuerpo = `${t.estado === "listo" ? `<div class="aviso bien">${ico("bien")}<p>${T_("listo_video")}</p></div>` : ""}
       <div class="tarjeta">
       <video controls src="/video/${esc(P.id)}.mp4?${Date.now()}"></video>
       <div class="botones">
-        <button class="btn principal" id="ver">${ico("play")} Abrir el vídeo</button>
-        <button class="btn" id="carpeta">${ico("carpeta")} Mostrar en la carpeta</button>
-        <button class="btn discreto derecha" id="cambiar">${ico("lapiz")} Cambiar textos y rehacer</button>
+        <button class="btn principal" id="ver">${ico("play")} ${T_("abrir_video")}</button>
+        <button class="btn" id="carpeta">${ico("carpeta")} ${T_("mostrar_carpeta")}</button>
+        <button class="btn discreto derecha" id="cambiar">${ico("lapiz")} ${T_("cambiar_rehacer")}</button>
       </div>
-      ${P.hecho ? `<p class="pista" style="margin:14px 0 0">Hecho el ${esc(P.hecho)}${P.voz ? ", con voz" : ""}.${P.srt ? " Junto al vídeo están también sus subtítulos (.srt), por si los quieres subir a Teams, Stream o YouTube." : ""}</p>` : ""}</div>`;
+      ${P.hecho ? `<p class="pista" style="margin:14px 0 0">${T_("hecho_el", {f: esc(P.hecho)})}${P.voz ? T_("con_voz_min") : ""}.${P.srt ? T_("srt_junto") : ""}</p>` : ""}</div>`;
   } else {
     const error = t.estado === "error" ? `<div class="aviso mal">${ico("mal")}<div><p>${esc(t.msg)}</p>
-      ${t.paso ? '<p><button class="btn" id="ir-paso" style="margin-top:8px">Ir a ese paso</button></p>' : ""}</div></div>` : "";
+      ${t.paso ? `<p><button class="btn" id="ir-paso" style="margin-top:8px">${T_("ir_paso")}</button></p>` : ""}</div></div>` : "";
     cuerpo = `${error}<div class="tarjeta">
-      ${conTexto ? "" : `<div class="aviso info">${ico("info")}<p>No has escrito ningún texto: el vídeo saldrá solo con el cursor. Puedes <a href="#" id="a-textos">añadir algunos</a>.</p></div>`}
+      ${conTexto ? "" : `<div class="aviso info">${ico("info")}<p>${T_("sin_texto")}</p></div>`}
       <div class="opcion">
-        <div><b>Con voz</b><small>${hayVoz ? `Lee las frases en alto con la voz de Windows (${esc(nombreVoz(INICIO.ajustes.voz || INICIO.voces[0]))}). Puedes cambiarla en <a href="#" id="a-ajustes">Ajustes</a>.` : "Este ordenador no tiene voces instaladas; las frases saldrán solo en pantalla."}</small></div>
-        <label class="interruptor"><input type="checkbox" id="voz" ${hayVoz && P.voz !== false ? "checked" : ""} ${hayVoz ? "" : "disabled"} aria-label="Con voz"><span></span></label>
+        <div><b>${T_("con_voz")}</b><small>${hayVoz ? T_("voz_lee", {v: esc(nombreVoz(vozDelIdioma()))}) : T_("sin_voces")}</small></div>
+        <label class="interruptor"><input type="checkbox" id="voz" ${hayVoz && P.voz !== false ? "checked" : ""} ${hayVoz ? "" : "disabled"} aria-label="${T_("con_voz")}"><span></span></label>
       </div>
       <ol class="lista-num">
-        <li><span>Tramoya abre la web y repite tus pasos sola, con calma y sin errores.</span></li>
-        <li><span>Mientras tanto, <b>no toques esa ventana</b>. Tarda más o menos lo que dura el vídeo.</span></li>
-        <li><span>Al terminar, el vídeo aparece aquí y en la carpeta «Mis vídeos».</span></li>
+        <li><span>${T_("hace1")}</span></li>
+        <li><span>${T_("hace2")}</span></li>
+        <li><span>${T_("hace3")}</span></li>
       </ol>
-      <div class="botones"><button class="btn principal grande" id="hacer">${ico("peli", 18)} Hacer el vídeo</button>
-        <button class="btn discreto" id="atras">Volver a los textos</button></div></div>`;
+      <div class="botones"><button class="btn principal grande" id="hacer">${ico("peli", 18)} ${T_("hacer_video")}</button>
+        <button class="btn discreto" id="atras">${T_("volver_textos")}</button></div></div>`;
   }
-  v.innerHTML = cabecera(esc(P.nombre), "Paso 3 de 3: Tramoya repite el proceso y graba el vídeo.") + cuerpo;
+  v.innerHTML = cabecera(esc(P.nombre), T_("paso3de3")) + cuerpo;
   enlazarGuia();
   enlazarCabecera();
   const on = (id, fn) => { const b = $("#" + id); if (b) b.onclick = fn; };
@@ -1014,7 +1195,7 @@ function actualizarProgreso() {
   const t = P.tarea, b = $("#barra"); if (!b) return pintar();
   b.style.width = Math.round((t.p || 0) * 100) + "%";
   $("#msg").textContent = t.msg || "";
-  const fases = [["voz", "Voz", P.voz], ["grabar", "Grabación", true], ["montar", "Montaje", true]].filter((f) => f[2]);
+  const fases = [["voz", T_("fase_voz"), P.voz], ["grabar", T_("fase_grabar"), true], ["montar", T_("fase_montar"), true]].filter((f) => f[2]);
   const actual = t.p >= .8 ? "montar" : t.p >= .15 ? "grabar" : "voz";
   const idx = fases.findIndex((f) => f[0] === actual);
   $("#fases").innerHTML = fases.map((f, i) => `<span class="${i < idx ? "ya" : i === idx ? "ahora" : ""}">${i < idx ? "✓ " : ""}${f[1]}</span>`).join("");
@@ -1023,33 +1204,41 @@ function actualizarProgreso() {
 /* ---------- ajustes ---------- */
 function ajustes() {
   const a = {...INICIO.ajustes};
+  if (!a.idioma) a.idioma = LANG;
   const d = document.createElement("div");
   d.className = "dialogo-fondo";
   const seg = (clave, opciones) => `<div class="segmentos" data-clave="${clave}">${opciones.map(([v, t]) =>
     `<button data-v="${v}" class="${a[clave] === v ? "on" : ""}">${t}</button>`).join("")}</div>`;
-  d.innerHTML = `<div class="dialogo ancho" role="dialog" aria-modal="true" aria-label="Ajustes"><h2>Ajustes</h2>
-    <p style="margin-bottom:8px">Valen para todos los vídeos nuevos.</p>
-    ${INICIO.voces.length ? `<div class="ajuste"><b>Voz</b><small>La voz que lee las frases. Son las voces de Windows de este ordenador.</small>
-      <select id="a-voz">${INICIO.voces.map((v) => `<option value="${esc(v)}" ${v === (a.voz || INICIO.voces[0]) ? "selected" : ""}>${esc(nombreVoz(v))} · ${esc((v.split(" - ")[1] || "").trim())}</option>`).join("")}</select>
-      <div style="margin-top:14px"><b style="font-weight:500">Velocidad de la voz</b>
-        <input type="range" id="a-vel" min="-5" max="5" step="1" value="${a.velocidad || 0}" aria-label="Velocidad de la voz">
-        <div class="escala"><span>Más despacio</span><span>Normal</span><span>Más deprisa</span></div></div>
-      <button class="btn" id="a-probar" style="margin-top:10px">${ico("altavoz")} Probar la voz</button></div>` : ""}
-    <div class="ajuste"><b>Ritmo del vídeo</b><small>Cuánto se para entre un paso y el siguiente.</small>
-      ${seg("ritmo", [["tranquilo", "Tranquilo"], ["normal", "Normal"], ["agil", "Ágil"]])}</div>
-    <div class="ajuste"><b>Tamaño del vídeo</b><small>Si vas a verlo a pantalla completa, mejor Full HD. Se aplica a lo que grabes a partir de ahora.</small>
-      ${seg("tamano", [["720p", "HD (1280×720)"], ["800p", "Portátil (1280×800)"], ["1080p", "Full HD (1920×1080)"]])}</div>
-    <div class="ajuste"><div class="opcion" style="margin:0"><div><b>Guardar también los subtítulos</b><small>Un archivo .srt junto al vídeo, para Teams, Stream o YouTube.</small></div>
-      <label class="interruptor"><input type="checkbox" id="a-srt" ${a.srt ? "checked" : ""} aria-label="Guardar subtítulos"><span></span></label></div></div>
-    <div class="ajuste"><details><summary>Avanzado</summary>
-      <small style="display:block;color:var(--suave);margin:8px 0">Si una web de tu empresa te pide la contraseña de Windows cada vez, escribe aquí su dominio (por ejemplo <code>*.miempresa.com</code>) para que entre sola. La web de cada vídeo ya se incluye.</small>
-      <input type="text" id="a-dom" value="${esc((a.dominios || []).join(", "))}" placeholder="*.miempresa.com, *.miempresa.net" spellcheck="false"></details></div>
-    <div class="botones" style="margin-top:8px"><button class="btn principal" id="a-ok">Guardar</button><button class="btn discreto" id="a-no">Cancelar</button></div></div>`;
+  d.innerHTML = `<div class="dialogo ancho" role="dialog" aria-modal="true" aria-label="${t("ajustes")}"><h2>${t("ajustes")}</h2>
+    <p style="margin-bottom:8px">${t("valen_todos")}</p>
+    <div class="ajuste"><b>${t("idioma")}</b><small>${t("idioma_sub")}</small>
+      ${seg("idioma", [["en", "English"], ["es", "Español"]])}</div>
+    ${INICIO.voces.length ? `<div class="ajuste"><b>${t("voz")}</b><small>${t("voz_sub")}</small>
+      <select id="a-voz">${INICIO.voces.map((v) => `<option value="${esc(v)}" ${v === (a.voz || vozDelIdioma()) ? "selected" : ""}>${esc(nombreVoz(v))} · ${esc((v.split(" - ")[1] || "").trim())}</option>`).join("")}</select>
+      <div style="margin-top:14px"><b style="font-weight:500">${t("velocidad")}</b>
+        <input type="range" id="a-vel" min="-5" max="5" step="1" value="${a.velocidad || 0}" aria-label="${t("velocidad")}">
+        <div class="escala"><span>${t("mas_despacio")}</span><span>${t("normal")}</span><span>${t("mas_deprisa")}</span></div></div>
+      <button class="btn" id="a-probar" style="margin-top:10px">${ico("altavoz")} ${t("probar_voz")}</button></div>` : ""}
+    <div class="ajuste"><b>${t("ritmo")}</b><small>${t("ritmo_sub")}</small>
+      ${seg("ritmo", [["tranquilo", t("tranquilo")], ["normal", t("normal")], ["agil", t("agil")]])}</div>
+    <div class="ajuste"><b>${t("tamano")}</b><small>${t("tamano_sub")}</small>
+      ${seg("tamano", [["720p", "HD (1280×720)"], ["800p", t("portatil")], ["1080p", "Full HD (1920×1080)"]])}</div>
+    <div class="ajuste"><div class="opcion" style="margin:0"><div><b>${t("srt")}</b><small>${t("srt_sub")}</small></div>
+      <label class="interruptor"><input type="checkbox" id="a-srt" ${a.srt ? "checked" : ""} aria-label="${t("guardar_subt")}"><span></span></label></div></div>
+    <div class="ajuste"><details><summary>${t("avanzado")}</summary>
+      <small style="display:block;color:var(--suave);margin:8px 0">${t("dominios_sub")}</small>
+      <input type="text" id="a-dom" value="${esc((a.dominios || []).join(", "))}" placeholder="${t("dominios_ph")}" spellcheck="false"></details></div>
+    <div class="botones" style="margin-top:8px"><button class="btn principal" id="a-ok">${t("guardar")}</button><button class="btn discreto" id="a-no">${t("cancelar")}</button></div></div>`;
   document.body.append(d);
   d.querySelectorAll(".segmentos").forEach((g) => g.onclick = (e) => {
     const b = e.target.closest("button"); if (!b) return;
     a[g.dataset.clave] = b.dataset.v;
     g.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    // Al cambiar de idioma, la voz pasa a una de ese idioma si la que había era de otro.
+    if (g.dataset.clave === "idioma" && $("#a-voz", d)) {
+      const sel = $("#a-voz", d);
+      if (!vozEs(sel.value, b.dataset.v)) { const otra = INICIO.voces.find((v) => vozEs(v, b.dataset.v)); if (otra) sel.value = otra; }
+    }
   });
   const leer = () => {
     if ($("#a-voz", d)) { a.voz = $("#a-voz", d).value; a.velocidad = Number($("#a-vel", d).value); }
@@ -1059,7 +1248,7 @@ function ajustes() {
   if (probar) probar.onclick = async () => {
     leer();
     await api("/api/ajustes", {voz: a.voz, velocidad: a.velocidad});
-    api("/api/oir", {texto: "Hola. Así sonará la voz de tus vídeos."});
+    api("/api/oir", {texto: TEXTOS.hola_voz[a.idioma || LANG] || TEXTOS.hola_voz.en});
   };
   const cerrar = () => { d.remove(); document.removeEventListener("keydown", tecla); };
   const tecla = (e) => { if (e.key === "Escape") cerrar(); };
@@ -1067,7 +1256,8 @@ function ajustes() {
   $("#a-no", d).onclick = cerrar;
   d.onclick = (e) => { if (e.target === d) cerrar(); };
   $("#a-ok", d).onclick = async () => {
-    leer(); INICIO.ajustes = await api("/api/ajustes", a); cerrar(); avisar("Ajustes guardados."); if (P) pintar();
+    leer(); INICIO.ajustes = await api("/api/ajustes", a); cerrar();
+    LANG = INICIO.ajustes.idioma || LANG; traducirFijos(); pintarLista(); avisar(t("ajustes_ok")); pintar();
   };
 }
 
@@ -1076,7 +1266,7 @@ function confirmar(titulo, texto, si, fn) {
   const d = document.createElement("div");
   d.className = "dialogo-fondo";
   d.innerHTML = `<div class="dialogo" role="dialog" aria-modal="true"><h2>${esc(titulo)}</h2><p>${esc(texto)}</p>
-    <div class="botones"><button class="btn principal" id="d-si">${esc(si)}</button><button class="btn discreto" id="d-no">Cancelar</button></div></div>`;
+    <div class="botones"><button class="btn principal" id="d-si">${esc(si)}</button><button class="btn discreto" id="d-no">${t("cancelar")}</button></div></div>`;
   document.body.append(d);
   const cerrar = () => { d.remove(); document.removeEventListener("keydown", tecla); };
   const tecla = (e) => { if (e.key === "Escape") cerrar(); };
@@ -1092,7 +1282,7 @@ $("#filtro").oninput = pintarLista;
 $("#btn-acceso").onclick = async () => {
   const r = await api("/api/acceso", {});
   if (r.error) return avisar(r.error);
-  INICIO.acceso = true; $("#btn-acceso").classList.add("oculto"); avisar("Listo: tienes Tramoya en el escritorio.");
+  INICIO.acceso = true; $("#btn-acceso").classList.add("oculto"); avisar(t("escritorio_ok"));
 };
 $("#btn-nuevo").onclick = () => { P = null; VISTA = "crear"; pintar(); pintarLista(); };
 $("#btn-carpeta").onclick = () => P ? api(`/api/p/${P.id}/abrir`, {que: "carpeta"}) : fetch("/api/carpeta", {method: "POST"});

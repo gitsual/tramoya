@@ -81,6 +81,9 @@ public sealed class Server : IDisposable
         Directory.CreateDirectory(options.Datos);
         Directory.CreateDirectory(options.MisVideos);
         var (listener, url) = Escuchar();
+        // El idioma guardado manda sobre el de la línea de órdenes; sin guardar, vale el de --lang.
+        var idioma = Pasos.Str(Proyectos.LeerAjustes(options), "idioma");
+        if (idioma.Length != 0) Lengua.Actual = idioma;
         var servidor = new Server(options, listener, url);
         servidor._bucle.Start();
         // Una excepción en un hilo suelto tiraría la app entera; sin voces se sigue adelante.
@@ -282,6 +285,7 @@ public sealed class Server : IDisposable
                 ["voces"] = voces,
                 ["webs"] = Proyectos.Webs(_o),
                 ["ajustes"] = Proyectos.LeerAjustes(_o),
+                ["idioma"] = Lengua.Actual,
                 ["windows"] = _o.Windows,
                 ["carpeta"] = _o.MisVideos,
                 ["acceso"] = esc is not null && File.Exists(Path.Combine(esc, "Tramoya.lnk")),
@@ -380,7 +384,10 @@ public sealed class Server : IDisposable
         var ruta = ctx.Request.Url?.AbsolutePath ?? "/";
         if (ruta == "/api/ajustes")
         {
-            Responder(ctx, Proyectos.GuardarAjustes(_o, cuerpo));
+            var guardados = Proyectos.GuardarAjustes(_o, cuerpo);
+            var nuevo = Pasos.Str(guardados, "idioma");
+            if (nuevo.Length != 0) Lengua.Actual = nuevo;
+            Responder(ctx, guardados);
             return;
         }
         if (ruta == "/api/oir")
@@ -399,7 +406,7 @@ public sealed class Server : IDisposable
             }
             catch (Exception exc)
             {
-                Responder(ctx, new JsonObject { ["error"] = $"No he podido crear el acceso directo ({exc.Message})" });
+                Responder(ctx, new JsonObject { ["error"] = Lengua.T($"No he podido crear el acceso directo ({exc.Message})", $"The desktop shortcut could not be created ({exc.Message})") });
             }
             return;
         }
@@ -443,7 +450,7 @@ public sealed class Server : IDisposable
                     var objetivo = Pasos.Str(cuerpo, "objetivo").Trim();
                     if (objetivo.Length == 0)
                     {
-                        Responder(ctx, new JsonObject { ["error"] = "Escribe qué quieres que haga la IA." }, 400);
+                        Responder(ctx, new JsonObject { ["error"] = Lengua.T("Escribe qué quieres que haga la IA.", "Write what you want the AI to do.") }, 400);
                         return;
                     }
                     Tareas.Cancelar(pid);

@@ -33,6 +33,8 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
+from tramoya.easy import lengua
+
 VIEWPORT = (1280, 800)
 TAMANOS = {"720p": (1280, 720), "800p": (1280, 800), "1080p": (1920, 1080)}
 RITMOS = {"tranquilo": 1.3, "normal": 1.0, "agil": 0.75}
@@ -249,28 +251,25 @@ def _paso_de_evento(d: dict, prefijo: str) -> dict | None:
     tipo = d.get("tipo")
     nombre = d.get("nombre") or ""
     que = d.get("que") or ""
-    cosa = (f"{que} «{nombre}»" if que else f"«{nombre}»") if nombre else (que or "este elemento")
+    cosa = lengua.cosa(que, nombre)
     if tipo == "tecla":
-        return {"tipo": "tecla", "valor": d["valor"],
-                "desc": f"Pulsa la tecla {TECLAS.get(d['valor'], d['valor'])}"}
+        return {"tipo": "tecla", "valor": d["valor"], "desc": lengua.tecla(d["valor"])}
     if not d.get("selector"):
         return None
     selector = prefijo + d["selector"]
     if tipo == "clic":
-        verbo = {"on": "Marca", "off": "Desmarca"}.get(d.get("marca"), "Pulsa")
+        desc = lengua.clic(cosa, d.get("marca") or "")
         if COOKIES.search(nombre) or COOKIES.search(d["selector"]):
-            return {"tipo": "clic", "selector": selector, "opcional": True,
-                    "desc": f"{verbo} {cosa} (aviso de cookies: si no sale, se salta)"}
-        return {"tipo": "clic", "selector": selector, "desc": f"{verbo} {cosa}",
+            return {"tipo": "clic", "selector": selector, "opcional": True, "desc": lengua.cookies(desc)}
+        return {"tipo": "clic", "selector": selector, "desc": desc,
                 "guarda": bool(GUARDAN.match(nombre))}
     if tipo == "escribir":
-        donde = f" en el campo «{nombre}»" if nombre else ""
         return {"tipo": "escribir", "selector": selector, "valor": d["valor"],
-                "desc": f"Escribe «{d['valor']}»{donde}"}
+                "desc": lengua.escribe(d["valor"], nombre)}
     if tipo == "elegir":
-        donde = f" en «{nombre}»" if nombre and len(nombre) < 40 else ""
+        donde = nombre if nombre and len(nombre) < 40 else ""
         return {"tipo": "elegir", "selector": selector, "valor": d["valor"],
-                "desc": f"Elige «{d.get('texto_opcion') or d['valor']}»{donde}"}
+                "desc": lengua.elige(d.get("texto_opcion") or d["valor"], donde)}
     return None
 
 
@@ -363,11 +362,10 @@ def grabar(carpeta: Path, url: str, perfil: Path, ajustes: dict | None = None) -
                 if inicio is None:
                     continue
                 if fuente["page"] != principal:
-                    avisos.add("Se abrió otra pestaña o ventana; lo que se hizo en ella no se "
-                               "puede repetir.")
+                    avisos.add(lengua.t("Se abrió otra pestaña o ventana; lo que se hizo en ella no se puede repetir.", "Another tab or window opened; what was done in it cannot be replayed."))
                     continue
                 if d.get("tipo") == "clave":
-                    avisos.add("No se ha apuntado ninguna contraseña.")
+                    avisos.add(lengua.t("No se ha apuntado ninguna contraseña.", "No password was recorded."))
                     continue
                 try:
                     prefijo = _prefijo_marco(fuente["frame"])
@@ -521,9 +519,9 @@ class FalloPaso(Exception):
 def explicar_fallo(e: Exception) -> str:
     t = str(e)
     if "Timeout" in t or "timeout" in t or "not visible" in t:
-        return "no lo he encontrado en la página (puede que la web haya cambiado o tarde más)"
+        return lengua.t("no lo he encontrado en la página (puede que la web haya cambiado o tarde más)", "it is not on the page (the website may have changed, or it takes longer)")
     if "strict mode" in t:
-        return "hay varios iguales en la página y no sé cuál es"
+        return lengua.t("hay varios iguales en la página y no sé cuál es", "there are several identical ones on the page and it is not clear which")
     return t.splitlines()[0][:200]
 
 
@@ -553,16 +551,16 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
     lista = escenas(proyecto)
     out = carpeta / "out"
     shutil.rmtree(out, ignore_errors=True)
-    voces = out / "voices" / "es"
+    voces = out / "voices" / lengua.actual()
     voces.mkdir(parents=True)
 
     if con_voz:
-        emitir(fase="voz", msg="Preparando la voz…", p=0.05)
+        emitir(fase="voz", msg=lengua.t("Preparando la voz…", "Preparing the voice…"), p=0.05)
         hablar({voces / f"scene-{e['name']}.wav": e["texto"] for e in lista if e["texto"]},
                ajustes.get("voz"), ajustes.get("velocidad", 0))
 
-    emitir(fase="grabar", msg="Grabando. No toques la ventana del navegador.", p=0.15)
-    pacing = Pacing(pace=RITMOS.get(ajustes.get("ritmo"), 1.0), lang="es")
+    emitir(fase="grabar", msg=lengua.t("Grabando. No toques la ventana del navegador.", "Recording. Do not touch the browser window."), p=0.15)
+    pacing = Pacing(pace=RITMOS.get(ajustes.get("ritmo"), 1.0), lang=lengua.actual())
     narrador = Narrator(out / "voices", pacing,
                         player=lambda clip: _SilentClip(wav_seconds(clip), pacing))
     marks = Marks(path=out / "marks.json")
@@ -598,18 +596,18 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
                     finally:
                         stage.page.set_default_timeout(15000)
                     hechos += 1
-                    emitir(fase="grabar", msg=f"Grabando paso {hechos} de {total}…",
+                    emitir(fase="grabar", msg=lengua.t(f"Grabando paso {hechos} de {total}…", f"Recording step {hechos} of {total}…"),
                            p=0.15 + 0.6 * hechos / total)
                 if e is lista[-1]:
                     stage.beat(2.0)
                 stage.caption("")
     shutil.copyfile(take, out / "take.webm")
 
-    emitir(fase="montar", msg="Montando el vídeo…", p=0.8)
+    emitir(fase="montar", msg=lengua.t("Montando el vídeo…", "Editing the video…"), p=0.8)
     final = out / "video.mp4"
     tabla = assemble_marks(Runner(), out / "take.webm", out / "marks.json", voces, final,
-                           lang="es")
-    nombre = re.sub(r'[<>:"/\\|?*]+', "", proyecto["nombre"]).strip() or "vídeo"
+                           lang=lengua.actual())
+    nombre = re.sub(r'[<>:"/\\|?*]+', "", proyecto["nombre"]).strip() or lengua.t("vídeo", "video")
     destino = Path(proyecto["mis_videos"]) / f"{nombre}.mp4"
     destino.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(final, destino)

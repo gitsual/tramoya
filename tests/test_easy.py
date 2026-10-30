@@ -15,6 +15,7 @@ from tramoya.easy.engine import (
     segundos_lectura,
     srt,
 )
+from tramoya.easy import lengua
 from tramoya.profile import parse_step
 
 CODEGEN = '''
@@ -85,16 +86,20 @@ def test_a_click_into_a_field_that_is_then_typed_into_is_one_step() -> None:
 
 
 def test_recorded_events_name_what_was_touched() -> None:
-    clic = _paso_de_evento({"tipo": "clic", "selector": "internal:role=button[name=\"IMPUTAR\"i]",
-                            "nombre": "IMPUTAR", "que": "el botón"}, "")
-    assert clic["desc"] == "Pulsa el botón «IMPUTAR»" and clic["guarda"]
-    marco = _paso_de_evento({"tipo": "clic", "selector": "#x", "nombre": "", "que": "la casilla",
-                             "marca": "on"}, "iframe >> internal:control=enter-frame >> ")
-    assert marco["desc"] == "Marca la casilla"
+    lengua.fijar("es")
+    try:
+        clic = _paso_de_evento({"tipo": "clic", "selector": "internal:role=button[name=\"IMPUTAR\"i]",
+                                "nombre": "IMPUTAR", "que": "el botón"}, "")
+        assert clic["desc"] == "Pulsa el botón «IMPUTAR»" and clic["guarda"]
+        marco = _paso_de_evento({"tipo": "clic", "selector": "#x", "nombre": "", "que": "la casilla",
+                                 "marca": "on"}, "iframe >> internal:control=enter-frame >> ")
+        assert marco["desc"] == "Marca la casilla"
+    finally:
+        lengua.fijar("en")
     assert marco["selector"] == "iframe >> internal:control=enter-frame >> #x"
     cookies = _paso_de_evento({"tipo": "clic", "selector": "#ok", "nombre": "Aceptar todas",
                                "que": "el botón"}, "")
-    assert cookies["opcional"] and "cookies" in cookies["desc"]
+    assert cookies["opcional"] and "cookie" in cookies["desc"]
     assert _paso_de_evento({"tipo": "clic", "selector": "", "nombre": "x"}, "") is None
 
 
@@ -149,3 +154,23 @@ def test_subtitles_follow_the_assembled_scene_lengths() -> None:
     assert srt([("Hola.", 2.5), ("", 1.0), ("Adiós.", 3.25)]) == (
         "1\n00:00:00,000 --> 00:00:02,500\nHola.\n\n"
         "2\n00:00:03,500 --> 00:00:06,750\nAdiós.\n")
+
+
+def test_steps_are_written_in_the_language_of_the_window() -> None:
+    lengua.fijar("en")
+    clic = _paso_de_evento({"tipo": "clic", "selector": "#s", "nombre": "Save", "que": "el botón"}, "")
+    assert clic["desc"] == "Click the “Save” button" and clic["guarda"]
+    casilla = _paso_de_evento({"tipo": "clic", "selector": "#x", "nombre": "", "que": "la casilla", "marca": "off"}, "")
+    assert casilla["desc"] == "Uncheck the checkbox"
+    texto = _paso_de_evento({"tipo": "escribir", "selector": "#t", "valor": "Milk", "nombre": "Title", "que": "el campo"}, "")
+    assert texto["desc"] == "Type “Milk” in the “Title” field"
+    opcion = _paso_de_evento({"tipo": "elegir", "selector": "#o", "valor": "b", "texto_opcion": "Blue", "nombre": "Colour"}, "")
+    assert opcion["desc"] == "Choose “Blue” in “Colour”"
+    assert _paso_de_evento({"tipo": "tecla", "valor": "Enter"}, "")["desc"] == "Press Enter"
+    lengua.fijar("es")
+    try:
+        assert _paso_de_evento({"tipo": "tecla", "valor": "Enter"}, "")["desc"] == "Pulsa la tecla Intro"
+        assert lengua.t("sí", "yes") == "sí"
+    finally:
+        lengua.fijar("en")
+    assert lengua.normalizar("FR") == "en" and lengua.normalizar("es-ES") == "es"

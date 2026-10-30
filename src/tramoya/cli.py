@@ -424,7 +424,10 @@ def cmd_easy(args: argparse.Namespace) -> int:
         print(f"easy needs the optional extra: pip install 'tramoya[easy]' ({exc})",
               file=sys.stderr)
         return 2
-    return easy_main(["--no-window"] if args.no_window else [])
+    argv = ["--no-window"] if args.no_window else []
+    if args.lang:
+        argv += ["--lang", args.lang]
+    return easy_main(argv)
 
 
 def cmd_snapshots_diff(args: argparse.Namespace) -> int:
@@ -592,10 +595,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(fn=cmd_login)
 
     p = sub.add_parser("easy", aliases=["facil"],
-                       help="the point-and-click app (Spanish): do the process once in the "
+                       help="the point-and-click app (English or Spanish): do the process once in the "
                             "browser, write a sentence per step, get the video")
     p.add_argument("--no-window", action="store_true",
                    help="serve the app and print its URL instead of opening a window")
+    p.add_argument("--lang", choices=["en", "es"],
+                   help="the window's language when none is saved in its settings (default en)")
     p.set_defaults(fn=cmd_easy)
 
     p = sub.add_parser("snapshots", help="accessibility snapshots written by direct")
