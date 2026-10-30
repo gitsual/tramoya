@@ -220,7 +220,7 @@ public static class Sapi
             {
                 lnk.TargetPath = targetExe;
                 lnk.WorkingDirectory = workingDir;
-                lnk.Description = "Tramoya: vídeos de procesos, sin esfuerzo";
+                lnk.Description = "Tramoya: videos of any process, without effort";
                 if (File.Exists(iconPath))
                     lnk.IconLocation = $"{iconPath},0";
                 lnk.Save();

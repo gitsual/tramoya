@@ -302,7 +302,7 @@ def crear_acceso(carpeta: Path) -> Path:
     lnk.TargetPath = str(pythonw if pythonw.exists() else PY)
     lnk.Arguments = "-m tramoya.easy"
     lnk.WorkingDirectory = str(CASA)
-    lnk.Description = "Tramoya: vídeos de procesos, sin esfuerzo"
+    lnk.Description = "Tramoya: videos of any process, without effort"
     if ICONO.exists():
         lnk.IconLocation = f"{ICONO},0"
     lnk.Save()

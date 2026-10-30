@@ -218,8 +218,8 @@ public class CliTests
         try
         {
             Assert.Equal(3, Run("agent", "Nota", "--url", "https://example.test/", "--video", "--voz"));
-            Assert.Contains($"v\u00eddeo: {video}", cap.Out);
-            Assert.Contains($"subt\u00edtulos: {srt}", cap.Out);
+            Assert.Contains($"video: {video}", cap.Out);
+            Assert.Contains($"subtitles: {srt}", cap.Out);
             Assert.Contains("\"ok\":true", cap.Out);
             var p = Tramoya.Easy.Proyectos.Leer(EasyHost.Options(), "nota");
             Assert.Equal(video, p["video"]!.GetValue<string>());

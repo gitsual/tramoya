@@ -5,6 +5,7 @@
 using System.Diagnostics;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
+using Tramoya.Core;
 
 namespace Tramoya.App;
 
@@ -40,8 +41,10 @@ internal sealed class MainWindow : Form
         {
             // Windows 11 ships the runtime; this is for older or trimmed installs.
             var respuesta = MessageBox.Show(this,
-                "Tramoya necesita el componente «WebView2» de Microsoft Edge y no está instalado "
+                Lengua.T("Tramoya necesita el componente «WebView2» de Microsoft Edge y no está instalado "
                 + "en este equipo.\n\n¿Quieres abrir la página de descarga de Microsoft?",
+                "Tramoya needs Microsoft Edge's «WebView2» component, which is not installed on this "
+                + "computer.\n\nOpen Microsoft's download page?"),
                 "Tramoya", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (respuesta == DialogResult.Yes)
                 AbrirFuera(WebView2Download);

@@ -140,8 +140,8 @@ internal static class Cli
             p["srt"] = final["srt"]?.DeepClone();
             Proyectos.Guardar(opts, id, p);
         }
-        if (p["video"] is { } video) Console.WriteLine($"vídeo: {video}");
-        if (p["srt"] is { } srt) Console.WriteLine($"subtítulos: {srt}");
+        if (p["video"] is { } video) Console.WriteLine($"video: {video}");
+        if (p["srt"] is { } srt) Console.WriteLine($"subtitles: {srt}");
         return rc;
     }
 
@@ -190,12 +190,12 @@ internal static class Cli
         {
             if (Browsers.Installed())
             {
-                Console.WriteLine($"Chromium ya está en {Paths.Navegador}");
+                Console.WriteLine($"Chromium is already in {Paths.Navegador}");
                 return 0;
             }
             if (EnsureBrowser() is { } rc)
                 return rc;
-            Console.WriteLine($"Chromium instalado en {Paths.Navegador}");
+            Console.WriteLine($"Chromium installed in {Paths.Navegador}");
             return 0;
         }
         Console.Error.WriteLine("usage: tramoya browser install");

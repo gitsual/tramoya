@@ -20,7 +20,7 @@ public delegate Task<JsonNode> PostJsonAsync(string url, JsonNode payload, IDict
 /// <summary>
 /// Un modelo servido por Ollama en este mismo PC, por su endpoint de chat con <c>format: json</c>
 /// para que conteste un objeto JSON. Un modelo de 30B en una GPU de sobremesa tarda unos
-/// segundos por turno, de ahí el tope de tres minutos.
+/// segundos por turno; cargarlo puede llevar minutos, de ahí el tope de diez.
 /// </summary>
 public sealed class OllamaChatBackend : IChatBackend
 {
@@ -53,6 +53,8 @@ public sealed class OllamaChatBackend : IChatBackend
             ["options"] = new JsonObject { ["temperature"] = 0.1, ["num_ctx"] = 16384 },
             // Algunos modelos lo ignoran y razonan igual; el <think> se quita al leer la respuesta.
             ["think"] = false,
+            // Que no se descargue entre un turno y el siguiente.
+            ["keep_alive"] = "30m",
         };
         var reply = await _post($"{BaseUrl}/api/chat", payload, new Dictionary<string, string>(), ct).ConfigureAwait(false);
         if (reply is JsonObject o && o["error"] is JsonNode error)
@@ -182,7 +184,9 @@ public static class Backends
     /// </summary>
     public static string UrlOllama(string? host) => Ia.UrlOllama(host);
 
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(180) };
+    // Ten minutes: a 30B model loaded from a slow disk, or evicted by another program using the same
+    // GPU, takes two or three minutes before its first word; the agent waits rather than giving up.
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(10) };
 
     /// <summary>POST de un JSON y respuesta JSON; un error HTTP lleva el cuerpo en el mensaje (Ollama explica ahí qué falta).</summary>
     public static async Task<JsonNode> HttpPostAsync(string url, JsonNode payload, IDictionary<string, string> headers, CancellationToken ct)
