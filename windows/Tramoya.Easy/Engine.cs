@@ -419,7 +419,7 @@ public static class Engine
             if (Paso.Match(linea) is { Success: true } m)
             {
                 _n = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
-                _ultimo = $"Paso {_n}: {m.Groups[2].Value}";
+                _ultimo = Lengua.T($"Paso {_n}: {m.Groups[2].Value}", $"Step {_n}: {m.Groups[2].Value}");
                 Avance(_ultimo);
                 Emitir(("paso", m.Groups[2].Value), ("n", _n));
                 return;
