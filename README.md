@@ -87,7 +87,9 @@ its own on the notes app of the examples. Nothing in either video was edited by 
 <p align="center"><sub>Preview without sound.
 <a href="assets/video/tramoya-tutorial.mp4"><b>Tutorial with narration</b></a> (4:03) ·
 <a href="assets/video/tutorial-the-ai-made-this.mp4"><b>The video the AI made inside it</b></a> ·
-<a href="assets/video/ask-where.mp4"><b>A question answered by the AI</b></a> (0:15)</sub></p>
+<a href="assets/video/ask-where.mp4"><b>A question answered by the AI</b></a> (0:15)<br>
+En español: <a href="assets/video/tramoya-tutorial-es.mp4"><b>el tutorial con voz</b></a> (3:37) ·
+<a href="assets/video/tutorial-la-ia-hizo-esto.mp4"><b>el vídeo que hizo la IA</b></a></sub></p>
 
 The window is a small theatre. The home screen raises the curtain; the three steps are three acts with the
 spotlight on the one in progress; the steps of a video are a script, each with its stage direction in brackets and
@@ -194,7 +196,9 @@ los pasos, los avisos, la IA y la voz van en español.
 
 **O pídeselo a la IA:** describe el proceso como se lo pedirías a un compañero; la IA lo hace en la web y te deja el
 guion con sus frases para revisarlo. **O pregúntale** «¿dónde está…?»: te lleva hasta allí, lo señala y lo explica.
-Para grabar el tutorial en español: `bash examples/tramoya-on-tramoya/record.sh es`.
+**[El tutorial en español](assets/video/tramoya-tutorial-es.mp4)** (3:37, con la voz de Helena) enseña la ventana
+entera y cómo la IA graba un vídeo de 7 pasos ([el que hizo](assets/video/tutorial-la-ia-hizo-esto.mp4)). Se vuelve a
+grabar con `bash examples/tramoya-on-tramoya/record.sh es`.
 </details>
 
 ---
@@ -654,7 +658,7 @@ filmstrip from HTML with the window's fonts; `scripts/render-assets.sh` records 
 | Python, slow | `python -m pytest -q -m slow` | 1 passed: three real seconds through the whole pipeline |
 | C#, with browser tests | `TRAMOYA_BROWSER_TESTS=1 dotnet test windows/Tramoya.Tests -c Release` | 548 passed, 14 skipped (Linux-only: `/proc`, `wf-recorder`, Python director) |
 | Cross-implementation | the notes profile through both, then `snapshots diff` | snapshots match |
-| End to end | the [tutorial](#tutorial), the AI's video and the question, in English | recorded, voiced and assembled by the 1.3.0 program |
+| End to end | the [tutorial](#tutorial), the AI's video and the question in English; the tutorial and its AI video in Spanish | recorded, voiced and assembled by the 1.3.0 program |
 
 Every picture on this page is the program's own output, or drawn from HTML by `scripts/render_brand.py` (the logos,
 the diagram, the filmstrip's frame). The window screenshots are the window; the terminal GIFs are asciinema

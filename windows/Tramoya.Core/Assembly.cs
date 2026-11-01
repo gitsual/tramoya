@@ -42,9 +42,9 @@ public static class Assembly
         // Python's round() is banker's rounding.
         var minutes = (int)Math.Round(seconds / 60.0, MidpointRounding.ToEven);
         if (minutes <= 0)
-            return lang == "es" ? "unos segundos despues" : "a few seconds later";
+            return lang == "es" ? "unos segundos después" : "a few seconds later";
         if (lang == "es")
-            return $"{minutes} {(minutes == 1 ? "minuto" : "minutos")} despues";
+            return $"{minutes} {(minutes == 1 ? "minuto" : "minutos")} después";
         return $"{minutes} {(minutes == 1 ? "minute" : "minutes")} later";
     }
 

@@ -101,9 +101,9 @@ def test_clip_page_is_configurable(tmp_path: Path) -> None:
 
 
 def test_humanize_wait_in_spanish() -> None:
-    assert humanize_wait(3.0, "es") == "unos segundos despues"
-    assert humanize_wait(60.0, "es") == "1 minuto despues"
-    assert humanize_wait(240.0, "es") == "4 minutos despues"
+    assert humanize_wait(3.0, "es") == "unos segundos después"
+    assert humanize_wait(60.0, "es") == "1 minuto después"
+    assert humanize_wait(240.0, "es") == "4 minutos después"
 
 
 def test_humanize_wait_in_english() -> None:

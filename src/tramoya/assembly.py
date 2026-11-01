@@ -48,10 +48,10 @@ def humanize_wait(seconds: float, lang: str) -> str:
     """A short caption for a sped-up wait, e.g. "4 minutes later"."""
     minutes = round(seconds / 60.0)
     if minutes <= 0:
-        return "unos segundos despues" if lang == "es" else "a few seconds later"
+        return "unos segundos después" if lang == "es" else "a few seconds later"
     if lang == "es":
         unit = "minuto" if minutes == 1 else "minutos"
-        return f"{minutes} {unit} despues"
+        return f"{minutes} {unit} después"
     unit = "minute" if minutes == 1 else "minutes"
     return f"{minutes} {unit} later"
 
