@@ -52,6 +52,10 @@ public sealed class ServerOptions
 /// </summary>
 public sealed class Server : IDisposable
 {
+    private static readonly string Version =
+        (typeof(Server).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            is [System.Reflection.AssemblyInformationalVersionAttribute v, ..] ? v.InformationalVersion : "0").Split('+')[0];
+
     private static readonly Regex RutaProyecto = new("^/api/p/([a-z0-9-]+)$", RegexOptions.CultureInvariant);
     private static readonly Regex RutaVideo = new(@"^/video/([a-z0-9-]+)\.mp4$", RegexOptions.CultureInvariant);
     private static readonly Regex RutaAccion = new("^/api/p/([a-z0-9-]+)/([a-z-]+)$", RegexOptions.CultureInvariant);
@@ -292,6 +296,8 @@ public sealed class Server : IDisposable
                 ["acceso"] = esc is not null && File.Exists(Path.Combine(esc, "Tramoya.lnk")),
                 // Solo con un modelo a mano se ofrece «pídeselo a la IA»; el Python manda false.
                 ["agente"] = Tareas.HayModelo(_o),
+                // Para la barra de estado de la ventana: «Tramoya 1.3.0 · en este equipo».
+                ["version"] = Version,
             });
             return;
         }

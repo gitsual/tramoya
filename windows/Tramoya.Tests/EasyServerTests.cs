@@ -461,7 +461,8 @@ public class EasyServerTests : IDisposable
 
         var (code, inicio) = await Get(c, "/api/inicio");
         Assert.Equal(HttpStatusCode.OK, code);
-        Assert.Equal(["proyectos", "voces", "webs", "ajustes", "idioma", "windows", "carpeta", "acceso", "agente"], inicio.Select(kv => kv.Key).ToArray());
+        Assert.Equal(["proyectos", "voces", "webs", "ajustes", "idioma", "windows", "carpeta", "acceso", "agente", "version"], inicio.Select(kv => kv.Key).ToArray());
+        Assert.Matches(@"^\d+\.\d+\.\d+$", inicio["version"]!.GetValue<string>()); // la barra de estado: «Tramoya 1.3.0 · en este equipo»
         Assert.False(inicio["agente"]!.GetValue<bool>()); // nadie contesta: la tarjeta de la IA no se enseña
         Assert.Empty(inicio["proyectos"]!.AsArray());
         Assert.Empty(inicio["voces"]!.AsArray());

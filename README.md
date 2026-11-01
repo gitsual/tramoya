@@ -95,6 +95,11 @@ The window is a small theatre. The home screen raises the curtain; the three ste
 spotlight on the one in progress; the steps of a video are a script, each with its stage direction in brackets and
 the line the voice will say; the AI and the finished video come out on stage.
 
+It follows Tramoya's sheet in the design-system frame: the room is dark by default and *Lit room* in the top bar
+turns the lights on; spotlight yellow is kept for the one action that moves the show forward, cyclorama blue for
+what is measured (progress, step counters), and every state is read by its shape as well as its colour. Below
+1024 px the list of videos becomes a drawer, and on a phone everything goes to one column.
+
 <p align="center">
   <img src="assets/easy/curtain-up.png" alt="Home screen: a stage with pleated curtains, a valance, a spotlight on the headline «Make a video of any process» and the boards underneath" width="49%">
   <img src="assets/easy/the-ai-on-stage.png" alt="The AI doing the process: the acts strip lit on Record, a stage panel with the step counter and the last step it took" width="49%">
@@ -193,6 +198,8 @@ los pasos, los avisos, la IA y la voz van en español.
    un valor (un nombre de ejemplo en vez del real), quita los pasos que sobran o marca un botón como *solo señalar*.
 5. **Acto III, el vídeo.** Elige la voz y pulsa *Hacer el vídeo*. En un par de minutos está en la carpeta
    *My videos*, con sus subtítulos al lado. Cuando cambie la web, se vuelve a hacer desde el mismo proyecto.
+
+La sala está a oscuras; *Lit room* (o *Sala iluminada*), arriba a la derecha, enciende las luces.
 
 **O pídeselo a la IA:** describe el proceso como se lo pedirías a un compañero; la IA lo hace en la web y te deja el
 guion con sus frases para revisarlo. **O pregúntale** «¿dónde está…?»: te lleva hasta allí, lo señala y lo explica.
