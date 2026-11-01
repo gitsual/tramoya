@@ -107,9 +107,9 @@ public class AssemblyTests : IDisposable
     [Fact]
     public void HumanizeWaitInSpanish()
     {
-        Assert.Equal("unos segundos despues", Core.Assembly.HumanizeWait(3.0, "es"));
-        Assert.Equal("1 minuto despues", Core.Assembly.HumanizeWait(60.0, "es"));
-        Assert.Equal("4 minutos despues", Core.Assembly.HumanizeWait(240.0, "es"));
+        Assert.Equal("unos segundos después", Core.Assembly.HumanizeWait(3.0, "es"));
+        Assert.Equal("1 minuto después", Core.Assembly.HumanizeWait(60.0, "es"));
+        Assert.Equal("4 minutos después", Core.Assembly.HumanizeWait(240.0, "es"));
     }
 
     [Fact]
