@@ -1,0 +1,70 @@
+# Tramoya recording Tramoya: a person opens the window, looks at the settings, creates a
+# video and asks the AI for it. The website is the «tramoya easy» interface itself; the URL
+# comes from `Tramoya.exe easy --no-window` and is passed with --url (record.sh does it all).
+# The website the AI goes through is the notes app of examples/notes-app, served locally.
+# tramoya.es.toml is the same tutorial in Spanish (`bash record.sh es`).
+
+[app]
+name = "Tramoya"
+url = "http://127.0.0.1:1/"
+viewport = [1280, 800]
+
+[demo]
+languages = ["en"]
+pace = 1.0
+
+[[scene]]
+name = "home"
+label = "Tramoya, just opened"
+steps = ["beat 1", "say 7", "point #empezar", "beat 1"]
+
+[scene.narration]
+en = "This is Tramoya. It makes videos of how a website is used, without knowing anything about video: you do it once, write what to say, and out comes the video. Let's see the whole window and, at the end, ask the artificial intelligence for the video."
+
+[[scene]]
+name = "settings"
+label = "The settings"
+steps = ["click #btn-ajustes", "beat 1", "say 6", "point .segmentos[data-clave=idioma]", "beat 1", "point #a-ia", "beat 0.5", "click .segmentos[data-clave=ia_backend] button[data-v=ollama]", "beat 1", "point #a-ia-url", "beat 0.5", "point #a-ia-modelo", "beat 0.5", "click #a-ia-probar", "wait #a-ia-resultado:has-text(\"answered\"), #a-ia-resultado:has-text(\"No answer\") | 900", "beat 0.5", "point #a-ia-resultado", "beat 2"]
+
+[scene.narration]
+en = "In Settings you choose the language of everything, English or Spanish, and the AI: which model does the work, Ollama on this computer, a server of yours or Claude, and whether it answers. Test connection asks it one short question."
+
+[[scene]]
+name = "settings-voice"
+label = "The voice"
+steps = ["say 6", "point #a-voz", "beat 1", "point #a-vel", "beat 1", "click #a-probar", "beat 3", "point #a-srt", "beat 1", "point #a-dom", "beat 1", "click #a-no", "beat 0.5"]
+
+[scene.narration]
+en = "Then the Windows voice that will read the sentences, and its speed. You can try it, decide whether you want the subtitle file and, for company websites, which domains use the Windows sign-in."
+
+[[scene]]
+name = "new"
+label = "Start a video"
+steps = ["click #empezar", "beat 1", "say 5", "type #nombre | How a note is added", "beat 0.5", "type #url | http://127.0.0.1:8770/index.html", "beat 1", "click #crear", "beat 1.5"]
+
+[scene.narration]
+en = "We start a video: a name and the address of the website. Here we use the small notes app of the examples, running locally."
+
+[[scene]]
+name = "ask"
+label = "Ask the AI"
+steps = ["say 7", "point #abrir-web", "beat 1.5", "point #objetivo-ia", "beat 0.5", "type #objetivo-ia | Show how a note is added: click New note, type the title Shopping and the text Milk and bread, save it, find it by typing Shopping in the search box and mark it as done. Explain each step with a short sentence.", "beat 1", "click #btn-ia", "beat 2", "say 6", "wait #pasos | 3600", "beat 1"]
+
+[scene.narration]
+en = "There are two ways to record. The usual one: open the website and do the process once, and Tramoya writes it down. And the new one: describe it, and the artificial intelligence does it. We write what we want to show and press the button. The AI opens the website, reads the page, decides every click and writes the sentence of each step. It takes a couple of minutes; we speed it up."
+
+[[scene]]
+name = "explain"
+label = "What the AI did"
+steps = ["say 7", "point #pasos", "beat 1", "scroll 300", "beat 1", "scroll -300", "beat 0.5", "point #seguir", "beat 0.5", "click #seguir", "beat 1.5"]
+
+[scene.narration]
+en = "Here are the steps the AI took, with the sentence that will be said on each one. You can correct them, remove them, or set a button to be pointed at without pressing it. Next: make the video."
+
+[[scene]]
+name = "video"
+label = "The video"
+steps = ["say 5", "point #voz", "beat 1", "click #hacer", "beat 2", "say 4", "wait #ver | 900", "beat 1", "point #ver", "beat 2"]
+
+[scene.narration]
+en = "With voice. Tramoya repeats the steps on the website, records them with the cursor and the captions, and reads the sentences with the Windows voice. A couple more minutes. And that's it: the video, with its subtitles, in your videos folder."

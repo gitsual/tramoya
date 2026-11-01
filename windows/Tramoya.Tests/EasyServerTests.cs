@@ -121,7 +121,7 @@ public class EasyServerTests : IDisposable
     public void AjustesSinFicheroSonLosDeFabrica()
     {
         var a = Proyectos.LeerAjustes(_o);
-        Assert.Equal("""{"voz":"","velocidad":0,"ritmo":"normal","tamano":"800p","srt":true,"dominios":[]}""",
+        Assert.Equal("""{"idioma":"","voz":"","velocidad":0,"ritmo":"normal","tamano":"800p","srt":true,"dominios":[],"ia_backend":"","ia_modelo":"","ia_url":"","ia_clave":""}""",
             Json.Dump(a, indent: false));
     }
 
@@ -159,26 +159,27 @@ public class EasyServerTests : IDisposable
     {
         var antes = Proyectos.Ahora();
         var id = Proyectos.Crear(_o, "  ", "apps.example.net/x");
-        Assert.Equal("mi-video", id);
+        Assert.Equal("my-video", id);
         var p = Proyectos.Leer(_o, id);
         Assert.Equal(["id", "nombre", "url", "pasos", "fase", "creado"], p.Select(kv => kv.Key).ToArray());
-        Assert.Equal("Mi vídeo", p["nombre"]!.GetValue<string>());
+        Assert.Equal("My video", p["nombre"]!.GetValue<string>());
         Assert.Equal("https://apps.example.net/x", p["url"]!.GetValue<string>());
         Assert.Empty(p["pasos"]!.AsArray());
         Assert.Equal("grabar", p["fase"]!.GetValue<string>());
         Assert.InRange(p["creado"]!.GetValue<double>(), antes, Proyectos.Ahora());
         // El mismo nombre otra vez: «-2», «-3»; una dirección con esquema se respeta.
-        Assert.Equal("mi-video-2", Proyectos.Crear(_o, "Mi vídeo", "http://a.b/"));
-        Assert.Equal("mi-video-3", Proyectos.Crear(_o, "MI VÍDEO", "http://a.b/"));
-        Assert.Equal("http://a.b/", Proyectos.Leer(_o, "mi-video-2")["url"]!.GetValue<string>());
-        Assert.False(File.Exists(Path.Combine(_datos, "mi-video", "proyecto.tmp")));
+        Assert.Equal("my-video-2", Proyectos.Crear(_o, "My video", "http://a.b/"));
+        Assert.Equal("my-video-3", Proyectos.Crear(_o, "MY VIDEO", "http://a.b/"));
+        Assert.Equal("mi-video", Proyectos.Crear(_o, "Mi vídeo", "http://a.b/"));
+        Assert.Equal("http://a.b/", Proyectos.Leer(_o, "my-video-2")["url"]!.GetValue<string>());
+        Assert.False(File.Exists(Path.Combine(_datos, "my-video", "proyecto.tmp")));
     }
 
     [Fact]
     public void CrearSinDireccionFalla()
     {
         var e = Assert.Throws<ArgumentException>(() => Proyectos.Crear(_o, "Algo", "  "));
-        Assert.Equal("Falta la dirección de la web", e.Message);
+        Assert.Equal("The website address is missing", e.Message);
         Assert.Empty(Directory.GetDirectories(_datos));
     }
 
@@ -292,10 +293,10 @@ public class EasyServerTests : IDisposable
         File.WriteAllText(Path.Combine(carpeta, "voz", "1.wav"), "x");
 
         var nuevo = Proyectos.Duplicar(_o, id);
-        Assert.Equal("original-copia", nuevo);
+        Assert.Equal("original-copy", nuevo);
         var q = Proyectos.Leer(_o, nuevo);
         Assert.Equal(nuevo, q["id"]!.GetValue<string>());
-        Assert.Equal("Original (copia)", q["nombre"]!.GetValue<string>());
+        Assert.Equal("Original (copy)", q["nombre"]!.GetValue<string>());
         Assert.Equal("explicar", q["fase"]!.GetValue<string>());
         Assert.Null(q["video"]);
         Assert.Null(q["srt"]);
@@ -308,7 +309,7 @@ public class EasyServerTests : IDisposable
         Assert.True(File.Exists(Path.Combine(copia, "grabacion.json")));
         Assert.True(File.Exists(Path.Combine(copia, "voz", "1.wav")));
         // Otra copia del original: «-2». Un proyecto sin pasos vuelve a «grabar».
-        Assert.Equal("original-copia-2", Proyectos.Duplicar(_o, id));
+        Assert.Equal("original-copy-2", Proyectos.Duplicar(_o, id));
         var vacio = Proyectos.Crear(_o, "Vacío", "https://a.b/");
         Assert.Equal("grabar", Proyectos.Leer(_o, Proyectos.Duplicar(_o, vacio))["fase"]!.GetValue<string>());
     }
@@ -389,12 +390,12 @@ public class EasyServerTests : IDisposable
         Tareas.Convertir(_o, id);
         var t = Tareas.Tarea(id);
         Assert.Equal("error", t["estado"]!.GetValue<string>());
-        Assert.Equal("No he podido leer la grabación.", t["msg"]!.GetValue<string>());
+        Assert.Equal("The recording could not be read.", t["msg"]!.GetValue<string>());
         File.WriteAllText(Path.Combine(_datos, id, "grabacion.json"), """{"pasos": [], "avisos": [], "inicio": 1}""", Encoding.UTF8);
         Tareas.Convertir(_o, id);
         t = Tareas.Tarea(id);
         Assert.Equal("error", t["estado"]!.GetValue<string>());
-        Assert.Equal("No se ha apuntado ningún paso. Pulsa «Empezar a grabar» y luego haz los clics en la ventana de la web.",
+        Assert.Equal("No step was recorded. Press “Start recording”, then click in the website's window.",
             t["msg"]!.GetValue<string>());
         Assert.Equal("grabar", Proyectos.Leer(_o, id)["fase"]!.GetValue<string>());
         Tareas.Cancelar(id);
@@ -411,7 +412,7 @@ public class EasyServerTests : IDisposable
         Tareas.Convertir(_o, id);
         var t = Tareas.Tarea(id);
         Assert.Equal("error", t["estado"]!.GetValue<string>());
-        Assert.StartsWith("No he podido guardar la grabación en el proyecto (", t["msg"]!.GetValue<string>());
+        Assert.StartsWith("The recording could not be saved in the project (", t["msg"]!.GetValue<string>());
         Assert.EndsWith(").", t["msg"]!.GetValue<string>());
         Assert.Contains("proyecto.json", File.ReadAllText(Path.Combine(_datos, id, "ultimo-error.txt"), Encoding.UTF8));
     }
@@ -460,7 +461,7 @@ public class EasyServerTests : IDisposable
 
         var (code, inicio) = await Get(c, "/api/inicio");
         Assert.Equal(HttpStatusCode.OK, code);
-        Assert.Equal(["proyectos", "voces", "webs", "ajustes", "windows", "carpeta", "acceso", "agente"], inicio.Select(kv => kv.Key).ToArray());
+        Assert.Equal(["proyectos", "voces", "webs", "ajustes", "idioma", "windows", "carpeta", "acceso", "agente"], inicio.Select(kv => kv.Key).ToArray());
         Assert.False(inicio["agente"]!.GetValue<bool>()); // nadie contesta: la tarjeta de la IA no se enseña
         Assert.Empty(inicio["proyectos"]!.AsArray());
         Assert.Empty(inicio["voces"]!.AsArray());
@@ -493,7 +494,7 @@ public class EasyServerTests : IDisposable
         Assert.Equal("acción desconocida", j["error"]!.GetValue<string>());
         (code, j) = await Post(c, "/api/crear", """{"nombre":"Sin web"}""");
         Assert.Equal(HttpStatusCode.BadRequest, code);
-        Assert.Equal("Falta la dirección de la web", j["error"]!.GetValue<string>());
+        Assert.Equal("The website address is missing", j["error"]!.GetValue<string>());
         using var mp4 = await c.GetAsync("/video/prueba.mp4");
         Assert.Equal(HttpStatusCode.NotFound, mp4.StatusCode);
     }
@@ -529,8 +530,8 @@ public class EasyServerTests : IDisposable
         (code, var dup) = await Post(c, $"/api/p/{id}/duplicar");
         Assert.Equal(HttpStatusCode.OK, code);
         Assert.True(dup["ok"]!.GetValue<bool>());
-        Assert.Equal("otro-nombre-copia", dup["id"]!.GetValue<string>());
-        Assert.True(Proyectos.Existe(_o, "otro-nombre-copia"));
+        Assert.Equal("otro-nombre-copy", dup["id"]!.GetValue<string>());
+        Assert.True(Proyectos.Existe(_o, "otro-nombre-copy"));
 
         (code, ok) = await Post(c, $"/api/p/{id}/borrar");
         Assert.Equal(HttpStatusCode.OK, code);
@@ -548,7 +549,7 @@ public class EasyServerTests : IDisposable
         using var c = Cliente(s);
         var (code, a) = await Post(c, "/api/ajustes", """{"voz":"Helena","velocidad":-2,"dominios":"x.com y.com","nada":1}""");
         Assert.Equal(HttpStatusCode.OK, code);
-        Assert.Equal("""{"voz":"Helena","velocidad":-2,"ritmo":"normal","tamano":"800p","srt":true,"dominios":["x.com","y.com"]}""",
+        Assert.Equal("""{"idioma":"","voz":"Helena","velocidad":-2,"ritmo":"normal","tamano":"800p","srt":true,"dominios":["x.com","y.com"],"ia_backend":"","ia_modelo":"","ia_url":"","ia_clave":"","ia_clave_guardada":false,"ia_clave_fin":""}""",
             Json.Dump(a, indent: false));
         Assert.True(File.Exists(Path.Combine(_datos, "ajustes.json")));
         (code, var ok) = await Post(c, "/api/oir", """{"texto":"  Hola.  "}""");
@@ -641,7 +642,7 @@ public class EasyServerTests : IDisposable
         var id = creado["id"]!.GetValue<string>();
         var (code, j) = await Post(c, $"/api/p/{id}/agente", """{"objetivo":"   "}""");
         Assert.Equal(HttpStatusCode.BadRequest, code);
-        Assert.Equal("Escribe qué quieres que haga la IA.", j["error"]!.GetValue<string>());
+        Assert.Equal("Write what you want the AI to do.", j["error"]!.GetValue<string>());
         Assert.Equal("quieto", Tareas.Tarea(id)["estado"]!.GetValue<string>());
         (code, j) = await Post(c, $"/api/p/{id}/agente", """{"objetivo":" Entra en Pedidos y abre el 1234 "}""");
         Assert.Equal(HttpStatusCode.OK, code);
@@ -652,7 +653,7 @@ public class EasyServerTests : IDisposable
         Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "quieto");
         var t = Tareas.Tarea(id);
         Assert.Equal("error", t["estado"]!.GetValue<string>());
-        Assert.Equal("La IA se ha cerrado sin terminar.", t["msg"]!.GetValue<string>());
+        Assert.Equal("The AI closed without finishing.", t["msg"]!.GetValue<string>());
         Assert.Equal("grabar", Proyectos.Leer(_o, id)["fase"]!.GetValue<string>());
         (code, _) = await Post(c, $"/api/p/{id}/cancelar");
         Assert.Equal(HttpStatusCode.OK, code);
@@ -679,7 +680,7 @@ public class EasyServerTests : IDisposable
             Tareas.Agente(o, id, "Entra en Pedidos");
             var t = Tareas.Tarea(id);
             Assert.Equal("pensando", t["estado"]!.GetValue<string>());
-            Assert.Equal("Pensando…", t["msg"]!.GetValue<string>());
+            Assert.Equal("Thinking…", t["msg"]!.GetValue<string>());
             Assert.Equal(0.0, t["p"]!.GetValue<double>());
         }
         Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "quieto");
@@ -722,7 +723,7 @@ public class EasyServerTests : IDisposable
         Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "listo");
         var t = Tareas.Tarea(id);
         Assert.Equal("error", t["estado"]!.GetValue<string>());
-        Assert.Equal("El vídeo no se ha podido hacer.", t["msg"]!.GetValue<string>());
+        Assert.Equal("The video could not be made.", t["msg"]!.GetValue<string>());
         Assert.True(t.ContainsKey("paso") && t["paso"] is null);
         Assert.True(File.Exists(Path.Combine(_datos, id, "ultimo-error.txt")));
         // Antes de lanzar el motor, el proyecto se dejó con lo que el motor necesita.
@@ -754,7 +755,7 @@ public class EasyServerTests : IDisposable
         Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "listo");
         var t = Tareas.Tarea(id);
         Assert.Equal("error", t["estado"]!.GetValue<string>());
-        Assert.Equal("El vídeo no se ha podido hacer.", t["msg"]!.GetValue<string>());
+        Assert.Equal("The video could not be made.", t["msg"]!.GetValue<string>());
         Assert.Contains("not json", File.ReadAllText(Path.Combine(_datos, id, "ultimo-error.txt"), Encoding.UTF8));
         Assert.Equal("grabar", Proyectos.Leer(_o, id)["fase"]!.GetValue<string>());
         (code, var inicio) = await Get(c, "/api/inicio");
@@ -784,7 +785,7 @@ public class EasyServerTests : IDisposable
         Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "listo");
         var t = Tareas.Tarea(id);
         Assert.Equal("error", t["estado"]!.GetValue<string>());
-        Assert.StartsWith("No he podido terminar el vídeo (", t["msg"]!.GetValue<string>());
+        Assert.StartsWith("The video could not be finished (", t["msg"]!.GetValue<string>());
         Assert.EndsWith(").", t["msg"]!.GetValue<string>());
         Assert.Contains("proyecto.json", File.ReadAllText(Path.Combine(_datos, id, "ultimo-error.txt"), Encoding.UTF8));
         // El servidor sigue contestando: la portada no cuenta el proyecto roto y el detalle es un 404.
@@ -816,7 +817,7 @@ public class EasyServerTests : IDisposable
         Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() is "error" or "quieto");
         var t = Tareas.Tarea(id);
         Assert.Equal("error", t["estado"]!.GetValue<string>());
-        Assert.StartsWith("No he podido guardar la grabación en el proyecto (", t["msg"]!.GetValue<string>());
+        Assert.StartsWith("The recording could not be saved in the project (", t["msg"]!.GetValue<string>());
         var (code, inicio) = await Get(c, "/api/inicio");
         Assert.Equal(HttpStatusCode.OK, code);
         Assert.Empty(inicio["proyectos"]!.AsArray());
@@ -866,7 +867,7 @@ public class EasyServerTests : IDisposable
         var motor = Tareas.ProcesoDe(id);
         Assert.NotNull(motor);
         Espera(() => Tareas.Tarea(id)["estado"]!.GetValue<string>() == "error");
-        Assert.StartsWith("No he podido guardar la grabación en el proyecto (", Tareas.Tarea(id)["msg"]!.GetValue<string>());
+        Assert.StartsWith("The recording could not be saved in the project (", Tareas.Tarea(id)["msg"]!.GetValue<string>());
         // El motor sigue vivo y sigue siendo de la tarea.
         Assert.False(Terminado(motor.Value));
         Assert.Equal(motor, Tareas.ProcesoDe(id));

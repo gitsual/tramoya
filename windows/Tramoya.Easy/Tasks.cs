@@ -85,9 +85,13 @@ public static class Tareas
         return psi;
     }
 
-    private static Process Lanzar(ServerOptions o, string pid, IEnumerable<string> argv, bool entrada = false)
+    /// <summary>The variable that carries the settings' API key to the agent's process.</summary>
+    public const string VariableClave = "TRAMOYA_IA_CLAVE";
+
+    private static Process Lanzar(ServerOptions o, string pid, IEnumerable<string> argv, bool entrada = false, string clave = "")
     {
         var psi = Preparar(o, argv, Proyectos.Carpeta(o, pid), tuberias: true);
+        if (clave.Length != 0) psi.Environment[VariableClave] = clave;
         psi.RedirectStandardInput = entrada;
         if (entrada) psi.StandardInputEncoding = new UTF8Encoding(false);
         return Process.Start(psi) ?? throw new InvalidOperationException($"No se ha podido lanzar {psi.FileName}");
@@ -286,7 +290,7 @@ public static class Tareas
                 }
                 Convertir(o, pid);
             }
-        }, e => Fallo(o, pid, proc, "No he podido guardar la grabación en el proyecto", e, cola: null));
+        }, e => Fallo(o, pid, proc, Lengua.T("No he podido guardar la grabación en el proyecto", "The recording could not be saved in the project"), e, cola: null));
     }
 
     /// <summary>Le dice al grabador «empezar» o «terminar» por su entrada estándar.</summary>
@@ -330,14 +334,15 @@ public static class Tareas
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
-            Poner(pid, Estado("error"), "msg", "No he podido leer la grabación.");
+            Poner(pid, Estado("error"), "msg", Lengua.T("No he podido leer la grabación.", "The recording could not be read."));
             return;
         }
         var pasos = res["pasos"] as JsonArray;
         if (pasos is null || pasos.Count == 0)
         {
-            Poner(pid, Estado("error"), "msg", "No se ha apuntado ningún paso. Pulsa «Empezar "
-                + "a grabar» y luego haz los clics en la ventana de la web.");
+            Poner(pid, Estado("error"), "msg", Lengua.T("No se ha apuntado ningún paso. Pulsa «Empezar "
+                + "a grabar» y luego haz los clics en la ventana de la web.",
+                "No step was recorded. Press “Start recording”, then click in the website's window."));
             return;
         }
         // De aquí en adelante se toca proyecto.json. Esto corre al cerrarse la ventana de la
@@ -368,7 +373,7 @@ public static class Tareas
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
         {
-            Poner(pid, Estado("error"), "msg", $"No he podido guardar la grabación en el proyecto ({Motivo(e)}).");
+            Poner(pid, Estado("error"), "msg", Lengua.T($"No he podido guardar la grabación en el proyecto ({Motivo(e)}).", $"The recording could not be saved in the project ({Motivo(e)})."));
             Rastro(o, pid, [e.ToString()]);
             return;
         }
@@ -397,13 +402,15 @@ public static class Tareas
         // retocarlo y repetir, y queda constancia de qué se le pidió.
         p["objetivo"] = objetivo;
         Proyectos.Guardar(o, pid, p);
+        // The API key does not travel on the command line (anyone can list it): it goes in the environment.
+        var ajustes = Proyectos.LeerAjustes(o);
         string[] argv = ["agente", Proyectos.Carpeta(o, pid), Pasos.Str(p, "url"), PerfilWeb(o),
-            Json.Dump(Proyectos.LeerAjustes(o), indent: false), objetivo];
-        var proc = Lanzar(o, pid, argv);
+            Json.Dump(Ia.SinClave(ajustes), indent: false), objetivo];
+        var proc = Lanzar(o, pid, argv, clave: Ia.Str(ajustes, Ia.KClave));
         lock (Cerrojo)
             Mapa[pid] = new Entrada
             {
-                Datos = new JsonObject { ["estado"] = "pensando", ["msg"] = "Pensando…", ["p"] = 0.0 },
+                Datos = new JsonObject { ["estado"] = "pensando", ["msg"] = Lengua.T("Pensando…", "Thinking…"), ["p"] = 0.0 },
                 Proc = proc,
             };
 
@@ -452,11 +459,11 @@ public static class Tareas
                     Datos = new JsonObject
                     {
                         ["estado"] = "error",
-                        ["msg"] = error.Length != 0 ? error : "La IA se ha cerrado sin terminar.",
+                        ["msg"] = error.Length != 0 ? error : Lengua.T("La IA se ha cerrado sin terminar.", "The AI closed without finishing."),
                     },
                 };
             }
-        }, e => Fallo(o, pid, proc, "No he podido guardar lo que ha hecho la IA en el proyecto", e, cola));
+        }, e => Fallo(o, pid, proc, Lengua.T("No he podido guardar lo que ha hecho la IA en el proyecto", "What the AI did could not be saved in the project"), e, cola));
     }
 
     private static readonly HttpClient Sonda = new() { Timeout = TimeSpan.FromSeconds(1) };
@@ -468,16 +475,29 @@ public static class Tareas
     /// </summary>
     internal static Func<bool> ModeloDisponible { get; set; } = ModeloDisponibleDefecto;
 
+    private static JsonObject? _ajustesSonda;
+
     private static bool ModeloDisponibleDefecto()
     {
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY"))) return true;
         try
         {
-            var url = Backends.UrlOllama(Environment.GetEnvironmentVariable("OLLAMA_HOST"));
+            var ia = Ia.Elegir(null, null, _ajustesSonda);
+            if (ia.Backend == "off") return false;
+            if (ia.Backend == "claude") return ia.Key.Length != 0;
+            if (ia.Backend == "openai")
+            {
+                if (ia.Url.Length == 0) return false;
+                using var m = Sonda.GetAsync($"{ia.Url}/models").GetAwaiter().GetResult();
+                return (int)m.StatusCode < 500;
+            }
             // /api/version responde al instante; /api/tags recorre los manifiestos de cada
             // modelo y en un disco lento tarda segundos, más que la sonda.
-            using var r = Sonda.GetAsync($"{url}/api/version").GetAwaiter().GetResult();
+            using var r = Sonda.GetAsync($"{ia.Url}/api/version").GetAwaiter().GetResult();
             return r.IsSuccessStatusCode;
+        }
+        catch (ArgumentException)
+        {
+            return false; // un backend desconocido en los ajustes: sin tarjeta
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException or UriFormatException)
         {
@@ -491,8 +511,11 @@ public static class Tareas
     /// </summary>
     public static bool HayModelo(ServerOptions o)
     {
+        var ajustes = Proyectos.LeerAjustes(o);
+        if (Ia.Apagada(ajustes)) return false;
         lock (Oyendo)
         {
+            _ajustesSonda = ajustes;
             if (_modelo is { } m && m.Hasta > DateTime.UtcNow) return m.Valor;
         }
         var valor = ModeloDisponible();
@@ -512,7 +535,7 @@ public static class Tareas
         var p = Proyectos.Leer(o, pid);
         p["voz"] = voz;
         p["mis_videos"] = o.MisVideos;
-        p["ajustes"] = Proyectos.LeerAjustes(o);
+        p["ajustes"] = Ia.SinClave(Proyectos.LeerAjustes(o));
         Proyectos.Guardar(o, pid, p);
         List<string> argv = ["video", Proyectos.Carpeta(o, pid)];
         if (voz) argv.Add("--voz");
@@ -520,7 +543,7 @@ public static class Tareas
         lock (Cerrojo)
             Mapa[pid] = new Entrada
             {
-                Datos = new JsonObject { ["estado"] = "haciendo", ["msg"] = "Empezando…", ["p"] = 0.02 },
+                Datos = new JsonObject { ["estado"] = "haciendo", ["msg"] = Lengua.T("Empezando…", "Starting…"), ["p"] = 0.02 },
                 Proc = proc,
             };
 
@@ -572,12 +595,12 @@ public static class Tareas
                         {
                             ["estado"] = "error",
                             ["paso"] = fin["paso"]?.DeepClone(),
-                            ["msg"] = error.Length != 0 ? error : "El vídeo no se ha podido hacer.",
+                            ["msg"] = error.Length != 0 ? error : Lengua.T("El vídeo no se ha podido hacer.", "The video could not be made."),
                         },
                     };
                 }
             }
-        }, e => Fallo(o, pid, proc, "No he podido terminar el vídeo", e, cola));
+        }, e => Fallo(o, pid, proc, Lengua.T("No he podido terminar el vídeo", "The video could not be finished"), e, cola));
     }
 
     /// <summary>Olvida la tarea de un vídeo y mata su proceso si sigue vivo.</summary>
@@ -672,6 +695,12 @@ public static class Tareas
     }
 
     /// <summary>Para los tests: olvida la caché de voces y cualquier tarea de otra prueba.</summary>
+    /// <summary>The AI settings changed: ask again whether a model answers.</summary>
+    public static void OlvidarModelo()
+    {
+        lock (Oyendo) _modelo = null;
+    }
+
     internal static void Reiniciar()
     {
         CancelarTodas();

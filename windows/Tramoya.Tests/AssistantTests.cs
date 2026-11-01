@@ -151,7 +151,7 @@ public class AssistantTests
         var exc = Assert.Throws<ArgumentException>(() => Assistant.PickBackend("claude", Env()));
         Assert.Contains("ANTHROPIC_API_KEY", exc.Message);
         var unknown = Assert.Throws<ArgumentException>(() => Assistant.PickBackend("gemini", Env()));
-        Assert.Equal("unknown backend 'gemini': use 'ollama' or 'claude'", unknown.Message);
+        Assert.Equal("unknown AI backend «gemini»: use ollama, claude or openai", unknown.Message);
     }
 
     [Fact]

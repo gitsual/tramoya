@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
+using Tramoya.Core;
 
 namespace Tramoya.App;
 
@@ -42,6 +43,13 @@ internal static class Program
 
         ApplicationConfiguration.Initialize();
         Paths.EnsureFolders();
+        // The saved language, for the few messages shown before the window's own page.
+        try
+        {
+            var idioma = Ia.Str(Json.Parse(File.ReadAllText(Paths.Ajustes)) as System.Text.Json.Nodes.JsonObject, "idioma");
+            if (idioma.Length != 0) Lengua.Actual = idioma;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { }
 
         // The recorder needs Playwright's Chromium. The kit brings it in `navegador\`;
         // an installed copy has to download it the first time, and the user sees why
@@ -53,12 +61,17 @@ internal static class Program
                 return 1; // closed by the user: no window, no message
             if (fallo.Length > 0)
             {
-                MessageBox.Show(fallo + "\n\n" +
+                MessageBox.Show(fallo + "\n\n" + Lengua.T(
                                 "Tramoya graba con su propio Chromium y no puede seguir sin él.\n\n" +
                                 "Si estás en una red de empresa con proxy, puede que la descarga esté cortada: " +
                                 "usa el kit de Tramoya (Tramoya-<versión>-windows.zip), que ya trae la carpeta " +
                                 "«navegador» dentro, o pide que dejen pasar la descarga.\n\n" +
-                                "Carpeta del navegador: " + Paths.Navegador,
+                                "Carpeta del navegador: ",
+                                "Tramoya records with its own Chromium and cannot go on without it.\n\n" +
+                                "On a company network with a proxy the download may be blocked: use the Tramoya " +
+                                "kit (Tramoya-<version>-windows.zip), which already has the «navegador» folder " +
+                                "inside, or ask for the download to be allowed.\n\n" +
+                                "Browser folder: ") + Paths.Navegador,
                                 "Tramoya", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return 1;
             }
@@ -71,7 +84,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            MessageBox.Show("No he podido arrancar Tramoya.\n\n" + ex.Message, "Tramoya",
+            MessageBox.Show(Lengua.T("No he podido arrancar Tramoya.", "Tramoya could not start.") + "\n\n" + ex.Message, "Tramoya",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
@@ -198,7 +211,7 @@ internal static class Program
 
             var titulo = new Label
             {
-                Text = "Preparando el navegador (solo la primera vez)…",
+                Text = Lengua.T("Preparando el navegador (solo la primera vez)…", "Preparing the browser (only the first time)…"),
                 AutoSize = false,
                 Location = new Point(16, 14),
                 Size = new Size(428, 22),
@@ -213,7 +226,7 @@ internal static class Program
             };
             _estado = new Label
             {
-                Text = "Comprobando…",
+                Text = Lengua.T("Comprobando…", "Checking…"),
                 AutoSize = false,
                 AutoEllipsis = true,
                 Location = new Point(16, 76),
@@ -232,7 +245,7 @@ internal static class Program
                 // the timer is the bound, for a task that does not come back in time.
                 _cerrando = true;
                 e.Cancel = true;
-                _estado.Text = "Parando la descarga…";
+                _estado.Text = Lengua.T("Parando la descarga…", "Stopping the download…");
                 UseWaitCursor = true;
                 _cancelar.Cancel();
                 var limite = new System.Windows.Forms.Timer { Interval = (int)EsperaAlCancelar.TotalMilliseconds };
@@ -241,8 +254,10 @@ internal static class Program
                     limite.Stop();
                     if (_terminado)
                         return;
-                    _resultado = "No he podido parar la descarga del navegador a tiempo; " +
-                                 "si sigue un proceso node.exe, ciérralo desde el Administrador de tareas.";
+                    _resultado = Lengua.T("No he podido parar la descarga del navegador a tiempo; " +
+                                 "si sigue un proceso node.exe, ciérralo desde el Administrador de tareas.",
+                                 "The browser download could not be stopped in time; " +
+                                 "if a node.exe process is still running, close it from the Task Manager.");
                     _terminado = true;
                     Close();
                 };

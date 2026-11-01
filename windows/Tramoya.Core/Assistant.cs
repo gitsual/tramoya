@@ -110,6 +110,41 @@ public sealed class ClaudeBackend : IBackend
     }
 }
 
+/// <summary>Any server with the OpenAI chat-completions API (LM Studio, llama.cpp, vLLM, LiteLLM, OpenAI).</summary>
+public sealed class OpenAiBackend : IBackend
+{
+    public string Model { get; }
+    public string BaseUrl { get; }
+    public string ApiKey { get; }
+    private readonly Func<string, JsonNode, IDictionary<string, string>, JsonNode> _post;
+
+    public OpenAiBackend(string baseUrl, string model, string apiKey = "",
+        Func<string, JsonNode, IDictionary<string, string>, JsonNode>? post = null)
+    {
+        BaseUrl = baseUrl.TrimEnd('/');
+        Model = model;
+        ApiKey = apiKey;
+        _post = post ?? Assistant.HttpPost;
+    }
+
+    public string Complete(string system, string user)
+    {
+        var headers = new Dictionary<string, string>();
+        if (ApiKey.Length != 0) headers["Authorization"] = "Bearer " + ApiKey;
+        var reply = _post($"{BaseUrl}/chat/completions", new JsonObject
+        {
+            ["model"] = Model,
+            ["temperature"] = 0,
+            ["messages"] = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = system },
+                new JsonObject { ["role"] = "user", ["content"] = user },
+            },
+        }, headers);
+        return Assistant.Key(Assistant.Key(Assistant.Key(reply, "choices").AsArray()[0]!, "message"), "content").GetValue<string>();
+    }
+}
+
 public static class Assistant
 {
     public const string DefaultOllamaModel = "qwen3-coder:30b";
@@ -212,29 +247,23 @@ return a plan with no steps and say why in the summary.
     ///
     /// The model comes from <paramref name="model"/>, else <c>$TRAMOYA_LLM_MODEL</c>, else a default.
     /// </summary>
-    public static IBackend PickBackend(string? name, IDictionary<string, string>? env = null, string? model = null)
+    /// <remarks>
+    /// The window's AI settings (<paramref name="ajustes"/>, from <c>ajustes.json</c>) sit between the
+    /// flags and the environment: flag &gt; settings &gt; environment &gt; default (<see cref="Ia.Elegir"/>).
+    /// </remarks>
+    public static IBackend PickBackend(string? name, IDictionary<string, string>? env = null, string? model = null,
+        JsonObject? ajustes = null)
     {
-        env ??= Environment.GetEnvironmentVariables()
-            .Cast<System.Collections.DictionaryEntry>()
-            .ToDictionary(e => (string)e.Key, e => (string?)e.Value ?? "");
-        string? Get(string key) => env.TryGetValue(key, out var v) ? v : null;
-        var fallback = !string.IsNullOrEmpty(Get("ANTHROPIC_API_KEY")) ? "claude" : "ollama";
-        var chosen = FirstNonEmpty(name, Get("TRAMOYA_LLM")) ?? fallback;
-        model = FirstNonEmpty(model, Get("TRAMOYA_LLM_MODEL"));
-        if (chosen == "claude")
+        var ia = Ia.Elegir(name, model, ajustes, env);
+        return ia.Backend switch
         {
-            var key = Get("ANTHROPIC_API_KEY") ?? "";
-            if (key.Length == 0)
-                throw new ArgumentException("the claude backend needs ANTHROPIC_API_KEY in the environment");
-            return new ClaudeBackend(apiKey: key, model: model ?? DefaultClaudeModel);
-        }
-        if (chosen == "ollama")
-        {
-            return new OllamaBackend(
-                model: model ?? DefaultOllamaModel,
-                baseUrl: Get("OLLAMA_HOST") ?? DefaultOllamaUrl);
-        }
-        throw new ArgumentException($"unknown backend {PyRepr.Of(chosen)}: use 'ollama' or 'claude'");
+            "off" => throw new ArgumentException("the AI is switched off in the window's Settings; pass --backend to use one anyway"),
+            "claude" when ia.Key.Length == 0 => throw new ArgumentException("the claude backend needs an API key: Settings → AI, or ANTHROPIC_API_KEY in the environment"),
+            "claude" => new ClaudeBackend(apiKey: ia.Key, model: ia.Model),
+            "openai" when ia.Url.Length == 0 => throw new ArgumentException("the openai backend needs the server address: Settings → AI, or OPENAI_BASE_URL"),
+            "openai" => new OpenAiBackend(ia.Url, ia.Model, ia.Key),
+            _ => new OllamaBackend(model: ia.Model, baseUrl: ia.Url),
+        };
     }
 
     private static string? FirstNonEmpty(params string?[] values) =>

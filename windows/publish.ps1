@@ -6,7 +6,7 @@ windows\dist\Tramoya-<version>-windows.zip.
 .DESCRIPTION
 Publishes Tramoya.App (Release, win-x64, self-contained, single file), copies
 ffmpeg.exe and ffprobe.exe into dist\Tramoya\ffmpeg\, downloads Chromium into
-dist\Tramoya\navegador\ with Playwright, writes LEEME.txt and zips the folder.
+dist\Tramoya\navegador\ with Playwright, writes README.txt and zips the folder.
 Code signing happens outside this script (signtool).
 
 Works on Windows PowerShell 5.1.
@@ -168,26 +168,34 @@ if ($SkipBrowser) {
     Write-Host "   Chromium en $($chromium[0].FullName)"
 }
 
-# --- LEEME.txt ------------------------------------------------------------------
+# --- README.txt (English, then Spanish) -------------------------------------------
 # Single-quoted here-string: backticks and «» must reach the file as they are.
 $leeme = @'
-Tramoya VERSION para Windows
-============================
+Tramoya VERSION for Windows
+===========================
 
-Haz doble clic en Tramoya.exe. No instala nada: todo queda en esta carpeta.
+Double-click Tramoya.exe. Nothing is installed: everything stays in this folder.
 
-- Los vídeos terminados se guardan en la carpeta «Mis vídeos», aquí al lado
-  (también se abre desde la propia ventana de Tramoya).
-- Si copias la carpeta entera a otro sitio o a un pendrive, sigue funcionando.
-- Tramoya trae su propio Chromium en la carpeta «navegador»; no toca el
-  navegador que tengas instalado.
-- Para desinstalar, borra la carpeta.
+- Finished videos are saved in the «My videos» folder, right here
+  (the Tramoya window opens it too).
+- The window is in English; Settings → Language switches it to Spanish.
+- Copy the whole folder somewhere else or to a USB drive and it keeps working.
+- Tramoya brings its own Chromium in the «navegador» folder; it does not touch
+  the browser you have installed.
+- To uninstall, delete the folder.
 
-Desde una terminal, Tramoya.exe acepta los mismos subcomandos que «tramoya»
-en Linux y Mac (Tramoya.exe --help).
+From a terminal, Tramoya.exe takes the same subcommands as «tramoya» on
+Linux and Mac (Tramoya.exe --help).
+
+-------------------------------------------------------------------------------
+
+Tramoya VERSION para Windows: haz doble clic en Tramoya.exe. No instala nada.
+Los vídeos quedan en la carpeta «My videos» de aquí al lado. La ventana sale
+en inglés: Settings → Language → Español la pone en español. Para
+desinstalar, borra la carpeta.
 '@
 $leeme = $leeme.Replace('VERSION', $version)
-Set-Content -Path (Join-Path $dist 'LEEME.txt') -Value $leeme -Encoding UTF8
+Set-Content -Path (Join-Path $dist 'README.txt') -Value $leeme -Encoding UTF8
 
 # --- licencias de las fuentes de la ventana (SIL OFL 1.1, van incrustadas en la interfaz) ---
 $licencias = Join-Path $dist 'licencias'

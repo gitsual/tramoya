@@ -41,8 +41,9 @@ internal static class Cli
         Profile profile, string @out, double? pace, bool rehearse, string? lang,
         string? url, string? launch, string? storageState, bool headless);
 
+    // ask/do: --backend and --model, then the window's AI settings, then the environment.
     internal static Func<string?, string?, IBackend> PickBackend { get; set; } =
-        (name, model) => Assistant.PickBackend(name, model: model);
+        (name, model) => Assistant.PickBackend(name, model: model, ajustes: Proyectos.LeerAjustes(EasyHost.Options()));
 
     internal static Func<string[], int> RunStep { get; set; } = RunStepDefault;
 
@@ -68,26 +69,25 @@ internal static class Cli
     private static Task<AgentResult> RunAgentDefault(string url, AgentOptions options,
         string? backendName, string? model, JsonObject ajustes, string authPath) =>
         Engine.CorrerAgenteAsync(url, Paths.PerfilWeb, options, ajustes, authPath,
-            Backends.Pick(backendName, model), new StderrProgress(), CancellationToken.None);
+            Backends.Desde(Ia.Elegir(backendName, model, ajustes)), new StderrProgress(), CancellationToken.None);
 
     private static int CmdAgent(ParsedArgs args)
     {
         var goal = args.GetRequired("goal");
+        var lang = Lengua.Normalizar(args.Get("lang") ?? Lengua.Actual);
+        Lengua.Actual = lang;
         var url = args.GetRequired("url");
         var maxPasos = args.Int("max_pasos")!.Value;
         if (maxPasos < 1)
         {
-            Console.Error.WriteLine("--max-pasos debe ser mayor que cero.");
+            Console.Error.WriteLine("--max-pasos must be greater than zero.");
             return 2;
         }
         if (args.Flag("dry_run"))
         {
-            var backend = args.Get("backend") ?? Environment.GetEnvironmentVariable("TRAMOYA_LLM");
-            if (string.IsNullOrEmpty(backend))
-                backend = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")) ? "ollama" : "claude";
-            var model = args.Get("model") ?? Environment.GetEnvironmentVariable("TRAMOYA_LLM_MODEL");
-            if (string.IsNullOrEmpty(model)) model = backend == "ollama" ? "qwen3-coder:30b" : Assistant.DefaultClaudeModel;
-            Console.WriteLine($"backend: {backend}\nmodelo: {model}\nurl: {url}\nobjetivo: {goal}\nmáximo de pasos: {maxPasos}");
+            // The same choice the run would make: flag, then the window's settings, then the environment.
+            var ia = Ia.Elegir(args.Get("backend"), args.Get("model"), Proyectos.LeerAjustes(EasyHost.Options()));
+            Console.WriteLine($"backend: {ia.Backend}\nmodel: {ia.Model}\nurl: {url}\ngoal: {goal}\nmax steps: {maxPasos}\nlanguage: {lang}");
             return 0;
         }
         if (EnsureBrowser() is { } missing) return missing;
@@ -98,7 +98,7 @@ internal static class Cli
         try
         {
             var auth = Path.Combine(temporary, "auth.json");
-            result = RunAgent(url, new AgentOptions(goal, "es", maxPasos, args.Flag("capturas")),
+            result = RunAgent(url, new AgentOptions(goal, lang, maxPasos, args.Flag("capturas")),
                 args.Get("backend"), args.Get("model"), Proyectos.LeerAjustes(opts), auth).GetAwaiter().GetResult();
             id = Proyectos.Crear(opts, args.Get("nombre") ?? goal[..Math.Min(60, goal.Length)], url);
             // No storage state (the browser closed before it could be saved) is not a failure.
@@ -115,8 +115,8 @@ internal static class Cli
         p["titulo_web"] = result.Titulo;
         p["resumen"] = result.Resumen;
         Proyectos.Guardar(opts, id, p);
-        Console.WriteLine($"proyecto {id} en {carpeta}: {pasos.Count} pasos");
-        if (!result.Ok) Console.Error.WriteLine("Aviso: el agente no ha alcanzado el objetivo; el proyecto se ha guardado para revisarlo.");
+        Console.WriteLine($"project {id} in {carpeta}: {pasos.Count} steps");
+        if (!result.Ok) Console.Error.WriteLine("Warning: the agent did not reach the goal; the project was saved for review.");
         if (!args.Flag("video")) return result.Ok ? 0 : 1;
         var voz = args.Flag("voz");
         p["voz"] = voz;
@@ -140,8 +140,8 @@ internal static class Cli
             p["srt"] = final["srt"]?.DeepClone();
             Proyectos.Guardar(opts, id, p);
         }
-        if (p["video"] is { } video) Console.WriteLine($"vídeo: {video}");
-        if (p["srt"] is { } srt) Console.WriteLine($"subtítulos: {srt}");
+        if (p["video"] is { } video) Console.WriteLine($"video: {video}");
+        if (p["srt"] is { } srt) Console.WriteLine($"subtitles: {srt}");
         return rc;
     }
 
@@ -190,12 +190,12 @@ internal static class Cli
         {
             if (Browsers.Installed())
             {
-                Console.WriteLine($"Chromium ya está en {Paths.Navegador}");
+                Console.WriteLine($"Chromium is already in {Paths.Navegador}");
                 return 0;
             }
             if (EnsureBrowser() is { } rc)
                 return rc;
-            Console.WriteLine($"Chromium instalado en {Paths.Navegador}");
+            Console.WriteLine($"Chromium installed in {Paths.Navegador}");
             return 0;
         }
         Console.Error.WriteLine("usage: tramoya browser install");
@@ -776,7 +776,12 @@ internal static class Cli
         await browser.CloseAsync().ConfigureAwait(false);
     }
 
-    private static int CmdEasy(ParsedArgs args) => EasyServerRun(args.Flag("no_window"));
+    private static int CmdEasy(ParsedArgs args)
+    {
+        // Without a language saved in the window's settings, this one (or TRAMOYA_LANG, or English).
+        if (args.Get("lang") is { } lang) Lengua.Actual = lang;
+        return EasyServerRun(args.Flag("no_window"));
+    }
 
     /// <summary>`tramoya easy`: serve the app; with `--no-window` print the URL and stay up, else open the window.</summary>
     private static int EasyServerRun(bool noWindow)
@@ -897,8 +902,8 @@ internal static class Cli
         {
             p = ap.AddSubparser("command", name, help: helpText);
             p.Add("request", help: "e.g. \"make the video from take.mp4 with the English voice\"");
-            p.Add("--backend", choices: new[] { "ollama", "claude" },
-                  help: "default: $TRAMOYA_LLM, else claude when $ANTHROPIC_API_KEY is set, else ollama");
+            p.Add("--backend", choices: new[] { "ollama", "claude", "openai" },
+                  help: "default: the window's Settings → AI, else $TRAMOYA_LLM, else claude when $ANTHROPIC_API_KEY is set, else ollama");
             p.Add("--model", help: "model name; default: $TRAMOYA_LLM_MODEL");
             if (name == "do")
             {
@@ -908,17 +913,18 @@ internal static class Cli
             p.Handler = fn;
         }
 
-        p = ap.AddSubparser("command", "agent", help: "describe el proceso y el modelo lo graba");
-        p.Add("goal", help: "objetivo del proceso");
+        p = ap.AddSubparser("command", "agent", help: "describe the process (or ask a question) and a model records it");
+        p.Add("goal", help: "the process to show, or a question");
         p.Add("--url", required: true);
-        p.Add("--backend", choices: new[] { "ollama", "claude" });
+        p.Add("--backend", choices: new[] { "ollama", "claude", "openai" });
         p.Add("--model");
         p.Add("--max-pasos", kind: ArgKind.Int, @default: "25");
         p.Add("--nombre");
         p.AddSwitch("--video");
         p.AddSwitch("--voz");
         p.AddSwitch("--capturas");
-        p.AddSwitch("--dry-run", help: "muestra el plan sin abrir el navegador");
+        p.Add("--lang", choices: new[] { "en", "es" }, help: "language of the steps, the sentences and the voice (default en)");
+        p.AddSwitch("--dry-run", help: "print the plan without opening the browser");
         p.Handler = CmdAgent;
 
         p = ap.AddSubparser("command", "direct", help: "run a director script or an app profile: it drives " +
@@ -972,10 +978,11 @@ internal static class Cli
         AddDryRun(p);
         p.Handler = CmdLogin;
 
-        p = ap.AddSubparser("command", "easy", help: "the point-and-click app (Spanish): do the process once in the " +
+        p = ap.AddSubparser("command", "easy", help: "the point-and-click app (English or Spanish): do the process once in the " +
                                                      "browser, write a sentence per step, get the video",
                             aliases: "facil");
         p.AddSwitch("--no-window", help: "serve the app and print its URL instead of opening a window");
+        p.Add("--lang", choices: new[] { "en", "es" }, help: "the window's language when none is saved in its settings (default en)");
         p.Handler = CmdEasy;
 
         p = ap.AddSubparser("command", "snapshots", help: "accessibility snapshots written by direct");

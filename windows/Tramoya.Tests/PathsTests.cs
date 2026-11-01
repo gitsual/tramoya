@@ -40,7 +40,7 @@ public class PathsTests
             Assert.Equal(kit, Paths.Kit);
             Assert.Equal(kit, Paths.Casa);
             Assert.Equal(Path.Combine(kit, "app", "datos"), Paths.Datos);
-            Assert.Equal(Path.Combine(kit, "Mis vídeos"), Paths.MisVideos);
+            Assert.Equal(Path.Combine(kit, "My videos"), Paths.MisVideos);
             Assert.Equal(Path.Combine(kit, "app", "datos", "ajustes.json"), Paths.Ajustes);
             Assert.Equal(Path.Combine(kit, "app", "datos", "_navegador"), Paths.PerfilWeb);
             Assert.Equal(Path.Combine(kit, "app", "datos", "_ventana"), Paths.Ventana);
@@ -125,7 +125,7 @@ public class PathsTests
             using var _ = new EnvScope(Paths.KitVariable, kit);
             Paths.EnsureFolders();
             Assert.True(Directory.Exists(Path.Combine(kit, "app", "datos")));
-            Assert.True(Directory.Exists(Path.Combine(kit, "Mis vídeos")));
+            Assert.True(Directory.Exists(Path.Combine(kit, "My videos")));
         }
         finally
         {

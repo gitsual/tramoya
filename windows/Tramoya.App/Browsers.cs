@@ -166,16 +166,17 @@ internal static class Browsers
         for (var attempt = 1; attempt <= 2; attempt++)
         {
             progress?.Report(attempt == 1
-                ? $"Descargando Chromium en {Paths.Navegador}…"
-                : "La descarga se quedó parada; lo intento otra vez…");
+                ? Lengua.T($"Descargando Chromium en {Paths.Navegador}…", $"Downloading Chromium into {Paths.Navegador}…")
+                : Lengua.T("La descarga se quedó parada; lo intento otra vez…", "The download stalled; trying again…"));
             var (code, hung, error) = await InstallOnceAsync(progress, cancel).ConfigureAwait(false);
             if (Installed())
                 return null;
             last = hung
-                ? "La descarga se quedó parada dos veces"
+                ? Lengua.T("La descarga se quedó parada dos veces", "The download stalled twice")
                 : error ?? (code == 0
-                    ? $"Playwright terminó sin dejar en {Paths.Navegador} las carpetas {string.Join(", ", Folders())}"
-                    : $"Playwright terminó con el código {code}");
+                    ? Lengua.T($"Playwright terminó sin dejar en {Paths.Navegador} las carpetas {string.Join(", ", Folders())}",
+                        $"Playwright finished without leaving the folders {string.Join(", ", Folders())} in {Paths.Navegador}")
+                    : Lengua.T($"Playwright terminó con el código {code}", $"Playwright finished with code {code}"));
             if (!hung)
                 break;
         }
@@ -337,7 +338,8 @@ internal static class Browsers
         int id;
         try { id = proc.Id; }
         catch (InvalidOperationException) { id = 0; }
-        return $"no he podido parar el instalador de Playwright (node.exe, pid {id}); ciérralo desde el Administrador de tareas";
+        return Lengua.T($"no he podido parar el instalador de Playwright (node.exe, pid {id}); ciérralo desde el Administrador de tareas",
+            $"the Playwright installer (node.exe, pid {id}) could not be stopped; close it from the Task Manager");
     }
 
     /// <summary>The driver's lines as the user sees them: the known shapes in Spanish, the rest as they come.</summary>
@@ -348,13 +350,13 @@ internal static class Browsers
         line = Regex.Replace(line, @"\x1b\[[0-9;]*[A-Za-z]", "").Trim();
         var m = Regex.Match(line, @"^Downloading (.+?) from \S+$");
         if (m.Success)
-            return $"Descargando {m.Groups[1].Value}…";
+            return Lengua.T($"Descargando {m.Groups[1].Value}…", $"Downloading {m.Groups[1].Value}…");
         m = Regex.Match(line, @"^\|.*\|\s*(\d+)% of (.+)$");
         if (m.Success)
-            return $"Descargando… {m.Groups[1].Value} % de {m.Groups[2].Value}";
+            return Lengua.T($"Descargando… {m.Groups[1].Value} % de {m.Groups[2].Value}", $"Downloading… {m.Groups[1].Value} % of {m.Groups[2].Value}");
         m = Regex.Match(line, @"^(.+?) downloaded to .+$");
         if (m.Success)
-            return $"{m.Groups[1].Value} descargado; instalando…";
+            return Lengua.T($"{m.Groups[1].Value} descargado; instalando…", $"{m.Groups[1].Value} downloaded; installing…");
         return line;
     }
 
@@ -397,8 +399,8 @@ internal static class Browsers
     private static string Describe(Activity a)
     {
         if (a.DownloadBytes > 0)
-            return $"Descargando Chromium… {a.DownloadBytes / (1024 * 1024)} MB";
-        return $"Instalando… {a.Files} ficheros ({a.Bytes / (1024 * 1024)} MB)";
+            return Lengua.T($"Descargando Chromium… {a.DownloadBytes / (1024 * 1024)} MB", $"Downloading Chromium… {a.DownloadBytes / (1024 * 1024)} MB");
+        return Lengua.T($"Instalando… {a.Files} ficheros ({a.Bytes / (1024 * 1024)} MB)", $"Installing… {a.Files} files ({a.Bytes / (1024 * 1024)} MB)");
     }
 
     // --- Job Object: the driver's tree dies with this process -------------------------

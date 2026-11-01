@@ -102,10 +102,10 @@ public class CliTests
         }
         finally { Cli.EnsureBrowser = browser; }
         Assert.Contains("backend: ollama", cap.Out);
-        Assert.Contains("modelo: modelo-local", cap.Out);
+        Assert.Contains("model: modelo-local", cap.Out);
         Assert.Contains("url: https://example.test/", cap.Out);
-        Assert.Contains("objetivo: Crear una nota", cap.Out);
-        Assert.Contains("máximo de pasos: 12", cap.Out);
+        Assert.Contains("goal: Crear una nota", cap.Out);
+        Assert.Contains("max steps: 12", cap.Out);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class CliTests
             Assert.True(checkedBrowser);
             Assert.Equal("https://example.test/", url);
             Assert.Equal("Crear una nota", options.Goal);
-            Assert.Equal("es", options.Lang);
+            Assert.Equal("en", options.Lang);
             Assert.Equal(7, options.MaxPasos);
             Assert.True(options.Capturas);
             Assert.Equal("claude", backend);
@@ -175,9 +175,9 @@ public class CliTests
             Assert.Equal("Guardamos la nota.", pasos[1]!["texto"]!.GetValue<string>());
             Assert.True(pasos[1]!["seguro"]!.GetValue<bool>());
             Assert.True(File.Exists(Path.Combine(Tramoya.Easy.Proyectos.Carpeta(opts, "mi-nota"), "auth.json")));
-            Assert.Contains("proyecto mi-nota en ", cap.Out);
-            Assert.Contains(": 2 pasos", cap.Out);
-            if (!ok) Assert.Contains("no ha alcanzado el objetivo", cap.Err);
+            Assert.Contains("project mi-nota in ", cap.Out);
+            Assert.Contains(": 2 steps", cap.Out);
+            if (!ok) Assert.Contains("did not reach the goal", cap.Err);
         }
         finally
         {
@@ -218,8 +218,8 @@ public class CliTests
         try
         {
             Assert.Equal(3, Run("agent", "Nota", "--url", "https://example.test/", "--video", "--voz"));
-            Assert.Contains($"v\u00eddeo: {video}", cap.Out);
-            Assert.Contains($"subt\u00edtulos: {srt}", cap.Out);
+            Assert.Contains($"video: {video}", cap.Out);
+            Assert.Contains($"subtitles: {srt}", cap.Out);
             Assert.Contains("\"ok\":true", cap.Out);
             var p = Tramoya.Easy.Proyectos.Leer(EasyHost.Options(), "nota");
             Assert.Equal(video, p["video"]!.GetValue<string>());
@@ -680,7 +680,7 @@ public class CliTests
     {
         using var cap = new Capture();
         Assert.Equal(0, Run("--version"));
-        Assert.Equal("tramoya 1.2.0", cap.Out.Trim());
+        Assert.Equal("tramoya 1.3.0", cap.Out.Trim());
     }
 
     [Fact]

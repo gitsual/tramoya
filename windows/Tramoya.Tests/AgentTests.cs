@@ -330,7 +330,7 @@ public sealed class AgentTests(ITestOutputHelper salida)
             """{"pensamiento":"ya está","accion":"terminar","resumen":"Formulario guardado"}""");
         var registro = new List<string>();
 
-        var r = await AgentRunner.RunAsync(pagina.Page, new AgentOptions("Rellena el formulario"), modelo, new Registro(registro), CancellationToken.None);
+        var r = await AgentRunner.RunAsync(pagina.Page, new AgentOptions("Rellena el formulario", Lang: "es"), modelo, new Registro(registro), CancellationToken.None);
 
         Assert.True(r.Ok);
         Assert.Equal("Formulario guardado", r.Resumen);
@@ -392,7 +392,7 @@ public sealed class AgentTests(ITestOutputHelper salida)
             """{"pensamiento":"ahí está","accion":"señalar","ref":{ref:Guardar},"frase":"Aquí está el botón de guardar, abajo a la derecha"}""",
             """{"pensamiento":"contestado","accion":"terminar","resumen":"Se guarda con el botón Guardar, al final del formulario."}""");
 
-        var r = await AgentRunner.RunAsync(pagina.Page, new AgentOptions("¿Dónde se guarda el formulario?"), modelo, null, CancellationToken.None);
+        var r = await AgentRunner.RunAsync(pagina.Page, new AgentOptions("¿Dónde se guarda el formulario?", Lang: "es"), modelo, null, CancellationToken.None);
 
         Assert.True(r.Ok);
         Assert.Contains("MODO PREGUNTA", modelo.Llamadas[0].System);
@@ -429,7 +429,7 @@ public sealed class AgentTests(ITestOutputHelper salida)
             """{"accion":"clic","ref":1,"pensamiento":"no debería llegar"}""");
         var registro = new List<string>();
 
-        var r = await AgentRunner.RunAsync(pagina.Page, new AgentOptions("Pulsa dos veces", MaxPasos: 2), modelo, new Registro(registro), CancellationToken.None);
+        var r = await AgentRunner.RunAsync(pagina.Page, new AgentOptions("Pulsa dos veces", Lang: "es", MaxPasos: 2), modelo, new Registro(registro), CancellationToken.None);
 
         Assert.False(r.Ok);
         Assert.Equal(2, r.Pasos.Count);
@@ -504,7 +504,7 @@ public sealed class AgentTests(ITestOutputHelper salida)
                 """{"pensamiento":"el nombre","accion":"escribir","ref":{ref:Nombre},"valor":"hola","frase":"Escribimos el nombre"}""",
                 """{"pensamiento":"listo","accion":"terminar","resumen":"Formulario relleno"}""");
             var registro = new List<string>();
-            var r = await AgentRunner.RunAsync(page, new AgentOptions("Pulsa Siguiente y escribe el nombre"), modelo, new Registro(registro), CancellationToken.None);
+            var r = await AgentRunner.RunAsync(page, new AgentOptions("Pulsa Siguiente y escribe el nombre", Lang: "es"), modelo, new Registro(registro), CancellationToken.None);
 
             Assert.True(r.Ok, string.Join("\n", registro));
             Assert.Equal(2, r.Pasos.Count);

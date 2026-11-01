@@ -27,12 +27,19 @@ public static class Proyectos
     /// <summary>Los ajustes de fábrica; solo estas claves se guardan (<c>AJUSTES_DEFECTO</c>).</summary>
     public static JsonObject AjustesDefecto() => new()
     {
+        ["idioma"] = "",
         ["voz"] = "",
         ["velocidad"] = 0,
         ["ritmo"] = "normal",
         ["tamano"] = "800p",
         ["srt"] = true,
         ["dominios"] = new JsonArray(),
+        // The AI: "" (decide from the environment), "off", "ollama", "claude" or "openai"; the model,
+        // the Ollama host or OpenAI-compatible URL, and the API key (never sent back to the window).
+        ["ia_backend"] = "",
+        ["ia_modelo"] = "",
+        ["ia_url"] = "",
+        ["ia_clave"] = "",
     };
 
     /// <summary>Segundos Unix con decimales, como <c>time.time()</c>.</summary>
@@ -103,9 +110,13 @@ public static class Proyectos
     public static JsonObject GuardarAjustes(ServerOptions o, JsonObject nuevos)
     {
         var a = LeerAjustes(o);
+        var claveAntes = Ia.Str(a, Ia.KClave);
         foreach (var (k, v) in nuevos)
             if (a.ContainsKey(k))
                 a[k] = v?.DeepClone();
+        // The window never sees the key: an empty field keeps the saved one, «ia_clave_borrar» removes it.
+        if (Ia.Str(a, Ia.KClave).Length == 0) a[Ia.KClave] = claveAntes;
+        if (nuevos["ia_clave_borrar"] is JsonValue borrar && borrar.TryGetValue<bool>(out var si) && si) a[Ia.KClave] = "";
         if (a["dominios"] is JsonValue dv && dv.TryGetValue<string>(out var texto))
         {
             var lista = new JsonArray();
@@ -213,7 +224,7 @@ public static class Proyectos
     public static string Duplicar(ServerOptions o, string pid)
     {
         var p = Leer(o, pid);
-        var nombre = $"{Pasos.Str(p, "nombre")} (copia)";
+        var nombre = Lengua.T($"{Pasos.Str(p, "nombre")} (copia)", $"{Pasos.Str(p, "nombre")} (copy)");
         var nuevo = IdLibre(o, nombre);
         CopiarArbol(Carpeta(o, pid), Carpeta(o, nuevo));
         p["id"] = nuevo;
@@ -252,10 +263,10 @@ public static class Proyectos
     public static string Crear(ServerOptions o, string? nombre, string? url)
     {
         nombre = (nombre ?? "").Trim();
-        if (nombre.Length == 0) nombre = "Mi vídeo";
+        if (nombre.Length == 0) nombre = Lengua.T("Mi vídeo", "My video");
         url = (url ?? "").Trim();
         if (url.Length == 0)
-            throw new ArgumentException("Falta la dirección de la web");
+            throw new ArgumentException(Lengua.T("Falta la dirección de la web", "The website address is missing"));
         if (!Esquema.IsMatch(url))
             url = "https://" + url;
         var pid = IdLibre(o, nombre);

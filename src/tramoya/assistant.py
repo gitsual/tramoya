@@ -179,31 +179,56 @@ class ClaudeBackend:
         return "".join(block.get("text", "") for block in reply["content"])
 
 
+class OpenAIBackend:
+    """Any server with the OpenAI chat-completions API (LM Studio, llama.cpp, vLLM, LiteLLM, OpenAI)."""
+
+    def __init__(self, base_url: str, model: str, api_key: str = "", post: Post = http_post) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.api_key = api_key
+        self._post = post
+
+    def complete(self, system: str, user: str) -> str:
+        reply = self._post(
+            f"{self.base_url}/chat/completions",
+            {
+                "model": self.model,
+                "temperature": 0,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            },
+            {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {},
+        )
+        return reply["choices"][0]["message"]["content"]
+
+
 def pick_backend(
     name: str | None,
     env: Mapping[str, str] | None = None,
     model: str | None = None,
+    ajustes: Mapping | None = None,
 ) -> Backend:
-    """Choose a backend: the explicit `name`, else `$TRAMOYA_LLM`, else Claude
-    when `$ANTHROPIC_API_KEY` is set, else a local Ollama model.
-
-    The model comes from `model`, else `$TRAMOYA_LLM_MODEL`, else a default.
+    """Choose a backend: the explicit `name` (and `model`), else the window's AI settings
+    (`ajustes`: ia_backend, ia_modelo, ia_url, ia_clave), else `$TRAMOYA_LLM` and
+    `$TRAMOYA_LLM_MODEL`, else Claude when `$ANTHROPIC_API_KEY` is set, else a local Ollama
+    model (see `tramoya.ia.elegir`).
     """
-    env = os.environ if env is None else env
-    fallback = "claude" if env.get("ANTHROPIC_API_KEY") else "ollama"
-    chosen = name or env.get("TRAMOYA_LLM") or fallback
-    model = model or env.get("TRAMOYA_LLM_MODEL") or None
-    if chosen == "claude":
-        key = env.get("ANTHROPIC_API_KEY", "")
-        if not key:
-            raise ValueError("the claude backend needs ANTHROPIC_API_KEY in the environment")
-        return ClaudeBackend(api_key=key, model=model or DEFAULT_CLAUDE_MODEL)
-    if chosen == "ollama":
-        return OllamaBackend(
-            model=model or DEFAULT_OLLAMA_MODEL,
-            base_url=env.get("OLLAMA_HOST", DEFAULT_OLLAMA_URL),
-        )
-    raise ValueError(f"unknown backend {chosen!r}: use 'ollama' or 'claude'")
+    from tramoya import ia as _ia
+
+    elegida = _ia.elegir(name, model, ajustes, env)
+    if elegida.backend == "off":
+        raise ValueError("the AI is switched off in the window's Settings; pass --backend to use one anyway")
+    if elegida.backend == "claude":
+        if not elegida.key:
+            raise ValueError("the claude backend needs an API key: Settings → AI, or ANTHROPIC_API_KEY in the environment")
+        return ClaudeBackend(api_key=elegida.key, model=elegida.model)
+    if elegida.backend == "openai":
+        if not elegida.url:
+            raise ValueError("the openai backend needs the server address: Settings → AI, or OPENAI_BASE_URL")
+        return OpenAIBackend(elegida.url, elegida.model, elegida.key)
+    return OllamaBackend(model=elegida.model, base_url=elegida.url)
 
 
 # --- plans ----------------------------------------------------------------
