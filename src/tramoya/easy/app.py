@@ -27,7 +27,7 @@ import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from tramoya import ia
+from tramoya import __version__, ia
 from tramoya.easy import lengua
 
 
@@ -390,7 +390,7 @@ class H(BaseHTTPRequestHandler):
                 "windows": sys.platform == "win32", "carpeta": str(MIS_VIDEOS),
                 "acceso": bool(esc and (esc / "Tramoya.lnk").exists()),
                 # Pedírselo a la IA solo existe en la versión de Windows: aquí se oculta.
-                "agente": False})
+                "agente": False, "version": __version__})
         if m := re.fullmatch(r"/api/p/([a-z0-9-]+)", ruta):
             if not (DATOS / m[1] / "proyecto.json").exists():
                 return self.responder({"error": "no existe"}, 404)
