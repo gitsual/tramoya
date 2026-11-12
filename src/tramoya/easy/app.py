@@ -50,6 +50,7 @@ UI = Path(__file__).resolve().parent / "ui" / "index.html"
 ICONO = Path(__file__).resolve().parent / "ui" / "tramoya.ico"
 AJUSTES = DATOS / "ajustes.json"
 AJUSTES_DEFECTO = {"idioma": "", "ia_backend": "", "ia_modelo": "", "ia_url": "", "ia_clave": "", "voz": "", "velocidad": 0, "ritmo": "normal", "tamano": "800p", "srt": True,
+                   "acabado": "estreno", "formato": "horizontal", "duracion": 0,
                    "dominios": []}
 # pythonw (the kit launcher, no console) for the window; python for the workers
 PY = Path(sys.executable).with_name(Path(sys.executable).name.replace("pythonw", "python"))
@@ -238,7 +239,7 @@ def hacer_video(pid: str, voz: bool) -> None:
             return
         if fin.get("ok"):
             q = leer(pid)
-            q.update(video=fin["video"], srt=fin.get("srt"), fase="video",
+            q.update(video=fin["video"], srt=fin.get("srt"), aviso=fin.get("aviso"), fase="video",
                      hecho=time.strftime("%d-%m-%Y %H:%M"))
             guardar(pid, q)
             TAREAS[pid] = {"estado": "listo"}

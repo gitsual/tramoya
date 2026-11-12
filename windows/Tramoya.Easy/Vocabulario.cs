@@ -24,6 +24,8 @@ public static class Vocabulario
     public static readonly (int Ancho, int Alto) Viewport = (1280, 800);
     public static readonly Dictionary<string, (int Ancho, int Alto)> Tamanos = new()
     { ["720p"] = (1280, 720), ["800p"] = (1280, 800), ["1080p"] = (1920, 1080) };
+    // Vertical (para el móvil): la web se graba en 4:5, que es lo que mejor llena un lienzo 9:16 con el titular encima.
+    public static readonly (int Ancho, int Alto) Vertical = (768, 960);
     public static readonly Dictionary<string, double> Ritmos = new()
     { ["tranquilo"] = 1.3, ["normal"] = 1.0, ["agil"] = 0.75 };
     public static readonly string[] SsoSiempre = ["*.microsoftonline.com", "*.windows.net"];

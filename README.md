@@ -284,6 +284,31 @@ Long waits become a few seconds with a caption in the same colours.
 <p align="center"><sub>One frame per scene of the notes demo, cut from the take at the midpoint of each scene in
 <code>marks.json</code> (<code>scripts/render_brand.py filmstrip</code>).</sub></p>
 
+<a id="the-premiere"></a>
+
+### The premiere
+
+A video from the window comes out as a premiere: the take is put on a stage instead of being handed over bare. The
+curtain opens on the title, every scene comes in with its sentence as a headline and a cue stamp (Q1, Q2…), the cue
+sheet on the right ticks off what has been played, the boards at the bottom light one lamp per scene, and the curtain
+falls on the figures of the show. The caption band is not recorded on the page then: the headline is outside the
+take. `src/tramoya/estreno/sala.html` draws every frame as a function of `seek(t)` and Playwright films it frame by
+frame, the same file in Python and in the `.exe`.
+
+<p align="center">
+  <img src="assets/premiere.jpg" alt="Two frames of a premiere: horizontal, with the headline, the cue stamp Q2, the take framed under a spotlight and the cue sheet; vertical, with the same headline above the take and the next scene below" width="100%">
+</p>
+
+Three settings in the window decide it:
+
+| Setting | Values |
+|---|---|
+| Finish | *Premiere* (default) or *Just the recording*, the take as it was with the caption band on the page. |
+| Format | *Horizontal* (1920×1080) or *Vertical* (1080×1920, for a phone; the site is recorded at 768×960, the way a tablet sees it). |
+| Length at most | No limit, 30 s, 1 min, 1:30 or 2 min. A longer take plays faster to fit, up to 1.5× with the voice in its own pitch; if even that is not enough, the video says how long it runs. |
+
+The `.srt` follows the premiere's clock: the first sentence starts when the curtain has opened.
+
 ---
 
 <a id="capabilities"></a>
