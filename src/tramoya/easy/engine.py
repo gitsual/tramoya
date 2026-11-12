@@ -446,6 +446,29 @@ def lineas_de_paso(p: dict) -> list[str]:
     return []
 
 
+# Palabras que delatan el idioma de una frase (las más frecuentes de cada uno, que casi no se cruzan).
+PALABRAS_IDIOMA = {
+    "es": set("el la los las de del que y en un una es se con para por al lo su sus no como más pero este esta "
+              "aquí ahora vamos hay muy también donde cuando ya".split()),
+    "en": set("the and to of is a in on with for you this it that are we be at your here now there can will "
+              "then when click".split()),
+}
+
+
+def idioma_de(textos: list[str]) -> str | None:
+    """El idioma en que están escritas las frases del vídeo («es» o «en»), o None si no se sabe. La voz y los
+    rótulos del estreno lo siguen, aunque la ventana esté en otro: un guion en español se lee en español."""
+    cuenta = {k: 0.0 for k in PALABRAS_IDIOMA}
+    for texto in textos:
+        for palabra in re.findall(r"[a-záéíóúüñ]+", (texto or "").lower()):
+            for idioma, palabras in PALABRAS_IDIOMA.items():
+                cuenta[idioma] += palabra in palabras
+            cuenta["es"] += 0.5 * sum(c in "áéíóúñ" for c in palabra)
+        cuenta["es"] += texto.count("¿") + texto.count("¡")
+    mejor = max(cuenta, key=cuenta.get)
+    return mejor if cuenta[mejor] >= 2 and cuenta[mejor] > 1.5 * min(cuenta.values()) else None
+
+
 def segundos_lectura(texto: str) -> float:
     return round(max(2.5, len(texto.split()) / 2.6 + 1.2), 1)
 
@@ -482,14 +505,18 @@ def voces() -> list[str]:
     return sorted(nombres, key=lambda n: not _es_espanol(n))
 
 
-def _voz(nombre: str | None, velocidad: int = 0):
+def _del_idioma(descripcion: str, idioma: str) -> bool:
+    return _es_espanol(descripcion) if idioma == "es" else "english" in descripcion.lower()
+
+
+def _voz(nombre: str | None, velocidad: int = 0, idioma: str = "es"):
     import comtypes.client as cc
     voz = cc.CreateObject("SAPI.SpVoice")
     todas = voz.GetVoices()
     elegida = None
     for i in range(todas.Count):
         d = todas.Item(i).GetDescription()
-        if d == nombre or (elegida is None and not nombre and _es_espanol(d)):
+        if d == nombre or (elegida is None and not nombre and _del_idioma(d, idioma)):
             elegida = todas.Item(i)
     if elegida is not None:
         voz.Voice = elegida
@@ -497,9 +524,9 @@ def _voz(nombre: str | None, velocidad: int = 0):
     return voz
 
 
-def hablar(textos: dict[Path, str], nombre: str | None = None, velocidad: int = 0) -> None:
+def hablar(textos: dict[Path, str], nombre: str | None = None, velocidad: int = 0, idioma: str = "es") -> None:
     import comtypes.client as cc
-    voz = _voz(nombre, velocidad)
+    voz = _voz(nombre, velocidad, idioma)
     for ruta, texto in textos.items():
         ruta.parent.mkdir(parents=True, exist_ok=True)
         flujo = cc.CreateObject("SAPI.SpFileStream")
@@ -514,7 +541,7 @@ def hablar(textos: dict[Path, str], nombre: str | None = None, velocidad: int = 
 
 def oir(texto: str, nombre: str | None = None, velocidad: int = 0) -> None:
     """Lee una frase por los altavoces, para probarla antes de hacer el vídeo."""
-    _voz(nombre, velocidad).Speak(texto)
+    _voz(nombre, velocidad, idioma_de([texto]) or lengua.actual()).Speak(texto)
 
 
 # --- subtítulos -----------------------------------------------------------------
@@ -589,18 +616,20 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
     Browser.new_context = lambda self, **kw: contexto(
         self, **{**kw, "ignore_https_errors": True, "locale": "es-ES"})
     lista = escenas(proyecto)
+    # El idioma del vídeo es el de sus frases (la voz, el ritmo de lectura y los rótulos del estreno lo siguen).
+    idioma = idioma_de([e["texto"] for e in lista]) or lengua.actual()
     out = carpeta / "out"
     shutil.rmtree(out, ignore_errors=True)
-    voces = out / "voices" / lengua.actual()
+    voces = out / "voices" / idioma
     voces.mkdir(parents=True)
 
     if con_voz:
         emitir(fase="voz", msg=lengua.t("Preparando la voz…", "Preparing the voice…"), p=0.05)
         hablar({voces / f"scene-{e['name']}.wav": e["texto"] for e in lista if e["texto"]},
-               ajustes.get("voz"), ajustes.get("velocidad", 0))
+               ajustes.get("voz"), ajustes.get("velocidad", 0), idioma)
 
     emitir(fase="grabar", msg=lengua.t("Grabando. No toques la ventana del navegador.", "Recording. Do not touch the browser window."), p=0.15)
-    pacing = Pacing(pace=RITMOS.get(ajustes.get("ritmo"), 1.0), lang=lengua.actual())
+    pacing = Pacing(pace=RITMOS.get(ajustes.get("ritmo"), 1.0), lang=idioma)
     narrador = Narrator(out / "voices", pacing,
                         player=lambda clip: _SilentClip(wav_seconds(clip), pacing))
     marks = Marks(path=out / "marks.json")
@@ -649,7 +678,7 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
     emitir(fase="montar", msg=lengua.t("Montando el vídeo…", "Editing the video…"), p=0.8)
     final = out / "video.mp4"
     tabla = assemble_marks(Runner(), out / "take.webm", out / "marks.json", voces, final,
-                           lang=lengua.actual())
+                           lang=idioma)
     textos = {e["name"]: e["texto"] for e in lista}
     tramos = [(textos.get(n, ""), dur) for n, _raw, dur in tabla]
     aviso = None
@@ -661,7 +690,7 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
         plan = sala.estrenar(
             final, [(t or proyecto["nombre"], d) for t, d in tramos], out / "estreno.mp4",
             titulo=proyecto["nombre"], lugar=urlparse(url).hostname or "", formato=formato,
-            duracion_max=duracion_maxima(ajustes), lang=lengua.actual(),
+            duracion_max=duracion_maxima(ajustes), lang=idioma,
             musica=musica_de(ajustes, Path(proyecto["mis_videos"]).parent / "Pistas"),
             progreso=lambda k: emitir(fase="montar", p=0.84 + 0.15 * k,
                                       msg=lengua.t(f"El estreno: {k:.0%}", f"The premiere: {k:.0%}")))
