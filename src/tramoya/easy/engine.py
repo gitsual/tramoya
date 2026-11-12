@@ -64,12 +64,30 @@ def pistas(carpeta: Path) -> dict[str, Path]:
 
 
 def musica_de(ajustes: dict, carpeta_pistas: Path) -> Path | None:
-    """La música del estreno: «ascensor» (por defecto, la que trae Tramoya), «ninguna», o el nombre de una pista."""
+    """La música del estreno: «ascensor» (por defecto, la que trae Tramoya), «ninguna», «aleatoria» (una de las
+    pistas o el ascensor, distinta cada vez) o el nombre de una pista."""
+    import random
+
     from tramoya import estreno as sala
     eleccion = ajustes.get("musica", "ascensor") or "ascensor"
     if eleccion == "ninguna":
         return None
+    if eleccion == "aleatoria":
+        return random.choice([*pistas(carpeta_pistas).values(), sala.ascensor()])
     return pistas(carpeta_pistas).get(eleccion) or sala.ascensor()
+
+
+def bucle_de(musica: Path | None) -> tuple[float, float] | None:
+    """El trozo que se repite sin costura (segundos), si la pista trae <pista>.json con «bucle»: lo escribe
+    `python -m cronica.musica preparar <pista>`."""
+    meta = musica.with_suffix(".json") if musica else None
+    if not meta or not meta.is_file():
+        return None
+    try:
+        a, b = json.loads(meta.read_text(encoding="utf-8"))["bucle"]
+        return (float(a), float(b)) if 0 <= float(a) < float(b) else None
+    except (ValueError, KeyError, TypeError):
+        return None
 
 
 def duracion_maxima(ajustes: dict) -> float:
@@ -691,7 +709,8 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
             final, [(t or proyecto["nombre"], d) for t, d in tramos], out / "estreno.mp4",
             titulo=proyecto["nombre"], lugar=urlparse(url).hostname or "", formato=formato,
             duracion_max=duracion_maxima(ajustes), lang=idioma,
-            musica=musica_de(ajustes, Path(proyecto["mis_videos"]).parent / "Pistas"),
+            musica=(musica := musica_de(ajustes, Path(proyecto["mis_videos"]).parent / "Pistas")),
+            bucle=bucle_de(musica),
             progreso=lambda k: emitir(fase="montar", p=0.84 + 0.15 * k,
                                       msg=lengua.t(f"El estreno: {k:.0%}", f"The premiere: {k:.0%}")))
         final = out / "estreno.mp4"

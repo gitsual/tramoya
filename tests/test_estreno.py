@@ -105,3 +105,17 @@ def test_the_video_speaks_the_language_of_its_sentences():
     assert idioma_de(["This is the list of notes.", "The search box filters as you type."]) == "en"
     assert idioma_de(["¿Dónde está?"]) == "es"
     assert idioma_de(["OK"]) is None and idioma_de([]) is None
+
+
+def test_random_music_and_the_seamless_loop(tmp_path):
+    from tramoya.easy.engine import bucle_de, musica_de
+    for n in ("A", "B"):
+        (tmp_path / f"{n}.mp3").write_bytes(b"x")
+    (tmp_path / "A.json").write_text('{"negra": 0.5, "uno": 0.4, "bucle": [27.25, 45.0]}', encoding="utf-8")
+    elegidas = {musica_de({"musica": "aleatoria"}, tmp_path) for _ in range(60)}
+    assert elegidas == {tmp_path / "A.mp3", tmp_path / "B.mp3", estreno.ascensor()}
+    assert bucle_de(tmp_path / "A.mp3") == (27.25, 45.0)
+    assert bucle_de(tmp_path / "B.mp3") is None and bucle_de(None) is None
+    p = estreno.plan(ESCENAS, 30.0)
+    assert "aloop=loop=-1:size=852000:start=1308000" in estreno.filtro_sonido(p, True, True, (27.25, 45.0))
+    assert "aloop" not in estreno.filtro_sonido(p, True, True)

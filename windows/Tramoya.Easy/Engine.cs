@@ -579,12 +579,13 @@ public static class Engine
             var formato = Pasos.Str(ajustes, "formato");
             if (!Estreno.Formatos.ContainsKey(formato)) formato = "horizontal";
             var maxima = DuracionMaxima(ajustes);
+            var musica = MusicaDe(ajustes, Path.Combine(Path.GetDirectoryName(Path.GetFullPath(MisVideosDe(proyecto)))!, "Pistas"), salida);
             var titulo = Pasos.Str(proyecto, "nombre");
             var plan = await Estreno.EstrenarAsync(final,
                 tramos.Select(t => (t.Texto.Length != 0 ? t.Texto : titulo, t.Dur)).ToList(),
                 Path.Combine(salida, "estreno.mp4"), titulo, lugar: HostDe(url), formato: formato,
                 duracionMax: maxima, lang: idioma,
-                musica: MusicaDe(ajustes, Path.Combine(Path.GetDirectoryName(Path.GetFullPath(MisVideosDe(proyecto)))!, "Pistas"), salida),
+                musica: musica, bucle: BucleDe(musica),
                 progreso: k => Emitir(("fase", "montar"), ("msg", Lengua.T($"El estreno: {k:P0}", $"The premiere: {k:P0}")), ("p", 0.84 + 0.15 * k)))
                 .ConfigureAwait(false);
             final = Path.Combine(salida, "estreno.mp4");
@@ -631,12 +632,37 @@ public static class Engine
         return salida;
     }
 
-    /// <summary>La música del estreno: «ascensor» (por defecto, la que trae Tramoya), «ninguna» o una pista.</summary>
+    /// <summary>La música del estreno: «ascensor» (por defecto, la que trae Tramoya), «ninguna», «aleatoria» (una
+    /// de las pistas o el ascensor, distinta cada vez) o una pista.</summary>
     internal static string? MusicaDe(JsonObject ajustes, string carpetaPistas, string trabajo)
     {
         var eleccion = Pasos.Str(ajustes, "musica");
         if (eleccion == "ninguna") return null;
+        if (eleccion == "aleatoria")
+        {
+            var todas = Pistas(carpetaPistas).Values.Append(Estreno.Ascensor(trabajo)).ToList();
+            return todas[Random.Shared.Next(todas.Count)];
+        }
         return eleccion.Length != 0 && Pistas(carpetaPistas).TryGetValue(eleccion, out var f) ? f : Estreno.Ascensor(trabajo);
+    }
+
+    /// <summary>El trozo que se repite sin costura, si la pista trae &lt;pista&gt;.json con «bucle» (lo escribe
+    /// <c>python -m cronica.musica preparar</c>).</summary>
+    internal static (double Ini, double Fin)? BucleDe(string? musica)
+    {
+        if (musica is null) return null;
+        var meta = Path.ChangeExtension(musica, ".json");
+        if (!File.Exists(meta)) return null;
+        try
+        {
+            if (Json.LoadNode(meta) is JsonObject o && o["bucle"] is JsonArray b && b.Count == 2)
+            {
+                var (ini, fin) = (b[0]!.GetValue<double>(), b[1]!.GetValue<double>());
+                return ini >= 0 && ini < fin ? (ini, fin) : null;
+            }
+        }
+        catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException) { }
+        return null;
     }
 
     internal static double DuracionMaxima(JsonObject ajustes) =>

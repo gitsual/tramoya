@@ -153,7 +153,8 @@ public static class Estreno
     /// </summary>
     public static async Task<Plan> EstrenarAsync(string video, IReadOnlyList<(string Texto, double Segundos)> escenas,
         string salida, string titulo, string lugar = "", string formato = "horizontal", double duracionMax = 0,
-        string lang = "es", string ffmpeg = "ffmpeg", Action<double>? progreso = null, string? musica = null)
+        string lang = "es", string ffmpeg = "ffmpeg", Action<double>? progreso = null, string? musica = null,
+        (double Ini, double Fin)? bucle = null)
     {
         if (!Formatos.TryGetValue(formato, out var lienzo))
             throw new ArgumentException($"unknown format: {formato} (horizontal, vertical)", nameof(formato));
@@ -203,11 +204,12 @@ public static class Estreno
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(salida))!);
-        var filtro = FiltroSonido(p, conSonido, musica is not null);
+        var filtro = FiltroSonido(p, conSonido, musica is not null, bucle);
         if (filtro.Length != 0)
         {
             var argv = new List<string> { "-nostdin", "-loglevel", "error", "-y", "-i", mudo, "-i", video };
-            if (musica is not null) argv.AddRange(["-stream_loop", "-1", "-i", musica]);
+            // Con bucle (de <pista>.json), la pista suena desde el principio y repite su trozo sin costura.
+            if (musica is not null) argv.AddRange(bucle is null ? ["-stream_loop", "-1", "-i", musica] : ["-i", musica]);
             argv.AddRange(["-filter_complex", filtro, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac",
                 "-ac", "2", "-b:a", "192k", "-t", (p.TotalMs / 1000.0).ToString("0.000", CultureInfo.InvariantCulture),
                 "-movflags", "+faststart", salida]);
@@ -239,7 +241,7 @@ public static class Estreno
     /// <c>filtro_sonido</c>: the voice after the opening and as fast as the take, the music looping under
     /// everything and pushed down by the voice (sidechaincompress). Empty when there is nothing to hear.
     /// </summary>
-    public static string FiltroSonido(Plan p, bool voz, bool musica)
+    public static string FiltroSonido(Plan p, bool voz, bool musica, (double Ini, double Fin)? bucle = null)
     {
         var inv = CultureInfo.InvariantCulture;
         var fin = p.TotalMs / 1000.0;
@@ -247,7 +249,10 @@ public static class Estreno
         var vozF = $"[1:a]aresample=48000,aformat=channel_layouts=stereo,{tempo}adelay={p.IntroMs}:all=1," +
                    $"apad=whole_dur={fin.ToString("0.000", inv)}";
         if (!musica) return voz ? vozF + "[a]" : "";
-        var fondo = $"[2:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{fin.ToString("0.000", inv)}," +
+        var repite = bucle is { } b
+            ? $"aloop=loop=-1:size={Math.Round((b.Fin - b.Ini) * 48000)}:start={Math.Round(b.Ini * 48000)},"
+            : "";
+        var fondo = $"[2:a]aresample=48000,aformat=channel_layouts=stereo,{repite}atrim=0:{fin.ToString("0.000", inv)}," +
                     $"volume={(voz ? MusicaVolumen : MusicaSola).ToString(inv)},afade=t=in:d=1.5," +
                     $"afade=t=out:st={Math.Max(0, fin - 3).ToString("0.000", inv)}:d=3";
         if (!voz) return fondo + "[a]";
