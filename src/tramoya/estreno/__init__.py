@@ -135,7 +135,8 @@ def _servir_desde_disco(page, raiz: Path) -> None:
 
 def estrenar(video: Path, escenas: list[tuple[str, float]], salida: Path, *, titulo: str, lugar: str = "",
              formato: str = "horizontal", duracion_max: float = 0, lang: str = "es", ffmpeg: str = "ffmpeg",
-             musica: Path | None = None, progreso: Callable[[float], None] | None = None) -> Plan:
+             musica: Path | None = None, bucle: tuple[float, float] | None = None,
+             progreso: Callable[[float], None] | None = None) -> Plan:
     """Stage ``video`` (the assembled take) and write the film to ``salida``. Returns the plan: the scenes on
     the film's clock (for the subtitles), the speed and whether it fitted in ``duracion_max``. ``musica``: an audio
     file played in a loop under the whole film (ASCENSOR, a track of your own), lowered while the voice speaks."""
@@ -182,11 +183,13 @@ def estrenar(video: Path, escenas: list[tuple[str, float]], salida: Path, *, tit
             navegador.close()
 
     salida.parent.mkdir(parents=True, exist_ok=True)
-    filtro = filtro_sonido(p, con_sonido, musica is not None)
+    filtro = filtro_sonido(p, con_sonido, musica is not None, bucle)
     if filtro:
         entradas = ["-i", str(mudo), "-i", str(video)]
         if musica is not None:
-            entradas += ["-stream_loop", "-1", "-i", str(musica)]
+            # Con bucle (de <pista>.json), la pista suena desde el principio y luego repite su trozo sin costura;
+            # sin él, vuelve a empezar entera.
+            entradas += (["-i", str(musica)] if bucle else ["-stream_loop", "-1", "-i", str(musica)])
         subprocess.run([ffmpeg, "-nostdin", "-loglevel", "error", "-y", *entradas, "-filter_complex", filtro,
                         "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-ac", "2", "-b:a", "192k",
                         "-t", f"{p.total_ms / 1000:.3f}", "-movflags", "+faststart", str(salida)], check=True)
@@ -206,7 +209,7 @@ def ascensor() -> Path:
     return Path(str(resources.files("tramoya").joinpath("estreno", "musica", "ascensor.ogg")))
 
 
-def filtro_sonido(p: Plan, voz: bool, musica: bool) -> str:
+def filtro_sonido(p: Plan, voz: bool, musica: bool, bucle: tuple[float, float] | None = None) -> str:
     """The ffmpeg graph for the sound of the premiere. Input 1 is the take (its voice), input 2 the music.
 
     - The voice follows the picture: as fast as the take, after the opening, silence under the curtain.
@@ -220,7 +223,9 @@ def filtro_sonido(p: Plan, voz: bool, musica: bool) -> str:
              f"{f'atempo={p.vel:.4f},' if p.vel != 1 else ''}adelay={p.intro_ms}:all=1,apad=whole_dur={fin:.3f}")
     if not musica:
         return f"{voz_f}[a]" if voz else ""
-    fondo = (f"[2:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{fin:.3f},"
+    repite = (f"aloop=loop=-1:size={round((bucle[1] - bucle[0]) * 48000)}:start={round(bucle[0] * 48000)},"
+              if bucle else "")
+    fondo = (f"[2:a]aresample=48000,aformat=channel_layouts=stereo,{repite}atrim=0:{fin:.3f},"
              f"volume={MUSICA_VOLUMEN if voz else MUSICA_SOLA},afade=t=in:d=1.5,"
              f"afade=t=out:st={max(0.0, fin - 3):.3f}:d=3")
     if not voz:

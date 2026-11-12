@@ -147,6 +147,26 @@ public class EstrenoTests
     }
 
     [Fact]
+    public void RandomMusicAndTheSeamlessLoop()
+    {
+        var dir = Directory.CreateTempSubdirectory("tramoya-bucle-").FullName;
+        try
+        {
+            foreach (var n in new[] { "A", "B" }) File.WriteAllBytes(Path.Combine(dir, n + ".mp3"), [1]);
+            File.WriteAllText(Path.Combine(dir, "A.json"), """{"negra": 0.5, "uno": 0.4, "bucle": [27.25, 45.0]}""");
+            var trabajo = Path.Combine(dir, "out");
+            var elegidas = Enumerable.Range(0, 60).Select(_ => Path.GetFileName(Engine.MusicaDe(Obj("""{"musica": "aleatoria"}"""), dir, trabajo)!)).ToHashSet();
+            Assert.Equal(new HashSet<string> { "A.mp3", "B.mp3", "ascensor.ogg" }, elegidas);
+            Assert.Equal((27.25, 45.0), Engine.BucleDe(Path.Combine(dir, "A.mp3")));
+            Assert.Null(Engine.BucleDe(Path.Combine(dir, "B.mp3")));
+            var p = Estreno.PlanDe(Escenas, 30.0);
+            Assert.Contains("aloop=loop=-1:size=852000:start=1308000", Estreno.FiltroSonido(p, true, true, (27.25, 45.0)));
+            Assert.DoesNotContain("aloop", Estreno.FiltroSonido(p, true, true));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void EasySettings()
     {
         Assert.True(Engine.DeEstreno(Obj("{}")));
