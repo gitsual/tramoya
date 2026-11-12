@@ -201,6 +201,17 @@ async function load () {
   Object.assign($('escenario').style, { left: `${CAJA.x}px`, top: `${CAJA.y}px`, width: `${CAJA.w}px`, height: `${CAJA.h}px` })
   Object.assign($('haz').style, { left: `${CAJA.x - 60}px`, top: '40px', width: `${CAJA.w + 120}px`, height: `${CAJA.y + CAJA.h * .5 - 40}px` })
   Object.assign($('sello').style, { left: `${CAJA.x + CAJA.w - 132}px`, top: `${CAJA.y - 128}px` })
+  if (D.formato !== 'vertical') {
+    // El titular termina antes del sello, que cae sobre la esquina del escenario: nunca se pisan.
+    let ancho = CAJA.x + CAJA.w - 132 - 28 - 64
+    if (ancho < 900) {
+      // Toma estrecha (vertical en un lienzo horizontal): el sello va al margen derecho, junto al titular.
+      Object.assign($('sello').style, { left: `${D.ancho - 64 - 176}px`, top: '104px' })
+      ancho = D.ancho - 64 - 176 - 28 - 64
+    }
+    L = { ...L, titular: [ancho, L.titular[1]] }
+    $('titular').style.width = `${ancho}px`
+  }
   if (D.formato === 'vertical') {
     Object.assign($('sello').style, { left: `${D.ancho - 48 - 176}px`, top: '206px' })
     Object.assign($('sigue').style, { left: `${CAJA.x}px`, top: `${CAJA.y + CAJA.h + 74}px`, width: `${CAJA.w}px` })
