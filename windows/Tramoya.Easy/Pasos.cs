@@ -85,6 +85,37 @@ public static class Pasos
         return lista;
     }
 
+    // Palabras que delatan el idioma de una frase (las más frecuentes de cada uno). Port de PALABRAS_IDIOMA.
+    private static readonly Dictionary<string, HashSet<string>> PalabrasIdioma = new()
+    {
+        ["es"] = [.. ("el la los las de del que y en un una es se con para por al lo su sus no como más pero este esta " +
+                      "aquí ahora vamos hay muy también donde cuando ya").Split(' ')],
+        ["en"] = [.. ("the and to of is a in on with for you this it that are we be at your here now there can will " +
+                      "then when click").Split(' ')],
+    };
+
+    /// <summary>
+    /// El idioma en que están escritas las frases («es» o «en»), o null si no se sabe. La voz y los rótulos del
+    /// estreno lo siguen aunque la ventana esté en otro. Port de <c>idioma_de</c>.
+    /// </summary>
+    public static string? IdiomaDe(IEnumerable<string> textos)
+    {
+        var cuenta = new Dictionary<string, double> { ["es"] = 0, ["en"] = 0 };
+        foreach (var texto in textos)
+        {
+            var t = texto ?? "";
+            foreach (Match m in Regex.Matches(t.ToLowerInvariant(), "[a-záéíóúüñ]+"))
+            {
+                foreach (var (idioma, palabras) in PalabrasIdioma)
+                    if (palabras.Contains(m.Value)) cuenta[idioma] += 1;
+                cuenta["es"] += 0.5 * m.Value.Count(c => "áéíóúñ".Contains(c));
+            }
+            cuenta["es"] += t.Count(c => c is '¿' or '¡');
+        }
+        var mejor = cuenta["es"] >= cuenta["en"] ? "es" : "en";
+        return cuenta[mejor] >= 2 && cuenta[mejor] > 1.5 * cuenta.Values.Min() ? mejor : null;
+    }
+
     public static string Srt(IEnumerable<(string Texto, double Dur)> tramos)
     {
         static string Marca(double t)

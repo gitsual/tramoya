@@ -478,10 +478,12 @@ public static class Engine
         var estreno = DeEstreno(ajustes);
         var dominios = Dominios(ajustes);
         var lista = Pasos.Escenas(proyecto);
+        // El idioma del vídeo es el de sus frases (la voz, el ritmo de lectura y los rótulos del estreno lo siguen).
+        var idioma = Pasos.IdiomaDe(lista.Select(e => e.Texto)) ?? Lengua.Actual;
         var salida = Path.Combine(carpeta, "out");
         try { if (Directory.Exists(salida)) Directory.Delete(salida, recursive: true); }
         catch (Exception) { /* como rmtree(ignore_errors=True) */ }
-        var voces = Path.Combine(salida, "voices", Lengua.Actual);
+        var voces = Path.Combine(salida, "voices", idioma);
         Directory.CreateDirectory(voces);
 
         if (conVoz)
@@ -491,11 +493,11 @@ public static class Engine
             foreach (var e in lista.Where(e => e.Texto.Length != 0))
                 textos[Path.Combine(voces, $"scene-{e.Name}.wav")] = e.Texto;
             var voz = Pasos.Str(ajustes, "voz");
-            Sapi.Hablar(textos, voz.Length != 0 ? voz : null, Entero(ajustes["velocidad"]), idioma: Lengua.Actual);
+            Sapi.Hablar(textos, voz.Length != 0 ? voz : null, Entero(ajustes["velocidad"]), idioma: idioma);
         }
 
         Emitir(("fase", "grabar"), ("msg", Lengua.T("Grabando. No toques la ventana del navegador.", "Recording. Do not touch the browser window.")), ("p", 0.15));
-        var pacing = new Pacing(pace: Vocabulario.Ritmos.GetValueOrDefault(Pasos.Str(ajustes, "ritmo"), 1.0), lang: Lengua.Actual);
+        var pacing = new Pacing(pace: Vocabulario.Ritmos.GetValueOrDefault(Pasos.Str(ajustes, "ritmo"), 1.0), lang: idioma);
         // La voz ya está en los wav: en el escenario solo hay que esperar lo que duran.
         var narrador = new Narrator(Path.Combine(salida, "voices"), pacing,
             clip => new SilentClip(Narration.WavSeconds(clip), pacing));
@@ -567,7 +569,7 @@ public static class Engine
 
         Emitir(("fase", "montar"), ("msg", Lengua.T("Montando el vídeo…", "Editing the video…")), ("p", 0.8));
         var final = Path.Combine(salida, "video.mp4");
-        var tabla = Core.Assembly.AssembleMarks(new Runner(), toma, Path.Combine(salida, "marks.json"), voces, final, lang: Lengua.Actual);
+        var tabla = Core.Assembly.AssembleMarks(new Runner(), toma, Path.Combine(salida, "marks.json"), voces, final, lang: idioma);
         var textosEscena = lista.ToDictionary(e => e.Name, e => e.Texto);
         var tramos = tabla.Select(fila => (Texto: textosEscena.GetValueOrDefault(fila.Name, ""), Dur: fila.Final)).ToList();
         string? aviso = null;
@@ -581,7 +583,7 @@ public static class Engine
             var plan = await Estreno.EstrenarAsync(final,
                 tramos.Select(t => (t.Texto.Length != 0 ? t.Texto : titulo, t.Dur)).ToList(),
                 Path.Combine(salida, "estreno.mp4"), titulo, lugar: HostDe(url), formato: formato,
-                duracionMax: maxima, lang: Lengua.Actual,
+                duracionMax: maxima, lang: idioma,
                 musica: MusicaDe(ajustes, Path.Combine(Path.GetDirectoryName(Path.GetFullPath(MisVideosDe(proyecto)))!, "Pistas"), salida),
                 progreso: k => Emitir(("fase", "montar"), ("msg", Lengua.T($"El estreno: {k:P0}", $"The premiere: {k:P0}")), ("p", 0.84 + 0.15 * k)))
                 .ConfigureAwait(false);
@@ -692,7 +694,7 @@ public static class Engine
         {
             var d = Json.Parse(args[1])!.AsObject();
             var voz = Pasos.Str(d, "voz");
-            Sapi.Oir(Pasos.Str(d, "texto"), voz.Length != 0 ? voz : Sapi.VozPara(Lengua.Actual), Entero(d["velocidad"]));
+            Sapi.Oir(Pasos.Str(d, "texto"), voz.Length != 0 ? voz : Sapi.VozPara(Pasos.IdiomaDe([Pasos.Str(d, "texto")]) ?? Lengua.Actual), Entero(d["velocidad"]));
             return 0;
         }
         try

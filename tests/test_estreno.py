@@ -97,3 +97,11 @@ def test_the_music_setting(tmp_path):
     assert musica_de({"musica": "ninguna"}, tmp_path) is None
     assert musica_de({"musica": "Café Bossa Nova A"}, tmp_path) == tmp_path / "Café Bossa Nova A.mp3"
     assert musica_de({"musica": "borrada"}, tmp_path) == estreno.ascensor()
+
+
+def test_the_video_speaks_the_language_of_its_sentences():
+    from tramoya.easy.engine import idioma_de
+    assert idioma_de(["Esta es la lista de notas de casa.", "El buscador filtra mientras escribes."]) == "es"
+    assert idioma_de(["This is the list of notes.", "The search box filters as you type."]) == "en"
+    assert idioma_de(["¿Dónde está?"]) == "es"
+    assert idioma_de(["OK"]) is None and idioma_de([]) is None

@@ -137,6 +137,16 @@ public class EstrenoTests
     }
 
     [Fact]
+    public void TheVideoSpeaksTheLanguageOfItsSentences()
+    {
+        Assert.Equal("es", Pasos.IdiomaDe(["Esta es la lista de notas de casa.", "El buscador filtra mientras escribes."]));
+        Assert.Equal("en", Pasos.IdiomaDe(["This is the list of notes.", "The search box filters as you type."]));
+        Assert.Equal("es", Pasos.IdiomaDe(["¿Dónde está?"]));
+        Assert.Null(Pasos.IdiomaDe(["OK"]));
+        Assert.Null(Pasos.IdiomaDe([]));
+    }
+
+    [Fact]
     public void EasySettings()
     {
         Assert.True(Engine.DeEstreno(Obj("{}")));
