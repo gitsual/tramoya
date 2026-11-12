@@ -13,7 +13,7 @@ The audience never sees it. The show runs on time because of it.</em>
 <p><strong>Narrated videos of how a web application is used,<br>made from a process done once, described in a sentence, or asked as a question.</strong></p>
 
 <p>
-  <img alt="version 1.3.0" src="https://img.shields.io/badge/version-1.3.0-1F1E1C?style=for-the-badge&labelColor=1F1E1C&color=E9A80E">
+  <img alt="version 1.4.0" src="https://img.shields.io/badge/version-1.4.0-1F1E1C?style=for-the-badge&labelColor=1F1E1C&color=E9A80E">
   <img alt="Windows, Linux, macOS" src="https://img.shields.io/badge/windows%20%C2%B7%20linux%20%C2%B7%20macos-0E2A47?style=for-the-badge&labelColor=0E2A47&color=245680">
   <img alt="876 tests" src="https://img.shields.io/badge/tests-876-1F1E1C?style=for-the-badge&labelColor=1F1E1C&color=8FB5CC">
   <img alt="runs offline" src="https://img.shields.io/badge/runs-offline-0E2A47?style=for-the-badge&labelColor=0E2A47&color=F0CB66">
@@ -130,8 +130,8 @@ For a person who knows the process (how to file an expense, approve a request, s
 opened a terminal. Windows, no administrator rights, nothing to install. Button names are quoted as they appear in
 the English window; *Settings → Language* switches it to Spanish.
 
-**1. Download.** From the [v1.3.0 release](https://github.com/gitsual/tramoya/releases/tag/v1.3.0), take
-`Tramoya-1.3.0-windows.zip` (about 545 MB: the program, its own Chromium and ffmpeg, so nothing is downloaded
+**1. Download.** From the [v1.4.0 release](https://github.com/gitsual/tramoya/releases/tag/v1.4.0), take
+`Tramoya-1.4.0-windows.zip` (about 545 MB: the program, its own Chromium and ffmpeg, so nothing is downloaded
 later). On a network that cuts large downloads, take the six parts `….zip.part0` to `part5` and `unir.bat`, put them
 in one folder and double-click `unir.bat`; it joins the parts and unzips them.
 
@@ -186,8 +186,8 @@ Para quien sabe hacer el proceso y nunca ha abierto una terminal. Windows, sin p
 instalar nada. La ventana sale en inglés: **Settings → Language → Español** la pone en español, y desde ese momento
 los pasos, los avisos, la IA y la voz van en español.
 
-1. **Descarga.** De la [versión 1.3.0](https://github.com/gitsual/tramoya/releases/tag/v1.3.0), baja
-   `Tramoya-1.3.0-windows.zip` (unos 545 MB, lo lleva todo dentro). Si tu red corta las descargas grandes, baja las
+1. **Descarga.** De la [versión 1.4.0](https://github.com/gitsual/tramoya/releases/tag/v1.4.0), baja
+   `Tramoya-1.4.0-windows.zip` (unos 545 MB, lo lleva todo dentro). Si tu red corta las descargas grandes, baja las
    seis partes `….zip.part0` … `part5` y `unir.bat` a la misma carpeta y haz doble clic en `unir.bat`.
 2. **Abre.** Descomprime donde quieras y haz doble clic en `Tramoya.exe`. La primera vez Windows avisa de que no está
    firmado: *Más información* → *Ejecutar de todas formas*.
@@ -283,6 +283,31 @@ Long waits become a few seconds with a caption in the same colours.
 
 <p align="center"><sub>One frame per scene of the notes demo, cut from the take at the midpoint of each scene in
 <code>marks.json</code> (<code>scripts/render_brand.py filmstrip</code>).</sub></p>
+
+<a id="the-premiere"></a>
+
+### The premiere
+
+A video from the window comes out as a premiere: the take is put on a stage instead of being handed over bare. The
+curtain opens on the title, every scene comes in with its sentence as a headline and a cue stamp (Q1, Q2…), the cue
+sheet on the right ticks off what has been played, the boards at the bottom light one lamp per scene, and the curtain
+falls on the figures of the show. The caption band is not recorded on the page then: the headline is outside the
+take. `src/tramoya/estreno/sala.html` draws every frame as a function of `seek(t)` and Playwright films it frame by
+frame, the same file in Python and in the `.exe`.
+
+<p align="center">
+  <img src="assets/premiere.jpg" alt="Two frames of a premiere: horizontal, with the headline, the cue stamp Q2, the take framed under a spotlight and the cue sheet; vertical, with the same headline above the take and the next scene below" width="100%">
+</p>
+
+Three settings in the window decide it:
+
+| Setting | Values |
+|---|---|
+| Finish | *Premiere* (default) or *Just the recording*, the take as it was with the caption band on the page. |
+| Format | *Horizontal* (1920×1080) or *Vertical* (1080×1920, for a phone; the site is recorded at 768×960, the way a tablet sees it). |
+| Length at most | No limit, 30 s, 1 min, 1:30 or 2 min. A longer take plays faster to fit, up to 1.5× with the voice in its own pitch; if even that is not enough, the video says how long it runs. |
+
+The `.srt` follows the premiere's clock: the first sentence starts when the curtain has opened.
 
 ---
 
@@ -606,8 +631,8 @@ The internal names of the files (`proyecto.json`, `ajustes.json`) did not change
 
 ## Install
 
-**Windows.** Download `Tramoya-1.3.0-windows.zip` from the
-[release](https://github.com/gitsual/tramoya/releases/tag/v1.3.0), unzip, run `Tramoya.exe`. Everything it needs is
+**Windows.** Download `Tramoya-1.4.0-windows.zip` from the
+[release](https://github.com/gitsual/tramoya/releases/tag/v1.4.0), unzip, run `Tramoya.exe`. Everything it needs is
 in the folder: `Tramoya.exe`, the Playwright driver, Chromium, ffmpeg and the licences of the fonts. Data and videos
 stay in the folder. The command line is the same executable:
 
@@ -622,8 +647,8 @@ Tramoya.exe agent "<objective or question>" --url <page> --video --voz
 **Linux and macOS.** Pin the tag: the package is installed from git and the tag is the contract.
 
 ```bash
-pip install "tramoya @ git+https://github.com/gitsual/tramoya@v1.3.0"                       # core, no dependencies
-pip install "tramoya[playwright,tts,easy] @ git+https://github.com/gitsual/tramoya@v1.3.0"  # stage, voice, window
+pip install "tramoya @ git+https://github.com/gitsual/tramoya@v1.4.0"                       # core, no dependencies
+pip install "tramoya[playwright,tts,easy] @ git+https://github.com/gitsual/tramoya@v1.4.0"  # stage, voice, window
 python -m playwright install chromium
 ```
 
@@ -646,7 +671,7 @@ brew install ffmpeg                                              # macOS: use di
 
 ```powershell
 dotnet test windows/Tramoya.Tests -c Release
-powershell -File windows/publish.ps1 -Ffmpeg <folder with ffmpeg.exe and ffprobe.exe>   # -> windows/dist/Tramoya-1.3.0-windows.zip
+powershell -File windows/publish.ps1 -Ffmpeg <folder with ffmpeg.exe and ffprobe.exe>   # -> windows/dist/Tramoya-1.4.0-windows.zip
 ```
 
 **Rendering this page's assets.** `scripts/render_brand.py` draws the logos, the diagram, the cards and the
@@ -659,13 +684,13 @@ filmstrip from HTML with the window's fonts; `scripts/render-assets.sh` records 
 
 ## Verification
 
-| Suite | Command | Result for 1.3.0 |
+| Suite | Command | Result for 1.4.0 |
 |---|---|---|
-| Python, fast | `python -m pytest -q` | 313 passed on Windows; nothing encoded, no network |
+| Python, fast | `python -m pytest -q` | 322 passed on Windows; nothing encoded, no network |
 | Python, slow | `python -m pytest -q -m slow` | 1 passed: three real seconds through the whole pipeline |
-| C#, with browser tests | `TRAMOYA_BROWSER_TESTS=1 dotnet test windows/Tramoya.Tests -c Release` | 548 passed, 14 skipped (Linux-only: `/proc`, `wf-recorder`, Python director) |
+| C#, with browser tests | `TRAMOYA_BROWSER_TESTS=1 dotnet test windows/Tramoya.Tests -c Release` | 557 passed, 14 skipped (Linux-only: `/proc`, `wf-recorder`, Python director); one of them films a premiere |
 | Cross-implementation | the notes profile through both, then `snapshots diff` | snapshots match |
-| End to end | the [tutorial](#tutorial), the AI's video and the question in English; the tutorial and its AI video in Spanish | recorded, voiced and assembled by the 1.3.0 program |
+| End to end | the [tutorial](#tutorial), the AI's video and the question in English; the tutorial and its AI video in Spanish | recorded, voiced and assembled by the 1.3.0 program; for 1.4.0, a premiere from the window, vertical in 30 s and horizontal, by the `.exe` |
 
 Every picture on this page is the program's own output, or drawn from HTML by `scripts/render_brand.py` (the logos,
 the diagram, the filmstrip's frame). The window screenshots are the window; the terminal GIFs are asciinema
@@ -677,7 +702,7 @@ recordings of the installed command; the videos were directed, voiced and cut by
 
 ## Status and limits
 
-Version 1.3.0. The file formats (`tramoya.toml`, `marks.json`, `script.json`, the step language, the window's
+Version 1.4.0. The file formats (`tramoya.toml`, `marks.json`, `script.json`, the step language, the window's
 projects) are stable since 1.0.
 
 - **The Windows executable is not code-signed.** SmartScreen warns the first time; environments that only allow

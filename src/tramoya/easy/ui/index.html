@@ -786,6 +786,17 @@ const TEXTOS = {
   tamano: {en: "Video size", es: "Tamaño del vídeo"},
   tamano_sub: {en: "If you will watch it full screen, Full HD is better. It applies to what you record from now on.", es: "Si vas a verlo a pantalla completa, mejor Full HD. Se aplica a lo que grabes a partir de ahora."},
   portatil: {en: "Laptop (1280×800)", es: "Portátil (1280×800)"},
+  acabado: {en: "Finish", es: "Acabado"},
+  acabado_sub: {en: "A premiere puts the recording on a stage: the curtain opens on the title, every scene comes in with its headline and its cue, and the curtain falls at the end.", es: "El estreno pone la grabación en un escenario: se abre el telón con el título, cada escena entra con su titular y su cue, y el telón cae al final."},
+  acabado_estreno: {en: "Premiere", es: "De estreno"},
+  acabado_bruto: {en: "Just the recording", es: "Solo la grabación"},
+  formato: {en: "Format", es: "Formato"},
+  formato_sub: {en: "Vertical is for a phone (9:16): the website is recorded narrower, the way it looks on a tablet.", es: "Vertical es para el móvil (9:16): la web se graba más estrecha, como se ve en una tableta."},
+  horizontal: {en: "Horizontal (16:9)", es: "Horizontal (16:9)"},
+  vertical: {en: "Vertical (9:16)", es: "Vertical (9:16)"},
+  duracion: {en: "Length at most", es: "Duración máxima"},
+  duracion_sub: {en: "If the video runs longer, it plays faster to fit (up to 1.5×, the voice keeps its tone). Only with the premiere.", es: "Si el vídeo sale más largo, va más deprisa para caber (hasta 1,5×, la voz no cambia de tono). Solo con el estreno."},
+  sin_limite: {en: "No limit", es: "Sin límite"},
   srt: {en: "Also save the subtitles", es: "Guardar también los subtítulos"},
   srt_sub: {en: "An .srt file next to the video, for Teams, Stream or YouTube.", es: "Un archivo .srt junto al vídeo, para Teams, Stream o YouTube."},
   guardar_subt: {en: "Save subtitles", es: "Guardar subtítulos"},
@@ -1384,7 +1395,8 @@ function video(v) {
         <button class="btn" id="carpeta">${ico("carpeta")} ${T_("mostrar_carpeta")}</button>
         <button class="btn discreto derecha" id="cambiar">${ico("lapiz")} ${T_("cambiar_rehacer")}</button>
       </div>
-      ${P.hecho ? `<p class="pista" style="margin:14px 0 0">${T_("hecho_el", {f: esc(P.hecho)})}${P.voz ? T_("con_voz_min") : ""}.${P.srt ? T_("srt_junto") : ""}</p>` : ""}</div>`;
+      ${P.hecho ? `<p class="pista" style="margin:14px 0 0">${T_("hecho_el", {f: esc(P.hecho)})}${P.voz ? T_("con_voz_min") : ""}.${P.srt ? T_("srt_junto") : ""}</p>` : ""}
+      ${P.aviso ? `<p class="pista" style="margin:8px 0 0">${esc(P.aviso)}</p>` : ""}</div>`;
   } else {
     const error = t.estado === "error" ? `<div class="aviso mal">${ico("mal")}<div><p>${esc(t.msg)}</p>
       ${t.paso ? `<p><button class="btn" id="ir-paso" style="margin-top:8px">${T_("ir_paso")}</button></p>` : ""}</div></div>` : "";
@@ -1435,7 +1447,7 @@ function ajustes() {
   const d = document.createElement("div");
   d.className = "dialogo-fondo";
   const seg = (clave, opciones) => `<div class="segmentos" data-clave="${clave}">${opciones.map(([v, t]) =>
-    `<button data-v="${v}" class="${a[clave] === v ? "on" : ""}">${t}</button>`).join("")}</div>`;
+    `<button data-v="${v}" class="${String(a[clave] ?? "") === v ? "on" : ""}">${t}</button>`).join("")}</div>`;
   d.innerHTML = `<div class="dialogo ancho" role="dialog" aria-modal="true" aria-label="${t("ajustes")}"><h2>${t("ajustes")}</h2>
     <p style="margin-bottom:8px">${t("valen_todos")}</p>
     <div class="ajuste"><b>${t("idioma")}</b><small>${t("idioma_sub")}</small>
@@ -1465,6 +1477,12 @@ function ajustes() {
       ${seg("ritmo", [["tranquilo", t("tranquilo")], ["normal", t("normal")], ["agil", t("agil")]])}</div>
     <div class="ajuste"><b>${t("tamano")}</b><small>${t("tamano_sub")}</small>
       ${seg("tamano", [["720p", "HD (1280×720)"], ["800p", t("portatil")], ["1080p", "Full HD (1920×1080)"]])}</div>
+    <div class="ajuste"><b>${t("acabado")}</b><small>${t("acabado_sub")}</small>
+      ${seg("acabado", [["estreno", t("acabado_estreno")], ["bruto", t("acabado_bruto")]])}</div>
+    <div class="ajuste"><b>${t("formato")}</b><small>${t("formato_sub")}</small>
+      ${seg("formato", [["horizontal", t("horizontal")], ["vertical", t("vertical")]])}</div>
+    <div class="ajuste"><b>${t("duracion")}</b><small>${t("duracion_sub")}</small>
+      ${seg("duracion", [["0", t("sin_limite")], ["30", "30 s"], ["60", "1 min"], ["90", "1:30"], ["120", "2 min"]])}</div>
     <div class="ajuste"><div class="opcion" style="margin:0"><div><b>${t("srt")}</b><small>${t("srt_sub")}</small></div>
       <label class="interruptor"><input type="checkbox" id="a-srt" ${a.srt ? "checked" : ""} aria-label="${t("guardar_subt")}"><span></span></label></div></div>
     <div class="ajuste"><details><summary>${t("avanzado")}</summary>

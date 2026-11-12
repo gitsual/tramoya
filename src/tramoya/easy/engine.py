@@ -38,6 +38,26 @@ from tramoya.easy import lengua
 VIEWPORT = (1280, 800)
 TAMANOS = {"720p": (1280, 720), "800p": (1280, 800), "1080p": (1920, 1080)}
 RITMOS = {"tranquilo": 1.3, "normal": 1.0, "agil": 0.75}
+# Vertical (para el móvil): la web se graba en 4:5, que es lo que mejor llena un lienzo 9:16 con el titular encima.
+VERTICAL = (768, 960)
+
+
+def viewport_de(ajustes: dict) -> tuple[int, int]:
+    if ajustes.get("formato") == "vertical":
+        return VERTICAL
+    return TAMANOS.get(ajustes.get("tamano"), VIEWPORT)
+
+
+def de_estreno(ajustes: dict) -> bool:
+    """El acabado: «estreno» (por defecto) pone la toma en la sala; «bruto» deja la grabación tal cual."""
+    return ajustes.get("acabado", "estreno") != "bruto"
+
+
+def duracion_maxima(ajustes: dict) -> float:
+    try:
+        return max(0.0, float(ajustes.get("duracion") or 0))
+    except (TypeError, ValueError):
+        return 0.0
 
 # Botones que guardan algo: en el vídeo el cursor los señala pero no los pulsa.
 GUARDAN = re.compile(
@@ -315,7 +335,7 @@ def grabar(carpeta: Path, url: str, perfil: Path, ajustes: dict | None = None) -
     from playwright.sync_api import sync_playwright
 
     ajustes = ajustes or {}
-    ancho, alto = TAMANOS.get(ajustes.get("tamano"), VIEWPORT)
+    ancho, alto = viewport_de(ajustes)
     ordenes: queue.Queue[str] = queue.Queue()
     threading.Thread(target=lambda: [ordenes.put(x.strip()) for x in sys.stdin],
                      daemon=True).start()
@@ -539,7 +559,8 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
     proyecto = json.loads((carpeta / "proyecto.json").read_text(encoding="utf-8"))
     url = proyecto.get("inicio") or proyecto["url"]
     ajustes = proyecto.get("ajustes") or {}
-    viewport = TAMANOS.get(ajustes.get("tamano"), VIEWPORT)
+    viewport = viewport_de(ajustes)
+    estreno = de_estreno(ajustes)
     # La reproducción, con los mismos permisos que la grabación: inicio de sesión de
     # Windows en las webs de la empresa y sus certificados internos.
     from playwright.sync_api import Browser, BrowserType
@@ -582,7 +603,9 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
                 narrador.say(key, fallback=fallback)
 
             with marks.scene(e["name"], e["texto"]):
-                stage.caption(e["texto"])
+                # En el estreno el titular va fuera de la toma; sin él, el rótulo se graba en la página.
+                if not estreno:
+                    stage.caption(e["texto"])
                 if e["texto"]:
                     run_steps(stage, [f"say {segundos_lectura(e['texto'])}"], say)
                 for p in e["items"]:
@@ -600,24 +623,42 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
                            p=0.15 + 0.6 * hechos / total)
                 if e is lista[-1]:
                     stage.beat(2.0)
-                stage.caption("")
+                if not estreno:
+                    stage.caption("")
     shutil.copyfile(take, out / "take.webm")
 
     emitir(fase="montar", msg=lengua.t("Montando el vídeo…", "Editing the video…"), p=0.8)
     final = out / "video.mp4"
     tabla = assemble_marks(Runner(), out / "take.webm", out / "marks.json", voces, final,
                            lang=lengua.actual())
+    textos = {e["name"]: e["texto"] for e in lista}
+    tramos = [(textos.get(n, ""), dur) for n, _raw, dur in tabla]
+    aviso = None
+    if estreno:
+        from tramoya import estreno as sala
+        emitir(fase="montar", msg=lengua.t("El estreno: telón, titulares y hoja de cues…",
+                                           "The premiere: curtain, headlines and cue sheet…"), p=0.84)
+        formato = ajustes.get("formato") if ajustes.get("formato") in sala.FORMATOS else "horizontal"
+        plan = sala.estrenar(
+            final, [(t or proyecto["nombre"], d) for t, d in tramos], out / "estreno.mp4",
+            titulo=proyecto["nombre"], lugar=urlparse(url).hostname or "", formato=formato,
+            duracion_max=duracion_maxima(ajustes), lang=lengua.actual(),
+            progreso=lambda k: emitir(fase="montar", p=0.84 + 0.15 * k,
+                                      msg=lengua.t(f"El estreno: {k:.0%}", f"The premiere: {k:.0%}")))
+        final = out / "estreno.mp4"
+        tramos = sala.subtitulos(plan)
+        if not plan.cabe:
+            aviso = lengua.t(f"No cabe en {duracion_maxima(ajustes):.0f} s ni acelerado: dura {plan.total_ms / 1000:.0f} s.",
+                             f"It does not fit in {duracion_maxima(ajustes):.0f} s even sped up: it runs {plan.total_ms / 1000:.0f} s.")
     nombre = re.sub(r'[<>:"/\\|?*]+', "", proyecto["nombre"]).strip() or lengua.t("vídeo", "video")
     destino = Path(proyecto["mis_videos"]) / f"{nombre}.mp4"
     destino.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(final, destino)
     subtitulos = None
     if ajustes.get("srt", True):
-        textos = {e["name"]: e["texto"] for e in lista}
         subtitulos = destino.with_suffix(".srt")
-        subtitulos.write_text(srt([(textos.get(n, ""), dur) for n, _raw, dur in tabla]),
-                              encoding="utf-8-sig")
-    emitir(ok=True, video=str(destino), srt=str(subtitulos) if subtitulos else None, p=1.0)
+        subtitulos.write_text(srt(tramos), encoding="utf-8-sig")
+    emitir(ok=True, video=str(destino), srt=str(subtitulos) if subtitulos else None, aviso=aviso, p=1.0)
     return 0
 
 

@@ -580,6 +580,7 @@ public static class Tareas
                     var q = Proyectos.Leer(o, pid);
                     q["video"] = fin["video"]?.DeepClone();
                     q["srt"] = fin["srt"]?.DeepClone();
+                    q["aviso"] = fin["aviso"]?.DeepClone();
                     q["fase"] = "video";
                     q["hecho"] = Proyectos.Hecho();
                     Proyectos.Guardar(o, pid, q);

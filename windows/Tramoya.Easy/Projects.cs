@@ -33,6 +33,10 @@ public static class Proyectos
         ["ritmo"] = "normal",
         ["tamano"] = "800p",
         ["srt"] = true,
+        // El acabado («estreno»: la toma en la sala; «bruto»: la grabación tal cual), el formato y la duración máxima.
+        ["acabado"] = "estreno",
+        ["formato"] = "horizontal",
+        ["duracion"] = 0,
         ["dominios"] = new JsonArray(),
         // The AI: "" (decide from the environment), "off", "ollama", "claude" or "openai"; the model,
         // the Ollama host or OpenAI-compatible URL, and the API key (never sent back to the window).

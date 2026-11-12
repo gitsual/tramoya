@@ -182,7 +182,7 @@ public static class Engine
         Environment.SetEnvironmentVariable("PWDEBUG", "console");
 
         ajustes ??= [];
-        var (ancho, alto) = Vocabulario.Tamanos.GetValueOrDefault(Pasos.Str(ajustes, "tamano"), Vocabulario.Viewport);
+        var (ancho, alto) = ViewportDe(ajustes);
         var ordenes = new ConcurrentQueue<string>();
         var lector = new Thread(() =>
         {
@@ -313,7 +313,7 @@ public static class Engine
         // Da window.playwright.selector() en cada página (los selectores duraderos del agente);
         // tiene que estar puesto antes de que arranque el proceso de Playwright, que lo hereda.
         Environment.SetEnvironmentVariable("PWDEBUG", "console");
-        var (ancho, alto) = Vocabulario.Tamanos.GetValueOrDefault(Pasos.Str(ajustes, "tamano"), Vocabulario.Viewport);
+        var (ancho, alto) = ViewportDe(ajustes);
         using var pw = await Playwright.CreateAsync().ConfigureAwait(false);
         var ctx = await pw.Chromium.LaunchPersistentContextAsync(perfil, new()
         {
@@ -474,7 +474,8 @@ public static class Engine
         var url = Pasos.Str(proyecto, "inicio");
         if (url.Length == 0) url = proyecto["url"]?.ToString() ?? throw new KeyNotFoundException("url");
         var ajustes = proyecto["ajustes"] as JsonObject ?? [];
-        var viewport = Vocabulario.Tamanos.GetValueOrDefault(Pasos.Str(ajustes, "tamano"), Vocabulario.Viewport);
+        var viewport = ViewportDe(ajustes);
+        var estreno = DeEstreno(ajustes);
         var dominios = Dominios(ajustes);
         var lista = Pasos.Escenas(proyecto);
         var salida = Path.Combine(carpeta, "out");
@@ -528,7 +529,8 @@ public static class Engine
                 Func<double, Task> say = async fallback => await narrador.SayAsync(clave, fallback).ConfigureAwait(false);
                 using (marks.Scene(e.Name, e.Texto))
                 {
-                    await stage.CaptionAsync(e.Texto).ConfigureAwait(false);
+                    // En el estreno el titular va fuera de la toma; sin él, el rótulo se graba en la página.
+                    if (!estreno) await stage.CaptionAsync(e.Texto).ConfigureAwait(false);
                     if (e.Texto.Length != 0)
                         await Steps.RunAsync(stage, [$"say {Fmt.Py(Pasos.SegundosLectura(e.Texto))}"], say).ConfigureAwait(false);
                     foreach (var p in e.Items)
@@ -555,7 +557,7 @@ public static class Engine
                         Emitir(("fase", "grabar"), ("msg", Lengua.T($"Grabando paso {hechos} de {total}…", $"Recording step {hechos} of {total}…")), ("p", 0.15 + 0.6 * hechos / total));
                     }
                     if (ReferenceEquals(e, lista[^1])) await stage.BeatAsync(2.0).ConfigureAwait(false);
-                    await stage.CaptionAsync("").ConfigureAwait(false);
+                    if (!estreno) await stage.CaptionAsync("").ConfigureAwait(false);
                 }
             }
         }
@@ -566,6 +568,28 @@ public static class Engine
         Emitir(("fase", "montar"), ("msg", Lengua.T("Montando el vídeo…", "Editing the video…")), ("p", 0.8));
         var final = Path.Combine(salida, "video.mp4");
         var tabla = Core.Assembly.AssembleMarks(new Runner(), toma, Path.Combine(salida, "marks.json"), voces, final, lang: Lengua.Actual);
+        var textosEscena = lista.ToDictionary(e => e.Name, e => e.Texto);
+        var tramos = tabla.Select(fila => (Texto: textosEscena.GetValueOrDefault(fila.Name, ""), Dur: fila.Final)).ToList();
+        string? aviso = null;
+        if (estreno)
+        {
+            Emitir(("fase", "montar"), ("msg", Lengua.T("El estreno: telón, titulares y hoja de cues…", "The premiere: curtain, headlines and cue sheet…")), ("p", 0.84));
+            var formato = Pasos.Str(ajustes, "formato");
+            if (!Estreno.Formatos.ContainsKey(formato)) formato = "horizontal";
+            var maxima = DuracionMaxima(ajustes);
+            var titulo = Pasos.Str(proyecto, "nombre");
+            var plan = await Estreno.EstrenarAsync(final,
+                tramos.Select(t => (t.Texto.Length != 0 ? t.Texto : titulo, t.Dur)).ToList(),
+                Path.Combine(salida, "estreno.mp4"), titulo, lugar: HostDe(url), formato: formato,
+                duracionMax: maxima, lang: Lengua.Actual,
+                progreso: k => Emitir(("fase", "montar"), ("msg", Lengua.T($"El estreno: {k:P0}", $"The premiere: {k:P0}")), ("p", 0.84 + 0.15 * k)))
+                .ConfigureAwait(false);
+            final = Path.Combine(salida, "estreno.mp4");
+            tramos = Estreno.Subtitulos(plan);
+            if (!plan.Cabe)
+                aviso = Lengua.T($"No cabe en {maxima:0} s ni acelerado: dura {plan.TotalMs / 1000.0:0} s.",
+                                 $"It does not fit in {maxima:0} s even sped up: it runs {plan.TotalMs / 1000.0:0} s.");
+        }
         var nombre = Regex.Replace(Pasos.Str(proyecto, "nombre"), "[<>:\"/\\\\|?*]+", "").Trim();
         if (nombre.Length == 0) nombre = Lengua.T("vídeo", "video");
         var destino = Path.Combine(Pasos.Str(proyecto, "mis_videos"), nombre + ".mp4");
@@ -574,15 +598,23 @@ public static class Engine
         string? subtitulos = null;
         if (!ajustes.ContainsKey("srt") || Pasos.Bool(ajustes, "srt"))
         {
-            var textos = lista.ToDictionary(e => e.Name, e => e.Texto);
             subtitulos = Path.ChangeExtension(destino, ".srt");
-            File.WriteAllText(subtitulos,
-                Pasos.Srt(tabla.Select(fila => (textos.GetValueOrDefault(fila.Name, ""), fila.Final))),
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            File.WriteAllText(subtitulos, Pasos.Srt(tramos), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
         }
-        Emitir(("ok", true), ("video", destino), ("srt", subtitulos), ("p", 1.0));
+        Emitir(("ok", true), ("video", destino), ("srt", subtitulos), ("aviso", aviso), ("p", 1.0));
         return 0;
     }
+
+    internal static (int Ancho, int Alto) ViewportDe(JsonObject ajustes) =>
+        Pasos.Str(ajustes, "formato") == "vertical"
+            ? Vocabulario.Vertical
+            : Vocabulario.Tamanos.GetValueOrDefault(Pasos.Str(ajustes, "tamano"), Vocabulario.Viewport);
+
+    /// <summary>El acabado: «estreno» (por defecto) pone la toma en la sala; «bruto» deja la grabación tal cual.</summary>
+    internal static bool DeEstreno(JsonObject ajustes) => Pasos.Str(ajustes, "acabado") != "bruto";
+
+    internal static double DuracionMaxima(JsonObject ajustes) =>
+        double.TryParse(Pasos.Str(ajustes, "duracion"), NumberStyles.Float, CultureInfo.InvariantCulture, out var s) && s > 0 ? s : 0;
 
     /// <summary>Un número de los ajustes (<c>velocidad</c>), venga como entero, como decimal o como texto.</summary>
     private static int Entero(JsonNode? nodo)
