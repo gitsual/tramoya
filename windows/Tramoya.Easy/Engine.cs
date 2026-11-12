@@ -582,6 +582,7 @@ public static class Engine
                 tramos.Select(t => (t.Texto.Length != 0 ? t.Texto : titulo, t.Dur)).ToList(),
                 Path.Combine(salida, "estreno.mp4"), titulo, lugar: HostDe(url), formato: formato,
                 duracionMax: maxima, lang: Lengua.Actual,
+                musica: MusicaDe(ajustes, Path.Combine(Path.GetDirectoryName(Path.GetFullPath(MisVideosDe(proyecto)))!, "Pistas"), salida),
                 progreso: k => Emitir(("fase", "montar"), ("msg", Lengua.T($"El estreno: {k:P0}", $"The premiere: {k:P0}")), ("p", 0.84 + 0.15 * k)))
                 .ConfigureAwait(false);
             final = Path.Combine(salida, "estreno.mp4");
@@ -612,6 +613,29 @@ public static class Engine
 
     /// <summary>El acabado: «estreno» (por defecto) pone la toma en la sala; «bruto» deja la grabación tal cual.</summary>
     internal static bool DeEstreno(JsonObject ajustes) => Pasos.Str(ajustes, "acabado") != "bruto";
+
+    private static string MisVideosDe(JsonObject proyecto) => Pasos.Str(proyecto, "mis_videos");
+
+    internal static readonly string[] ExtensionesAudio = [".mp3", ".wav", ".ogg", ".flac", ".m4a"];
+
+    /// <summary>Las pistas propias de la carpeta Pistas (junto a Mis vídeos): nombre sin extensión → fichero.</summary>
+    internal static SortedDictionary<string, string> Pistas(string carpeta)
+    {
+        var salida = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        if (!Directory.Exists(carpeta)) return salida;
+        foreach (var f in Directory.GetFiles(carpeta).OrderBy(f => f, StringComparer.Ordinal))
+            if (ExtensionesAudio.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                salida.TryAdd(Path.GetFileNameWithoutExtension(f), f);
+        return salida;
+    }
+
+    /// <summary>La música del estreno: «ascensor» (por defecto, la que trae Tramoya), «ninguna» o una pista.</summary>
+    internal static string? MusicaDe(JsonObject ajustes, string carpetaPistas, string trabajo)
+    {
+        var eleccion = Pasos.Str(ajustes, "musica");
+        if (eleccion == "ninguna") return null;
+        return eleccion.Length != 0 && Pistas(carpetaPistas).TryGetValue(eleccion, out var f) ? f : Estreno.Ascensor(trabajo);
+    }
 
     internal static double DuracionMaxima(JsonObject ajustes) =>
         double.TryParse(Pasos.Str(ajustes, "duracion"), NumberStyles.Float, CultureInfo.InvariantCulture, out var s) && s > 0 ? s : 0;

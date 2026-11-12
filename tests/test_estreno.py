@@ -73,3 +73,27 @@ def test_easy_settings():
     assert viewport_de({"formato": "vertical", "tamano": "1080p"}) == VERTICAL
     assert viewport_de({"tamano": "720p"}) == (1280, 720)
     assert duracion_maxima({"duracion": "60"}) == 60 and duracion_maxima({"duracion": "x"}) == 0
+
+
+def test_the_sound_graph():
+    p = estreno.plan(ESCENAS, 30.0)
+    assert estreno.filtro_sonido(p, voz=False, musica=False) == ""
+    solo_voz = estreno.filtro_sonido(p, voz=True, musica=False)
+    assert solo_voz.startswith("[1:a]aresample=48000") and "adelay=3200" in solo_voz and "[2:a]" not in solo_voz
+    con_todo = estreno.filtro_sonido(p, voz=True, musica=True)
+    assert "sidechaincompress" in con_todo and "amix=inputs=2" in con_todo and f"volume={estreno.MUSICA_VOLUMEN}" in con_todo
+    assert f"volume={estreno.MUSICA_SOLA}" in estreno.filtro_sonido(p, voz=False, musica=True)
+
+
+def test_the_lobby_loop_ships_with_tramoya():
+    assert estreno.ascensor().stat().st_size > 500_000
+
+
+def test_the_music_setting(tmp_path):
+    from tramoya.easy.engine import musica_de, pistas
+    (tmp_path / "Café Bossa Nova A.mp3").write_bytes(b"x")
+    assert list(pistas(tmp_path)) == ["Café Bossa Nova A"]
+    assert musica_de({}, tmp_path) == estreno.ascensor()
+    assert musica_de({"musica": "ninguna"}, tmp_path) is None
+    assert musica_de({"musica": "Café Bossa Nova A"}, tmp_path) == tmp_path / "Café Bossa Nova A.mp3"
+    assert musica_de({"musica": "borrada"}, tmp_path) == estreno.ascensor()

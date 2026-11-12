@@ -9,6 +9,7 @@
   <ItemGroup>
     <!-- The premiere's player lives with the Python package and is embedded here, with the window's typefaces. -->
     <EmbeddedResource Include="..\..\src\tramoya\estreno\sala.html" LogicalName="estreno/sala.html" />
+    <EmbeddedResource Include="..\..\src\tramoya\estreno\musica\ascensor.ogg" LogicalName="estreno/musica/ascensor.ogg" />
     <EmbeddedResource Include="..\..\src\tramoya\easy\ui\fonts\Archivo-tramoya.woff2" LogicalName="estreno/fonts/Archivo-tramoya.woff2" />
     <EmbeddedResource Include="..\..\src\tramoya\easy\ui\fonts\IBMPlexMono-Medium.woff2" LogicalName="estreno/fonts/IBMPlexMono-Medium.woff2" />
   </ItemGroup>

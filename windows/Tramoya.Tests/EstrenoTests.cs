@@ -106,6 +106,37 @@ public class EstrenoTests
     }
 
     [Fact]
+    public void TheSoundGraph()
+    {
+        var p = Estreno.PlanDe(Escenas, 30.0);
+        Assert.Equal("", Estreno.FiltroSonido(p, voz: false, musica: false));
+        var soloVoz = Estreno.FiltroSonido(p, voz: true, musica: false);
+        Assert.StartsWith("[1:a]aresample=48000", soloVoz);
+        Assert.DoesNotContain("[2:a]", soloVoz);
+        var conTodo = Estreno.FiltroSonido(p, voz: true, musica: true);
+        Assert.Contains("sidechaincompress", conTodo);
+        Assert.Contains("volume=0.28", conTodo);
+        Assert.Contains("volume=0.5", Estreno.FiltroSonido(p, voz: false, musica: true));
+    }
+
+    [Fact]
+    public void TheMusicSetting()
+    {
+        var dir = Directory.CreateTempSubdirectory("tramoya-pistas-").FullName;
+        try
+        {
+            File.WriteAllBytes(Path.Combine(dir, "Café Bossa Nova A.mp3"), [1]);
+            Assert.Equal(["Café Bossa Nova A"], Engine.Pistas(dir).Keys);
+            var trabajo = Path.Combine(dir, "out");
+            Assert.EndsWith("ascensor.ogg", Engine.MusicaDe(Obj("{}"), dir, trabajo));
+            Assert.True(new FileInfo(Path.Combine(trabajo, "ascensor.ogg")).Length > 500_000);
+            Assert.Null(Engine.MusicaDe(Obj("""{"musica": "ninguna"}"""), dir, trabajo));
+            Assert.EndsWith("Café Bossa Nova A.mp3", Engine.MusicaDe(Obj("""{"musica": "Café Bossa Nova A"}"""), dir, trabajo));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void EasySettings()
     {
         Assert.True(Engine.DeEstreno(Obj("{}")));

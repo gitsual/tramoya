@@ -1,0 +1,45 @@
+ascensor.ogg
+============
+
+Lobby music for the premiere: 34 bars of bossa (F major, 112 bpm) that loop without a seam. Composed and
+played by the orchestra of cronica (https://github.com/gitsual/cronica, MIT): the composition is MIT like
+Tramoya; the instrument samples it is played with come from the two libraries below.
+
+Música de ascensor para el estreno: 34 compases de bossa que dan la vuelta sin costura. Compuesta y tocada por la
+orquesta de cronica; la composición es MIT como Tramoya, y las muestras de los instrumentos, de estas dos bibliotecas:
+
+
+
+1. VSCO-2 Community Edition, by Versilian Studios — CC0 1.0 Universal (public domain dedication)
+   https://github.com/sgossner/VSCO-2-CE
+   Harp, contrabass and violin pizzicato, sustained violins and cellos, bassoon, clarinet, flute, oboe,
+   glockenspiel, claves and shaker.
+   https://creativecommons.org/publicdomain/zero/1.0/
+
+
+2. FluidR3_GM, by Frank Wen — MIT license
+   (from the Debian package fluid-soundfont-gm 3.1; https://packages.debian.org/fluid-soundfont-gm)
+   Accordion, music box, celesta, vibraphone, electric piano, nylon guitar, acoustic bass, slow strings and the
+   drum kit (kick, rim, closed hi-hat, ride bell, triangle, shaker).
+
+   Copyright (c) 2000-2002, 2008 Frank Wen
+   Copyright (c) 2008 Toby Smithe
+
+   "Fluid was constructed in part from samples found in the public domain that I edited/cleaned/remixed/programmed
+   and largely from recordings of my own and in conjunction with the people below who helped along the way:
+   Suren M. Seron, Scott Hanan, Steve Aupperle, Chris Gillman, Alex Taubr, Chris Prola, Andrew Klenk,
+   Winfried Hubbe, Dylan, Tim, Gort, Uros Katic, Ethan Winer."
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+   documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+   to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all copies or substantial portions
+   of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+   THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+   CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
