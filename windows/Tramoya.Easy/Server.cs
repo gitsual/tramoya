@@ -253,6 +253,9 @@ public sealed class Server : IDisposable
 
     private string? Escritorio() => _o.Windows ? Sapi.Escritorio() : null;
 
+    /// <summary>Las pistas propias de música van en «Pistas», junto a la carpeta de los vídeos.</summary>
+    private string CarpetaPistas() => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_o.MisVideos))!, "Pistas");
+
     /// <summary>Un acceso directo «Tramoya» con su icono, que abre la app sin consola.</summary>
     private string CrearAcceso(string? carpeta)
     {
@@ -293,6 +296,8 @@ public sealed class Server : IDisposable
                 ["idioma"] = Lengua.Actual,
                 ["windows"] = _o.Windows,
                 ["carpeta"] = _o.MisVideos,
+                ["pistas"] = new JsonArray(Engine.Pistas(CarpetaPistas()).Keys.Select(k => (JsonNode)k).ToArray()),
+                ["carpeta_pistas"] = CarpetaPistas(),
                 ["acceso"] = esc is not null && File.Exists(Path.Combine(esc, "Tramoya.lnk")),
                 // Solo con un modelo a mano se ofrece «pídeselo a la IA»; el Python manda false.
                 ["agente"] = Tareas.HayModelo(_o),

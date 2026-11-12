@@ -53,6 +53,25 @@ def de_estreno(ajustes: dict) -> bool:
     return ajustes.get("acabado", "estreno") != "bruto"
 
 
+EXTENSIONES_AUDIO = (".mp3", ".wav", ".ogg", ".flac", ".m4a")
+
+
+def pistas(carpeta: Path) -> dict[str, Path]:
+    """Las pistas propias de la carpeta Pistas (junto a Mis vídeos): nombre sin extensión -> fichero."""
+    if not carpeta.is_dir():
+        return {}
+    return {f.stem: f for f in sorted(carpeta.iterdir()) if f.suffix.lower() in EXTENSIONES_AUDIO}
+
+
+def musica_de(ajustes: dict, carpeta_pistas: Path) -> Path | None:
+    """La música del estreno: «ascensor» (por defecto, la que trae Tramoya), «ninguna», o el nombre de una pista."""
+    from tramoya import estreno as sala
+    eleccion = ajustes.get("musica", "ascensor") or "ascensor"
+    if eleccion == "ninguna":
+        return None
+    return pistas(carpeta_pistas).get(eleccion) or sala.ascensor()
+
+
 def duracion_maxima(ajustes: dict) -> float:
     try:
         return max(0.0, float(ajustes.get("duracion") or 0))
@@ -643,6 +662,7 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
             final, [(t or proyecto["nombre"], d) for t, d in tramos], out / "estreno.mp4",
             titulo=proyecto["nombre"], lugar=urlparse(url).hostname or "", formato=formato,
             duracion_max=duracion_maxima(ajustes), lang=lengua.actual(),
+            musica=musica_de(ajustes, Path(proyecto["mis_videos"]).parent / "Pistas"),
             progreso=lambda k: emitir(fase="montar", p=0.84 + 0.15 * k,
                                       msg=lengua.t(f"El estreno: {k:.0%}", f"The premiere: {k:.0%}")))
         final = out / "estreno.mp4"

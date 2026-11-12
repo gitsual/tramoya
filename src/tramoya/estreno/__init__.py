@@ -135,9 +135,10 @@ def _servir_desde_disco(page, raiz: Path) -> None:
 
 def estrenar(video: Path, escenas: list[tuple[str, float]], salida: Path, *, titulo: str, lugar: str = "",
              formato: str = "horizontal", duracion_max: float = 0, lang: str = "es", ffmpeg: str = "ffmpeg",
-             progreso: Callable[[float], None] | None = None) -> Plan:
+             musica: Path | None = None, progreso: Callable[[float], None] | None = None) -> Plan:
     """Stage ``video`` (the assembled take) and write the film to ``salida``. Returns the plan: the scenes on
-    the film's clock (for the subtitles), the speed and whether it fitted in ``duracion_max``."""
+    the film's clock (for the subtitles), the speed and whether it fitted in ``duracion_max``. ``musica``: an audio
+    file played in a loop under the whole film (ASCENSOR, a track of your own), lowered while the voice speaks."""
     from playwright.sync_api import sync_playwright
 
     if formato not in FORMATOS:
@@ -181,20 +182,52 @@ def estrenar(video: Path, escenas: list[tuple[str, float]], salida: Path, *, tit
             navegador.close()
 
     salida.parent.mkdir(parents=True, exist_ok=True)
-    if con_sonido:
-        # The voice follows the picture: as fast as the take and after the opening, silence under the curtain.
-        # No afade (the voice is over by then), and stereo: some ffmpeg builds never finish a mono AAC at 192k.
-        fin = f"{p.total_ms / 1000:.3f}"
-        filtro = (f"[1:a]aresample=48000,{f'atempo={p.vel:.4f},' if p.vel != 1 else ''}adelay={p.intro_ms}:all=1,"
-                  f"apad=whole_dur={fin}[a]")
-        subprocess.run([ffmpeg, "-nostdin", "-loglevel", "error", "-y", "-i", str(mudo), "-i", str(video),
-                        "-filter_complex", filtro, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac",
-                        "-ac", "2", "-b:a", "192k", "-t", fin, "-movflags", "+faststart", str(salida)],
-                       check=True)
+    filtro = filtro_sonido(p, con_sonido, musica is not None)
+    if filtro:
+        entradas = ["-i", str(mudo), "-i", str(video)]
+        if musica is not None:
+            entradas += ["-stream_loop", "-1", "-i", str(musica)]
+        subprocess.run([ffmpeg, "-nostdin", "-loglevel", "error", "-y", *entradas, "-filter_complex", filtro,
+                        "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-ac", "2", "-b:a", "192k",
+                        "-t", f"{p.total_ms / 1000:.3f}", "-movflags", "+faststart", str(salida)], check=True)
     else:
         shutil.copyfile(mudo, salida)
     shutil.rmtree(trabajo / "frames", ignore_errors=True)
     return p
+
+
+# The music under the film: its level alone, and how far the voice pushes it down while it speaks.
+MUSICA_VOLUMEN, MUSICA_SOLA = 0.28, 0.5
+
+
+def ascensor() -> Path:
+    """The lobby loop that ships with Tramoya: 34 bars of bossa (72.9 s) that join end to start without a seam,
+    played by cronica's orchestra (samples CC0 and MIT, see estreno/musica/LICENCIAS.txt)."""
+    return Path(str(resources.files("tramoya").joinpath("estreno", "musica", "ascensor.ogg")))
+
+
+def filtro_sonido(p: Plan, voz: bool, musica: bool) -> str:
+    """The ffmpeg graph for the sound of the premiere. Input 1 is the take (its voice), input 2 the music.
+
+    - The voice follows the picture: as fast as the take, after the opening, silence under the curtain.
+    - The music loops under everything, comes in over 1.5 s and leaves with the curtain; the voice pushes it down
+      (sidechaincompress) while it speaks.
+    - aresample first and stereo out: some ffmpeg builds never finish adelay+apad+afade on a raw take, or a mono
+      AAC at 192k.
+    Empty when there is nothing to hear."""
+    fin = p.total_ms / 1000
+    voz_f = (f"[1:a]aresample=48000,aformat=channel_layouts=stereo,"
+             f"{f'atempo={p.vel:.4f},' if p.vel != 1 else ''}adelay={p.intro_ms}:all=1,apad=whole_dur={fin:.3f}")
+    if not musica:
+        return f"{voz_f}[a]" if voz else ""
+    fondo = (f"[2:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{fin:.3f},"
+             f"volume={MUSICA_VOLUMEN if voz else MUSICA_SOLA},afade=t=in:d=1.5,"
+             f"afade=t=out:st={max(0.0, fin - 3):.3f}:d=3")
+    if not voz:
+        return f"{fondo}[a]"
+    return (f"{voz_f},asplit=2[voz][llave];{fondo}[fondo];"
+            "[fondo][llave]sidechaincompress=threshold=0.02:ratio=6:attack=30:release=500[bajo];"
+            "[bajo][voz]amix=inputs=2:normalize=0[a]")
 
 
 def subtitulos(p: Plan) -> list[tuple[str, float]]:

@@ -153,7 +153,7 @@ public static class Estreno
     /// </summary>
     public static async Task<Plan> EstrenarAsync(string video, IReadOnlyList<(string Texto, double Segundos)> escenas,
         string salida, string titulo, string lugar = "", string formato = "horizontal", double duracionMax = 0,
-        string lang = "es", string ffmpeg = "ffmpeg", Action<double>? progreso = null)
+        string lang = "es", string ffmpeg = "ffmpeg", Action<double>? progreso = null, string? musica = null)
     {
         if (!Formatos.TryGetValue(formato, out var lienzo))
             throw new ArgumentException($"unknown format: {formato} (horizontal, vertical)", nameof(formato));
@@ -203,22 +203,57 @@ public static class Estreno
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(salida))!);
-        if (conSonido)
+        var filtro = FiltroSonido(p, conSonido, musica is not null);
+        if (filtro.Length != 0)
         {
-            // The voice follows the picture: as fast as the take and after the opening, silence under the curtain.
-            // No afade (the voice is over by then), and stereo: some ffmpeg builds never finish a mono AAC at 192k.
-            var inv = CultureInfo.InvariantCulture;
-            var tempo = p.Vel != 1 ? $"atempo={p.Vel.ToString("0.0000", inv)}," : "";
-            var fin = (p.TotalMs / 1000.0).ToString("0.000", inv);
-            var filtro = $"[1:a]aresample=48000,{tempo}adelay={p.IntroMs}:all=1,apad=whole_dur={fin}[a]";
-            Ejecutar(ffmpeg, ["-nostdin", "-loglevel", "error", "-y", "-i", mudo, "-i", video, "-filter_complex", filtro,
-                "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-ac", "2", "-b:a", "192k",
-                "-t", fin, "-movflags", "+faststart", salida]);
+            var argv = new List<string> { "-nostdin", "-loglevel", "error", "-y", "-i", mudo, "-i", video };
+            if (musica is not null) argv.AddRange(["-stream_loop", "-1", "-i", musica]);
+            argv.AddRange(["-filter_complex", filtro, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac",
+                "-ac", "2", "-b:a", "192k", "-t", (p.TotalMs / 1000.0).ToString("0.000", CultureInfo.InvariantCulture),
+                "-movflags", "+faststart", salida]);
+            Ejecutar(ffmpeg, argv);
         }
         else File.Copy(mudo, salida, overwrite: true);
         try { Directory.Delete(Path.Combine(trabajo, "frames"), recursive: true); }
         catch (IOException) { /* a frame still open by an antivirus scan: it goes with the next premiere */ }
         return p;
+    }
+
+    // The music under the film: its level alone, and how far the voice pushes it down while it speaks.
+    public const double MusicaVolumen = 0.28, MusicaSola = 0.5;
+
+    /// <summary>
+    /// The lobby loop that ships with Tramoya (embedded): 34 bars of bossa that join end to start without a seam,
+    /// played by cronica's orchestra. Written next to the premiere's work folder the first time it is needed.
+    /// </summary>
+    public static string Ascensor(string carpeta)
+    {
+        Directory.CreateDirectory(carpeta);
+        var destino = Path.Combine(carpeta, "ascensor.ogg");
+        if (!File.Exists(destino)) Copiar("estreno/musica/ascensor.ogg", destino);
+        return destino;
+    }
+
+    /// <summary>
+    /// The ffmpeg graph for the sound of the premiere (input 1: the take and its voice; input 2: the music). Port of
+    /// <c>filtro_sonido</c>: the voice after the opening and as fast as the take, the music looping under
+    /// everything and pushed down by the voice (sidechaincompress). Empty when there is nothing to hear.
+    /// </summary>
+    public static string FiltroSonido(Plan p, bool voz, bool musica)
+    {
+        var inv = CultureInfo.InvariantCulture;
+        var fin = p.TotalMs / 1000.0;
+        var tempo = p.Vel != 1 ? $"atempo={p.Vel.ToString("0.0000", inv)}," : "";
+        var vozF = $"[1:a]aresample=48000,aformat=channel_layouts=stereo,{tempo}adelay={p.IntroMs}:all=1," +
+                   $"apad=whole_dur={fin.ToString("0.000", inv)}";
+        if (!musica) return voz ? vozF + "[a]" : "";
+        var fondo = $"[2:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{fin.ToString("0.000", inv)}," +
+                    $"volume={(voz ? MusicaVolumen : MusicaSola).ToString(inv)},afade=t=in:d=1.5," +
+                    $"afade=t=out:st={Math.Max(0, fin - 3).ToString("0.000", inv)}:d=3";
+        if (!voz) return fondo + "[a]";
+        return $"{vozF},asplit=2[voz][llave];{fondo}[fondo];" +
+               "[fondo][llave]sidechaincompress=threshold=0.02:ratio=6:attack=30:release=500[bajo];" +
+               "[bajo][voz]amix=inputs=2:normalize=0[a]";
     }
 
     /// <summary>The page reads its files straight from disk: no local server for an antivirus to slow down.</summary>

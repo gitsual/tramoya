@@ -37,6 +37,7 @@ public static class Proyectos
         ["acabado"] = "estreno",
         ["formato"] = "horizontal",
         ["duracion"] = 0,
+        ["musica"] = "ascensor",
         ["dominios"] = new JsonArray(),
         // The AI: "" (decide from the environment), "off", "ollama", "claude" or "openai"; the model,
         // the Ollama host or OpenAI-compatible URL, and the API key (never sent back to the window).

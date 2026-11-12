@@ -29,6 +29,7 @@ from pathlib import Path
 
 from tramoya import __version__, ia
 from tramoya.easy import lengua
+from tramoya.easy.engine import pistas as engine_pistas
 
 
 def _kit() -> Path | None:
@@ -50,7 +51,7 @@ UI = Path(__file__).resolve().parent / "ui" / "index.html"
 ICONO = Path(__file__).resolve().parent / "ui" / "tramoya.ico"
 AJUSTES = DATOS / "ajustes.json"
 AJUSTES_DEFECTO = {"idioma": "", "ia_backend": "", "ia_modelo": "", "ia_url": "", "ia_clave": "", "voz": "", "velocidad": 0, "ritmo": "normal", "tamano": "800p", "srt": True,
-                   "acabado": "estreno", "formato": "horizontal", "duracion": 0,
+                   "acabado": "estreno", "formato": "horizontal", "duracion": 0, "musica": "ascensor",
                    "dominios": []}
 # pythonw (the kit launcher, no console) for the window; python for the workers
 PY = Path(sys.executable).with_name(Path(sys.executable).name.replace("pythonw", "python"))
@@ -389,6 +390,7 @@ class H(BaseHTTPRequestHandler):
             return self.responder({
                 "proyectos": lista(), "voces": voces(), "webs": webs(), "ajustes": ia.publicos(leer_ajustes()), "idioma": lengua.actual(),
                 "windows": sys.platform == "win32", "carpeta": str(MIS_VIDEOS),
+                "pistas": list(engine_pistas(MIS_VIDEOS.parent / "Pistas")), "carpeta_pistas": str(MIS_VIDEOS.parent / "Pistas"),
                 "acceso": bool(esc and (esc / "Tramoya.lnk").exists()),
                 # Pedírselo a la IA solo existe en la versión de Windows: aquí se oculta.
                 "agente": False, "version": __version__})

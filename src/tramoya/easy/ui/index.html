@@ -797,6 +797,10 @@ const TEXTOS = {
   duracion: {en: "Length at most", es: "Duración máxima"},
   duracion_sub: {en: "If the video runs longer, it plays faster to fit (up to 1.5×, the voice keeps its tone). Only with the premiere.", es: "Si el vídeo sale más largo, va más deprisa para caber (hasta 1,5×, la voz no cambia de tono). Solo con el estreno."},
   sin_limite: {en: "No limit", es: "Sin límite"},
+  musica: {en: "Music", es: "Música"},
+  musica_sub: {en: "It plays under the premiere and steps back while the voice speaks. Lobby comes with Tramoya; tracks of your own go in {c}.", es: "Suena bajo el estreno y se aparta cuando habla la voz. Ascensor viene con Tramoya; tus pistas van en {c}."},
+  ascensor: {en: "Lobby", es: "Ascensor"},
+  sin_musica: {en: "No music", es: "Sin música"},
   srt: {en: "Also save the subtitles", es: "Guardar también los subtítulos"},
   srt_sub: {en: "An .srt file next to the video, for Teams, Stream or YouTube.", es: "Un archivo .srt junto al vídeo, para Teams, Stream o YouTube."},
   guardar_subt: {en: "Save subtitles", es: "Guardar subtítulos"},
@@ -1483,6 +1487,8 @@ function ajustes() {
       ${seg("formato", [["horizontal", t("horizontal")], ["vertical", t("vertical")]])}</div>
     <div class="ajuste"><b>${t("duracion")}</b><small>${t("duracion_sub")}</small>
       ${seg("duracion", [["0", t("sin_limite")], ["30", "30 s"], ["60", "1 min"], ["90", "1:30"], ["120", "2 min"]])}</div>
+    <div class="ajuste"><b>${t("musica")}</b><small>${t("musica_sub", {c: esc(INICIO.carpeta_pistas || "")})}</small>
+      ${seg("musica", [["ascensor", t("ascensor")], ...(INICIO.pistas || []).map((n) => [n, esc(n)]), ["ninguna", t("sin_musica")]])}</div>
     <div class="ajuste"><div class="opcion" style="margin:0"><div><b>${t("srt")}</b><small>${t("srt_sub")}</small></div>
       <label class="interruptor"><input type="checkbox" id="a-srt" ${a.srt ? "checked" : ""} aria-label="${t("guardar_subt")}"><span></span></label></div></div>
     <div class="ajuste"><details><summary>${t("avanzado")}</summary>
