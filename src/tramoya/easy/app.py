@@ -78,6 +78,23 @@ def chromium() -> str:
     with sync_playwright() as pw:
         return pw.chromium.executable_path
 
+
+def navegador_ventana() -> str:
+    """The browser for the window itself: on Windows, Edge when it is installed.
+
+    Corporate policies (a forced proxy, for one) also apply to the kit's Chromium
+    and can keep it from reaching 127.0.0.1, so the window comes up blank, while
+    Edge on the same machine gets there. TRAMOYA_VENTANA=chromium forces the kit's.
+    The web being recorded is opened by the engine, not by this browser.
+    """
+    if sys.platform == "win32" and os.environ.get("TRAMOYA_VENTANA", "").lower() != "chromium":
+        for base in (os.environ.get("ProgramFiles(x86)"), os.environ.get("ProgramFiles"),
+                     os.environ.get("LOCALAPPDATA")):
+            edge = Path(base or "") / "Microsoft" / "Edge" / "Application" / "msedge.exe"
+            if base and edge.is_file():
+                return str(edge)
+    return chromium()
+
 # id -> {"estado", "msg", "p", "proc", ...}; un trabajo a la vez por vídeo
 TAREAS: dict[str, dict] = {}
 CERROJO = threading.Lock()
@@ -559,7 +576,7 @@ def main(argv: list[str] | None = None) -> int:
         print(url, flush=True)
         threading.Event().wait()
     try:
-        navegador = chromium()
+        navegador = navegador_ventana()
     except Exception as exc:  # noqa: BLE001
         print(f"tramoya easy needs Playwright's Chromium: python -m playwright install chromium "
               f"({exc})", file=sys.stderr)
