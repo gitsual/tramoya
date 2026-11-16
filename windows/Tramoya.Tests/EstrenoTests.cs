@@ -56,6 +56,10 @@ public class EstrenoTests
         var en = Estreno.Datos(p, "Notes", "", "horizontal", 900, (1280, 800), "en", new DateTime(2026, 11, 12));
         Assert.Equal("November 12, 2026", (string)en["fecha"]!);
         Assert.Equal("The end", (string)en["t"]!["fin"]!);
+        Assert.Equal("estreno", (string)en["modo"]!);
+        var demo = Estreno.Datos(p, "Notes", "", "horizontal", 900, (1280, 800), "es", new DateTime(2026, 11, 12), modo: "demo");
+        Assert.Equal("demo", (string)demo["modo"]!);
+        Assert.Equal("Demo", (string)demo["t"]!["demo"]!);
     }
 
     [Fact]
@@ -171,6 +175,10 @@ public class EstrenoTests
     {
         Assert.True(Engine.DeEstreno(Obj("{}")));
         Assert.False(Engine.DeEstreno(Obj("""{"acabado": "bruto"}""")));
+        Assert.True(Engine.DeEstreno(Obj("""{"acabado": "demo"}""")));
+        Assert.Equal("demo", Engine.ModoDe(Obj("""{"acabado": "demo"}""")));
+        Assert.Equal("estreno", Engine.ModoDe(Obj("""{"acabado": "raro"}""")));
+        Assert.Equal("estreno", Engine.ModoDe(Obj("{}")));
         Assert.Equal(Vocabulario.Vertical, Engine.ViewportDe(Obj("""{"formato": "vertical", "tamano": "1080p"}""")));
         Assert.Equal((1280, 720), Engine.ViewportDe(Obj("""{"tamano": "720p"}""")));
         Assert.Equal(60, Engine.DuracionMaxima(Obj("""{"duracion": "60"}""")));

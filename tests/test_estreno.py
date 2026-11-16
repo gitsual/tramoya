@@ -8,7 +8,7 @@ from datetime import date
 import pytest
 
 from tramoya import estreno
-from tramoya.easy.engine import VERTICAL, de_estreno, duracion_maxima, srt, viewport_de
+from tramoya.easy.engine import VERTICAL, de_estreno, modo_de, duracion_maxima, srt, viewport_de
 
 ESCENAS = [("Open the list", 8.0), ("Write a note", 12.0), ("Mark it done", 10.0)]
 
@@ -119,3 +119,27 @@ def test_random_music_and_the_seamless_loop(tmp_path):
     p = estreno.plan(ESCENAS, 30.0)
     assert "aloop=loop=-1:size=852000:start=1308000" in estreno.filtro_sonido(p, True, True, (27.25, 45.0))
     assert "aloop" not in estreno.filtro_sonido(p, True, True)
+
+
+def test_the_demo_finish_is_a_stage_without_the_count():
+    """«demo»: the same stage and curtain, but no scene count, cue sheet, stamp or boards; the close names the
+    show and nothing else."""
+    p = estreno.plan(ESCENAS, 30.0)
+    base = dict(titulo="Notes", lugar="", formato="horizontal", frames=900, video=(1280, 800), hoy=date(2026, 11, 12))
+    assert estreno.datos(p, **base)["modo"] == "estreno"
+    assert estreno.datos(p, modo="demo", **base)["modo"] == "demo"
+    assert estreno.datos(p, modo="demo", lang="es", **base)["t"]["demo"] == "Demo"
+    assert set(estreno.MODOS) == {"estreno", "demo"}
+    pagina = (estreno.resources.files("tramoya") / "estreno" / "sala.html").read_text(encoding="utf-8")
+    assert "html.demo #hoja" in pagina and "D.modo === 'demo'" in pagina
+
+
+def test_an_unknown_finish_is_refused(tmp_path):
+    with pytest.raises(ValueError):
+        estreno.estrenar(tmp_path / "x.mp4", ESCENAS, tmp_path / "y.mp4", titulo="x", modo="trailer")
+
+
+def test_the_easy_finish_setting():
+    assert modo_de({}) == "estreno" and modo_de({"acabado": "demo"}) == "demo"
+    assert modo_de({"acabado": "raro"}) == "estreno"
+    assert de_estreno({"acabado": "demo"}) and not de_estreno({"acabado": "bruto"})

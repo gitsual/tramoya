@@ -787,8 +787,9 @@ const TEXTOS = {
   tamano_sub: {en: "If you will watch it full screen, Full HD is better. It applies to what you record from now on.", es: "Si vas a verlo a pantalla completa, mejor Full HD. Se aplica a lo que grabes a partir de ahora."},
   portatil: {en: "Laptop (1280×800)", es: "Portátil (1280×800)"},
   acabado: {en: "Finish", es: "Acabado"},
-  acabado_sub: {en: "A premiere puts the recording on a stage: the curtain opens on the title, every scene comes in with its headline and its cue, and the curtain falls at the end.", es: "El estreno pone la grabación en un escenario: se abre el telón con el título, cada escena entra con su titular y su cue, y el telón cae al final."},
+  acabado_sub: {en: "A premiere puts the recording on a stage: the curtain opens on the title, every scene comes in with its headline and its cue, and the curtain falls at the end. A demo is the same stage without the count: no cues, no cue sheet, a bigger recording.", es: "El estreno pone la grabación en un escenario: se abre el telón con el título, cada escena entra con su titular y su cue, y el telón cae al final. La demo es el mismo escenario sin la cuenta: sin cues ni hoja, con la grabación más grande."},
   acabado_estreno: {en: "Premiere", es: "De estreno"},
+  acabado_demo: {en: "Demo", es: "Demo"},
   acabado_bruto: {en: "Just the recording", es: "Solo la grabación"},
   formato: {en: "Format", es: "Formato"},
   formato_sub: {en: "Vertical is for a phone (9:16): the website is recorded narrower, the way it looks on a tablet.", es: "Vertical es para el móvil (9:16): la web se graba más estrecha, como se ve en una tableta."},
@@ -1483,7 +1484,7 @@ function ajustes() {
     <div class="ajuste"><b>${t("tamano")}</b><small>${t("tamano_sub")}</small>
       ${seg("tamano", [["720p", "HD (1280×720)"], ["800p", t("portatil")], ["1080p", "Full HD (1920×1080)"]])}</div>
     <div class="ajuste"><b>${t("acabado")}</b><small>${t("acabado_sub")}</small>
-      ${seg("acabado", [["estreno", t("acabado_estreno")], ["bruto", t("acabado_bruto")]])}</div>
+      ${seg("acabado", [["estreno", t("acabado_estreno")], ["demo", t("acabado_demo")], ["bruto", t("acabado_bruto")]])}</div>
     <div class="ajuste"><b>${t("formato")}</b><small>${t("formato_sub")}</small>
       ${seg("formato", [["horizontal", t("horizontal")], ["vertical", t("vertical")]])}</div>
     <div class="ajuste"><b>${t("duracion")}</b><small>${t("duracion_sub")}</small>
