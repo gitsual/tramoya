@@ -19,6 +19,8 @@ public static class Estreno
 {
     public static readonly Dictionary<string, (int Ancho, int Alto)> Formatos = new()
     { ["horizontal"] = (1920, 1080), ["vertical"] = (1080, 1920) };
+    /// <summary>«estreno», the whole show; «demo», the same stage without the count (no cues, sheet or boards).</summary>
+    public static readonly string[] Modos = ["estreno", "demo"];
     public const int Fps = 30;
     public const double VelMax = 1.5;
     public const int IntroMs = 3200, OutroMs = 4400;
@@ -33,13 +35,13 @@ public static class Estreno
         {
             ["presenta"] = "Tramoya presenta", ["cuenta"] = "Escena {i} de {n}", ["hoja"] = "Hoja de cues",
             ["sigue"] = "Sigue", ["fin"] = "Fin", ["funcion"] = "de la función", ["escena"] = "escena",
-            ["escenas"] = "escenas", ["duracion"] = "duración", ["estreno"] = "estreno", ["hecho"] = "Hecho con Tramoya",
+            ["escenas"] = "escenas", ["duracion"] = "duración", ["estreno"] = "estreno", ["hecho"] = "Hecho con Tramoya", ["demo"] = "Demo",
         },
         ["en"] = new()
         {
             ["presenta"] = "Tramoya presents", ["cuenta"] = "Scene {i} of {n}", ["hoja"] = "Cue sheet",
             ["sigue"] = "Next", ["fin"] = "The end", ["funcion"] = "of the show", ["escena"] = "scene",
-            ["escenas"] = "scenes", ["duracion"] = "running time", ["estreno"] = "premiere", ["hecho"] = "Made with Tramoya",
+            ["escenas"] = "scenes", ["duracion"] = "running time", ["estreno"] = "premiere", ["hecho"] = "Made with Tramoya", ["demo"] = "Demo",
         },
     };
 
@@ -89,7 +91,7 @@ public static class Estreno
 
     /// <summary>What sala.html reads (datos.json).</summary>
     public static JsonObject Datos(Plan p, string titulo, string lugar, string formato, int frames,
-        (int W, int H) video, string lang = "es", DateTime? hoy = null)
+        (int W, int H) video, string lang = "es", DateTime? hoy = null, string modo = "estreno")
     {
         lang = Palabras.ContainsKey(lang) ? lang : "en";
         var (larga, corta) = Fecha(lang, hoy ?? DateTime.Today);
@@ -98,7 +100,7 @@ public static class Estreno
         foreach (var (k, v) in Palabras[lang]) t[k] = v;
         return new JsonObject
         {
-            ["formato"] = formato, ["ancho"] = ancho, ["alto"] = alto, ["titulo"] = titulo, ["lugar"] = lugar,
+            ["modo"] = Modos.Contains(modo) ? modo : "estreno", ["formato"] = formato, ["ancho"] = ancho, ["alto"] = alto, ["titulo"] = titulo, ["lugar"] = lugar,
             ["fecha"] = larga, ["fecha_corta"] = corta,
             ["escenas"] = new JsonArray(p.Escenas.Select(e =>
                 (JsonNode)new JsonObject { ["texto"] = e.Texto, ["ini"] = e.Ini, ["dur"] = e.Dur }).ToArray()),
@@ -154,10 +156,12 @@ public static class Estreno
     public static async Task<Plan> EstrenarAsync(string video, IReadOnlyList<(string Texto, double Segundos)> escenas,
         string salida, string titulo, string lugar = "", string formato = "horizontal", double duracionMax = 0,
         string lang = "es", string ffmpeg = "ffmpeg", Action<double>? progreso = null, string? musica = null,
-        (double Ini, double Fin)? bucle = null)
+        (double Ini, double Fin)? bucle = null, string modo = "estreno")
     {
         if (!Formatos.TryGetValue(formato, out var lienzo))
             throw new ArgumentException($"unknown format: {formato} (horizontal, vertical)", nameof(formato));
+        if (!Modos.Contains(modo))
+            throw new ArgumentException($"unknown finish: {modo} (estreno, demo)", nameof(modo));
         var trabajo = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(salida))!, "estreno");
         if (Directory.Exists(trabajo)) Directory.Delete(trabajo, recursive: true);
         Directory.CreateDirectory(Path.Combine(trabajo, "frames"));
@@ -167,7 +171,7 @@ public static class Estreno
         var frames = Directory.GetFiles(Path.Combine(trabajo, "frames"), "*.jpg").Length;
         var p = PlanDe(escenas, (double)frames / Fps, duracionMax);
         File.WriteAllText(Path.Combine(trabajo, "datos.json"),
-            Datos(p, titulo, lugar, formato, frames, tam, lang).ToJsonString(new JsonSerializerOptions
+            Datos(p, titulo, lugar, formato, frames, tam, lang, modo: modo).ToJsonString(new JsonSerializerOptions
             { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }),
             new UTF8Encoding(false));
         Sala(trabajo);

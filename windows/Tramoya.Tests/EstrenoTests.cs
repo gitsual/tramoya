@@ -56,6 +56,10 @@ public class EstrenoTests
         var en = Estreno.Datos(p, "Notes", "", "horizontal", 900, (1280, 800), "en", new DateTime(2026, 11, 12));
         Assert.Equal("November 12, 2026", (string)en["fecha"]!);
         Assert.Equal("The end", (string)en["t"]!["fin"]!);
+        Assert.Equal("estreno", (string)en["modo"]!);
+        var demo = Estreno.Datos(p, "Notes", "", "horizontal", 900, (1280, 800), "es", new DateTime(2026, 11, 12), modo: "demo");
+        Assert.Equal("demo", (string)demo["modo"]!);
+        Assert.Equal("Demo", (string)demo["t"]!["demo"]!);
     }
 
     [Fact]
@@ -166,11 +170,43 @@ public class EstrenoTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    [BrowserFact]
+    public async Task ADemoFromASyntheticTake()
+    {
+        var dir = Directory.CreateTempSubdirectory("tramoya-demo-").FullName;
+        try
+        {
+            var toma = Path.Combine(dir, "video.mp4");
+            new Runner().Run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=1280x800:rate=30:duration=4",
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=4", "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p", toma]);
+            var salida = Path.Combine(dir, "demo.mp4");
+            var p = await Estreno.EstrenarAsync(toma, [("One", 2.0), ("Two", 2.0)], salida, "Test", modo: "demo");
+            Assert.True(p.Cabe);
+            var (tam, _, conSonido) = Estreno.Medidas(salida);
+            Assert.Equal((1920, 1080), tam);
+            Assert.True(conSonido);
+            var datos = File.ReadAllText(Path.Combine(dir, "estreno", "datos.json"));
+            Assert.Contains("\"modo\": \"demo\"", datos);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task AnUnknownFinishIsRefused()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            Estreno.EstrenarAsync("x.mp4", Escenas, "y.mp4", "x", modo: "trailer"));
+    }
+
     [Fact]
     public void EasySettings()
     {
         Assert.True(Engine.DeEstreno(Obj("{}")));
         Assert.False(Engine.DeEstreno(Obj("""{"acabado": "bruto"}""")));
+        Assert.True(Engine.DeEstreno(Obj("""{"acabado": "demo"}""")));
+        Assert.Equal("demo", Engine.ModoDe(Obj("""{"acabado": "demo"}""")));
+        Assert.Equal("estreno", Engine.ModoDe(Obj("""{"acabado": "raro"}""")));
+        Assert.Equal("estreno", Engine.ModoDe(Obj("{}")));
         Assert.Equal(Vocabulario.Vertical, Engine.ViewportDe(Obj("""{"formato": "vertical", "tamano": "1080p"}""")));
         Assert.Equal((1280, 720), Engine.ViewportDe(Obj("""{"tamano": "720p"}""")));
         Assert.Equal(60, Engine.DuracionMaxima(Obj("""{"duracion": "60"}""")));

@@ -9,6 +9,8 @@ take always gives the same film.
 Two choices change the result:
 
 * ``formato``: ``horizontal`` (1920x1080) or ``vertical`` (1080x1920, for a phone).
+* ``modo``: ``estreno`` (the whole show) or ``demo``: the same stage and curtain, without the count (no scene
+  number, cue sheet, stamp or boards) and with a bigger take; the close names the show and nothing else.
 * ``duracion_max``: seconds at most. The take plays faster to fit (up to ``VEL_MAX``, the voice keeps its
   pitch); if even that is not enough, the film says so and stays as short as it can.
 """
@@ -26,6 +28,7 @@ from importlib import resources
 from pathlib import Path
 
 FORMATOS = {"horizontal": (1920, 1080), "vertical": (1080, 1920)}
+MODOS = ("estreno", "demo")
 FPS = 30
 VEL_MAX = 1.5
 INTRO_MS, OUTRO_MS = 3200, 4400
@@ -36,10 +39,10 @@ ORIGEN = "http://tramoya.local"
 PALABRAS = {
     "es": {"presenta": "Tramoya presenta", "cuenta": "Escena {i} de {n}", "hoja": "Hoja de cues",
            "sigue": "Sigue", "fin": "Fin", "funcion": "de la función", "escena": "escena", "escenas": "escenas",
-           "duracion": "duración", "estreno": "estreno", "hecho": "Hecho con Tramoya"},
+           "duracion": "duración", "estreno": "estreno", "hecho": "Hecho con Tramoya", "demo": "Demo"},
     "en": {"presenta": "Tramoya presents", "cuenta": "Scene {i} of {n}", "hoja": "Cue sheet",
            "sigue": "Next", "fin": "The end", "funcion": "of the show", "escena": "scene", "escenas": "scenes",
-           "duracion": "running time", "estreno": "premiere", "hecho": "Made with Tramoya"},
+           "duracion": "running time", "estreno": "premiere", "hecho": "Made with Tramoya", "demo": "Demo"},
 }
 MESES = {"es": "enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre".split(),
          "en": "January February March April May June July August September October November December".split()}
@@ -85,12 +88,12 @@ def _fecha(lang: str, hoy: date) -> tuple[str, str]:
 
 
 def datos(p: Plan, *, titulo: str, lugar: str, formato: str, frames: int, video: tuple[int, int],
-          lang: str = "es", hoy: date | None = None) -> dict:
+          lang: str = "es", hoy: date | None = None, modo: str = "estreno") -> dict:
     """What sala.html reads (datos.json)."""
     lang = lang if lang in PALABRAS else "en"
     larga, corta = _fecha(lang, hoy or date.today())
     ancho, alto = FORMATOS[formato]
-    return {"formato": formato, "ancho": ancho, "alto": alto, "titulo": titulo, "lugar": lugar,
+    return {"modo": modo if modo in MODOS else "estreno", "formato": formato, "ancho": ancho, "alto": alto, "titulo": titulo, "lugar": lugar,
             "fecha": larga, "fecha_corta": corta, "escenas": p.escenas, "frames": frames, "fps": FPS,
             "vel": p.vel, "intro": p.intro_ms, "outro": p.outro_ms, "video": {"w": video[0], "h": video[1]},
             "t": PALABRAS[lang]}
@@ -135,7 +138,7 @@ def _servir_desde_disco(page, raiz: Path) -> None:
 
 def estrenar(video: Path, escenas: list[tuple[str, float]], salida: Path, *, titulo: str, lugar: str = "",
              formato: str = "horizontal", duracion_max: float = 0, lang: str = "es", ffmpeg: str = "ffmpeg",
-             musica: Path | None = None, bucle: tuple[float, float] | None = None,
+             musica: Path | None = None, bucle: tuple[float, float] | None = None, modo: str = "estreno",
              progreso: Callable[[float], None] | None = None) -> Plan:
     """Stage ``video`` (the assembled take) and write the film to ``salida``. Returns the plan: the scenes on
     the film's clock (for the subtitles), the speed and whether it fitted in ``duracion_max``. ``musica``: an audio
@@ -144,6 +147,8 @@ def estrenar(video: Path, escenas: list[tuple[str, float]], salida: Path, *, tit
 
     if formato not in FORMATOS:
         raise ValueError(f"unknown format: {formato} ({', '.join(FORMATOS)})")
+    if modo not in MODOS:
+        raise ValueError(f"unknown finish: {modo} ({', '.join(MODOS)})")
     trabajo = salida.parent / "estreno"
     shutil.rmtree(trabajo, ignore_errors=True)
     (trabajo / "frames").mkdir(parents=True)
@@ -153,7 +158,7 @@ def estrenar(video: Path, escenas: list[tuple[str, float]], salida: Path, *, tit
     frames = len(list((trabajo / "frames").glob("*.jpg")))
     p = plan(escenas, frames / FPS, duracion_max)
     (trabajo / "datos.json").write_text(json.dumps(
-        datos(p, titulo=titulo, lugar=lugar, formato=formato, frames=frames, video=tam, lang=lang),
+        datos(p, titulo=titulo, lugar=lugar, formato=formato, frames=frames, video=tam, lang=lang, modo=modo),
         ensure_ascii=False, indent=1), encoding="utf-8")
     _sala(trabajo)
 

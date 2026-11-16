@@ -585,7 +585,7 @@ public static class Engine
                 tramos.Select(t => (t.Texto.Length != 0 ? t.Texto : titulo, t.Dur)).ToList(),
                 Path.Combine(salida, "estreno.mp4"), titulo, lugar: HostDe(url), formato: formato,
                 duracionMax: maxima, lang: idioma,
-                musica: musica, bucle: BucleDe(musica),
+                musica: musica, bucle: BucleDe(musica), modo: ModoDe(ajustes),
                 progreso: k => Emitir(("fase", "montar"), ("msg", Lengua.T($"El estreno: {k:P0}", $"The premiere: {k:P0}")), ("p", 0.84 + 0.15 * k)))
                 .ConfigureAwait(false);
             final = Path.Combine(salida, "estreno.mp4");
@@ -614,8 +614,11 @@ public static class Engine
             ? Vocabulario.Vertical
             : Vocabulario.Tamanos.GetValueOrDefault(Pasos.Str(ajustes, "tamano"), Vocabulario.Viewport);
 
-    /// <summary>El acabado: «estreno» (por defecto) pone la toma en la sala; «bruto» deja la grabación tal cual.</summary>
+    /// <summary>El acabado: «estreno» (por defecto) y «demo» ponen la toma en la sala; «bruto» la deja tal cual.</summary>
     internal static bool DeEstreno(JsonObject ajustes) => Pasos.Str(ajustes, "acabado") != "bruto";
+
+    /// <summary>Cómo se representa en la sala: «demo» sin la cuenta de escenas; cualquier otro valor, el estreno entero.</summary>
+    internal static string ModoDe(JsonObject ajustes) => Pasos.Str(ajustes, "acabado") == "demo" ? "demo" : "estreno";
 
     private static string MisVideosDe(JsonObject proyecto) => Pasos.Str(proyecto, "mis_videos");
 

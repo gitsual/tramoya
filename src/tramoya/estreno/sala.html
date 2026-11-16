@@ -118,6 +118,12 @@
   .vertical #tablas .tiempos { left: 48px; right: 48px; }
   .vertical .lado-telon { width: 18px; }
   .vertical .cartela { padding: 0 90px; }
+
+  /* La demo: la misma sala sin la cuenta. Ni hoja de cues, ni sello, ni tablas, ni «escena i de n»: la toma
+     ocupa el sitio y el cierre solo nombra la obra. */
+  html.demo #hoja, html.demo #sello, html.demo #sigue, html.demo #tablas, html.demo #cierre .datos { display: none; }
+  html.demo #titular { font-size: 54px; }
+  html.demo #cierre h1 { font-size: 150px; }
   .vertical .cartela h1 { font-size: 150px; }
   .vertical #cierre h1 { font-size: 200px; }
   .vertical #cierre .datos { flex-direction: column; gap: 26px; }
@@ -183,11 +189,18 @@ const LIENZOS = {
   horizontal: { caja: { x: 64, y: 272, w: 1376, h: 716 }, titular: [1376, 132], cartel: 1600, columna: 48 },
   vertical: { caja: { x: 48, y: 420, w: 984, h: 1230 }, titular: [790, 176], cartel: 900 }
 }
+/** En la demo no hay hoja, sello ni tablas: el escenario se centra y crece hasta el borde de abajo. */
+const LIENZOS_DEMO = {
+  horizontal: { caja: { x: 64, y: 244, w: 1792, h: 790 }, titular: [1792, 116], cartel: 1600 },
+  vertical: { caja: { x: 48, y: 380, w: 984, h: 1460 }, titular: [984, 176], cartel: 900 }
+}
 
 async function load () {
   D = await (await fetch('datos.json')).json()
-  L = LIENZOS[D.formato] || LIENZOS.horizontal
+  const DEMO = D.modo === 'demo'
+  L = (DEMO ? LIENZOS_DEMO : LIENZOS)[D.formato] || (DEMO ? LIENZOS_DEMO : LIENZOS).horizontal
   if (D.formato === 'vertical') document.documentElement.classList.add('vertical')
+  if (DEMO) document.documentElement.classList.add('demo')
   E = D.escenas
   VIDEO = D.frames * 1000 / D.fps / D.vel
   FIN = D.intro + VIDEO
@@ -197,11 +210,11 @@ async function load () {
   // El escenario encaja la toma sin deformarla; en horizontal, la hoja de cues ocupa lo que queda a la derecha.
   const c = L.caja, k = Math.min(c.w / D.video.w, c.h / D.video.h)
   CAJA = { x: c.x, y: c.y, w: Math.round(D.video.w * k), h: Math.round(D.video.h * k) }
-  if (D.formato === 'vertical') CAJA.x = Math.round((D.ancho - CAJA.w) / 2)
+  if (D.formato === 'vertical' || DEMO) CAJA.x = Math.round((D.ancho - CAJA.w) / 2)
   Object.assign($('escenario').style, { left: `${CAJA.x}px`, top: `${CAJA.y}px`, width: `${CAJA.w}px`, height: `${CAJA.h}px` })
   Object.assign($('haz').style, { left: `${CAJA.x - 60}px`, top: '40px', width: `${CAJA.w + 120}px`, height: `${CAJA.y + CAJA.h * .5 - 40}px` })
   Object.assign($('sello').style, { left: `${CAJA.x + CAJA.w - 132}px`, top: `${CAJA.y - 128}px` })
-  if (D.formato !== 'vertical') {
+  if (D.formato !== 'vertical' && !DEMO) {
     // El titular termina antes del sello, que cae sobre la esquina del escenario: nunca se pisan.
     let ancho = CAJA.x + CAJA.w - 132 - 28 - 64
     if (ancho < 900) {
@@ -235,6 +248,11 @@ async function load () {
   $('cierre-d').innerHTML = [[E.length, tr(E.length === 1 ? 'escena' : 'escenas')], [reloj(VIDEO), tr('duracion')], [D.fecha_corta, tr('estreno')]]
     .map(([n, l]) => `<div><strong>${n}</strong>${l}</div>`).join('')
   $('cierre-f').textContent = tr('hecho')
+  if (D.modo === 'demo') {
+    $('cuenta').textContent = tr('demo')
+    $('cierre-h').textContent = D.titulo; $('cierre-e').textContent = [tr('demo'), D.fecha].join(' · ')
+    encajar($('cierre-h'), L.cartel, D.formato === 'vertical' ? 640 : 330)
+  }
   window.ready = true
 }
 
@@ -255,7 +273,7 @@ function seek (t) {
   const e = E[i], enEscena = t < D.intro ? 0 : local - e.ini
 
   // La cabecera y el titular: entra de abajo cada vez que cambia la escena.
-  $('cuenta').textContent = tr('cuenta', { i: i + 1, n: E.length })
+  if (D.modo !== 'demo') $('cuenta').textContent = tr('cuenta', { i: i + 1, n: E.length })
   const r = $('titular')
   if (r.dataset.i !== String(i)) { r.dataset.i = i; r.textContent = e.texto || D.titulo; encajar(r, ...L.titular) }
   const kr = ease(enEscena / 450)

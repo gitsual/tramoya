@@ -49,8 +49,13 @@ def viewport_de(ajustes: dict) -> tuple[int, int]:
 
 
 def de_estreno(ajustes: dict) -> bool:
-    """El acabado: «estreno» (por defecto) pone la toma en la sala; «bruto» deja la grabación tal cual."""
+    """El acabado: «estreno» (por defecto) y «demo» ponen la toma en la sala; «bruto» la deja tal cual."""
     return ajustes.get("acabado", "estreno") != "bruto"
+
+
+def modo_de(ajustes: dict) -> str:
+    """Cómo se representa en la sala: «demo» sin la cuenta de escenas; cualquier otro valor, el estreno entero."""
+    return "demo" if ajustes.get("acabado") == "demo" else "estreno"
 
 
 EXTENSIONES_AUDIO = (".mp3", ".wav", ".ogg", ".flac", ".m4a")
@@ -709,6 +714,7 @@ def hacer_video(carpeta: Path, con_voz: bool) -> int:
             final, [(t or proyecto["nombre"], d) for t, d in tramos], out / "estreno.mp4",
             titulo=proyecto["nombre"], lugar=urlparse(url).hostname or "", formato=formato,
             duracion_max=duracion_maxima(ajustes), lang=idioma,
+            modo=modo_de(ajustes),
             musica=(musica := musica_de(ajustes, Path(proyecto["mis_videos"]).parent / "Pistas")),
             bucle=bucle_de(musica),
             progreso=lambda k: emitir(fase="montar", p=0.84 + 0.15 * k,
